@@ -54,6 +54,14 @@ impl CPU {
         self.registers.pc += 1;
     }
 
+    pub fn inc_bc(&mut self) {
+        println!("INC BC");
+
+        let value = self.registers.read_bc() + 1;
+        self.registers.write_bc(value);
+        self.registers.pc += 1;
+    }
+
     pub fn inc_a(&mut self) {
         println!("INC A");
 
@@ -221,6 +229,17 @@ impl CPU {
     }
 
     /** 
+     * Loads register B to register A. 
+     */
+    pub fn ld_a_b(&mut self) {
+        self.registers.a = self.registers.b;
+
+        println!("LD A,B");
+
+        self.registers.pc += 1;
+    }
+
+    /** 
      * Writes value from register A to memory address $FF00 + n. 
      */
     pub fn ldh_n_a(&mut self, memory: &mut Memory) {
@@ -268,6 +287,18 @@ impl CPU {
         self.registers.a = value;
 
         self.registers.pc += 1;
+    }
+
+    /** 
+     * Loads value nn to register SP. 
+     */
+    pub fn ld_bc_nn(&mut self, memory: &Memory) {
+        let value: u16 = memory.read_16(self.registers.pc + 1);
+        self.registers.write_bc(value);
+
+        println!("LD BC,{:X}", self.registers.read_bc());
+
+        self.registers.pc += 3;
     }
 
 

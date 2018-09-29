@@ -22,6 +22,8 @@ fn main() {
 
         match instruction {
             0x00 => cpu.nop(),
+            0x01 => cpu.ld_bc_nn(&memory),
+            0x03 => cpu.inc_bc(),
             0x05 => cpu.dec_b(),
             0x06 => cpu.ld_b_n(&memory),
             0x0E => cpu.ld_c_n(&memory),
@@ -38,6 +40,7 @@ fn main() {
             0x3E => cpu.ld_a_n(&memory),
             0x4E => cpu.ld_c_mhl(&memory),
             0x49 => cpu.ld_c_c(),
+            0x78 => cpu.ld_a_b(),
             0x7C => cpu.ld_a_h(),
             0x7D => cpu.ld_a_l(),
             0xAF => cpu.xor_a(),
@@ -60,6 +63,6 @@ fn main() {
             }
         }
 
-        sleep(Duration::from_millis(300));
+        //sleep(Duration::from_millis(300));
     }
 }

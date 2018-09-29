@@ -50,6 +50,12 @@ impl CPURegisters {
         return ::math::two_u8_to_u16(self.b, self.c);
     }
 
+    pub fn write_bc(&mut self, value : u16) {
+        let parts: (u8, u8) = ::math::u16_to_two_u8(value);
+        self.b = parts.0;
+        self.c = parts.1;
+    }
+
     /**
      * Reads combination of register D and register E.
      */
