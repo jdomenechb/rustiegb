@@ -277,11 +277,11 @@ impl CPU {
      * Jumps to the current PC + n
      */
     pub fn jr_n(&mut self, memory: &Memory) {
-        let to_sum = memory.read_8(self.registers.pc + 1);
-
-        println!("JR {:X}", to_sum);
+        let to_sum = memory.read_8(self.registers.pc + 1) + 2;
 
         self.registers.pc += to_sum as u16;
+
+        println!("JR {:X}", self.registers.pc);
     }
 
     /**
@@ -292,10 +292,10 @@ impl CPU {
 
         println!("JR NZ,{:X}", possible_value);
 
+        self.registers.pc += 2;
+
         if !self.registers.is_flag_z() {
             self.registers.pc += possible_value as u16;
-        } else {
-            self.registers.pc += 2;
         }
     }
 
@@ -351,6 +351,16 @@ impl CPU {
     pub fn push_hl(&mut self, memory : &mut Memory) {
         println!("PUSH HL");
         let reg: u16 = self.registers.read_hl();
+        self.push_nn(memory, reg);
+        self.registers.pc += 1;
+    }
+
+    /**
+     * Push BC into stack.
+     */
+    pub fn push_bc(&mut self, memory : &mut Memory) {
+        println!("PUSH BC");
+        let reg: u16 = self.registers.read_bc();
         self.push_nn(memory, reg);
         self.registers.pc += 1;
     }

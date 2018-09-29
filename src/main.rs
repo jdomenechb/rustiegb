@@ -12,7 +12,7 @@ fn main() {
     let mut cpu = CPU::new();
 
     // Setting up memory
-    let mut memory = Memory::new("/Users/jordi/RustProjects/rustiegb/cpu_instrs.gb");
+    let mut memory = Memory::new("./cpu_instrs.gb");
 
     // Main loop
     loop {
@@ -42,6 +42,7 @@ fn main() {
             0x7D => cpu.ld_a_l(),
             0xAF => cpu.xor_a(),
             0xC3 => cpu.jp_nn(&memory),
+            0xC5 => cpu.push_bc(&mut memory),
             0xC9 => cpu.ret(&mut memory),
             0xCD => cpu.call(&mut memory),
             0xE0 => cpu.ldh_n_a(&mut memory),
@@ -59,6 +60,6 @@ fn main() {
             }
         }
 
-        sleep(Duration::from_millis(750));
+        sleep(Duration::from_millis(300));
     }
 }
