@@ -1,0 +1,43 @@
+use super::registers::CPURegisters;
+use std::num::Wrapping;
+
+#[derive(Debug)]
+pub struct ALU {
+
+}
+
+impl ALU {
+    pub fn sub_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
+        registers.set_flag_n(true);
+
+        let half_carry : bool = b > a & 0x0f;
+        registers.set_flag_h(half_carry);
+
+        let value = Wrapping(a);
+        let to_subtract = Wrapping(b);
+
+        let value = (value - to_subtract).0;
+
+        let zero :bool = value == 0;
+        registers.set_flag_z(zero);
+
+        return value;
+    }
+
+    pub fn add_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
+        registers.set_flag_n(false);
+
+        let half_carry : bool = ((a & 0xf) + (b & 0xf)) & 0x10 == 0x10;
+        registers.set_flag_h(half_carry);
+
+        let value = Wrapping(a);
+        let to_add = Wrapping(b);
+
+        let value = (value + to_add).0;
+
+        let zero :bool = value == 0;
+        registers.set_flag_z(zero);
+
+        return value;
+    }
+}
