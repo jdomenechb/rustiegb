@@ -45,6 +45,19 @@ impl CPU {
         self.registers.pc += 1;
     }
 
+    /**
+     * Decrease register D.
+     */
+    pub fn dec_d(&mut self) {
+        println!("DEC D");
+
+        let value = self.registers.d;
+        let value = self.alu.sub_n(&mut self.registers, value, 1);
+        self.registers.d = value;
+
+        self.registers.pc += 1;
+    }
+
     pub fn inc_hl(&mut self) {
         println!("INC HL");
 
@@ -70,12 +83,33 @@ impl CPU {
         self.registers.pc += 1;
     }
 
+    pub fn inc_d(&mut self) {
+        println!("INC D");
+
+        let value :u8 = self.registers.d;
+        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
+        self.registers.d = value;
+        self.registers.pc += 1;
+    }
+
     pub fn inc_c(&mut self) {
         println!("INC C");
 
         let value :u8 = self.registers.c;
         let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
         self.registers.c = value;
+        self.registers.pc += 1;
+    }
+
+    pub fn adc_a_c(&mut self) {
+        let value1 :u8 = self.registers.a;
+        let value2 :u8 = self.registers.c + self.registers.is_flag_c() as u8;
+
+        println!("ADC A,C");
+
+        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+        self.registers.a = result;
+
         self.registers.pc += 1;
     }
 
@@ -528,6 +562,14 @@ impl CPU {
 
 
     // --- RESTART INSTRUCTIONS ------------------------------------------------------------------------------------------------------------
+
+    pub fn rst_18(&mut self, memory: &mut Memory) {     
+        println!("RST $18");
+        let current_addr :u16 = self.registers.pc;
+        self.push_nn(memory, current_addr);
+
+        self.registers.pc = 0x18;
+    }
 
     pub fn rst_38(&mut self, memory: &mut Memory) {
         println!("RST $38");

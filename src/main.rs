@@ -29,6 +29,8 @@ fn main() {
             0x06 => cpu.ld_b_n(&memory),
             0x0C => cpu.inc_c(),
             0x0E => cpu.ld_c_n(&memory),
+            0x14 => cpu.inc_d(),
+            0x15 => cpu.dec_d(),
             0x18 => cpu.jr_n(&memory),
             0x1E => cpu.ld_e_n(&memory),
             0x1F => cpu.rra(),
@@ -53,6 +55,7 @@ fn main() {
             0x7C => cpu.ld_a_h(),
             0x7D => cpu.ld_a_l(),
             0x7E => cpu.ld_a_mhl(&memory),
+            0x89 => cpu.adc_a_c(),
             0xAF => cpu.xor_a(),
             0xB1 => cpu.or_c(),
             0xC3 => cpu.jp_nn(&memory),
@@ -60,6 +63,7 @@ fn main() {
             0xC6 => cpu.add_a_n(&memory),
             0xC9 => cpu.ret(&mut memory),
             0xCD => cpu.call(&mut memory),
+            0xDF => cpu.rst_18(&mut memory),
             0xE0 => cpu.ldh_n_a(&mut memory),
             0xE1 => cpu.pop_hl(&mut memory),
             0xE5 => cpu.push_hl(&mut memory),
@@ -77,6 +81,6 @@ fn main() {
             }
         }
 
-        //sleep(Duration::from_millis(300));
+        sleep(Duration::from_millis(300));
     }
 }
