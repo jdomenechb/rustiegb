@@ -52,4 +52,17 @@ impl ALU {
 
         return result;
     }
+
+    pub fn cp_n(&self, registers: &mut CPURegisters, a: u8, b: u8) {
+        registers.set_flag_n(true);
+
+        let zero :bool  = a == b;
+        registers.set_flag_z(zero);
+
+        let carry: bool = a < b;
+        registers.set_flag_c(carry);
+
+        let half_carry : bool = b > a & 0x0f;
+        registers.set_flag_h(half_carry);
+    }
 }

@@ -1,6 +1,5 @@
 use super::registers::CPURegisters;
 use super::alu::ALU;
-use std::num::Wrapping;
 use ::memory::memory::Memory;
 
 #[derive(Debug)]
@@ -71,6 +70,15 @@ impl CPU {
         self.registers.pc += 1;
     }
 
+    pub fn inc_c(&mut self) {
+        println!("INC C");
+
+        let value :u8 = self.registers.c;
+        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
+        self.registers.c = value;
+        self.registers.pc += 1;
+    }
+
 
     /**
      * Rotates A right through carry flag.
@@ -130,6 +138,20 @@ impl CPU {
     }
 
 
+    // --- COMPARE INSTRUCTIONS -------------------------------------------------------------------------------------------------------------
+
+    pub fn cp_n(&mut self, memory: &Memory) {       
+        let n :u8 = memory.read_8(self.registers.pc + 1);
+        let a :u8 = self.registers.a;
+
+        println!("CP {:X}", n);
+
+        self.alu.cp_n(&mut self.registers, a, n);
+
+        self.registers.pc += 2;
+    }
+
+
     // --- WRITE INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------
 
     /** 
@@ -161,6 +183,17 @@ impl CPU {
         self.registers.c = self.registers.c;
 
         println!("LD C,C");
+
+        self.registers.pc += 1;
+    }
+
+    /** 
+     * Loads register H to register B. 
+     */
+    pub fn ld_h_b(&mut self) {
+        self.registers.h = self.registers.b;
+
+        println!("LD H,B");
 
         self.registers.pc += 1;
     }
@@ -223,6 +256,39 @@ impl CPU {
     }
 
     /** 
+     * Loads value (HL) to register L. 
+     */
+    pub fn ld_l_mhl(&mut self, memory: &Memory) {
+        self.registers.l = memory.read_8(self.registers.read_hl());
+
+        println!("LD L,(HL)");
+
+        self.registers.pc += 1;
+    }
+
+    /** 
+     * Loads value (HL) to register H. 
+     */
+    pub fn ld_h_mhl(&mut self, memory: &Memory) {
+        self.registers.h = memory.read_8(self.registers.read_hl());
+
+        println!("LD H,(HL)");
+
+        self.registers.pc += 1;
+    }
+
+    /** 
+     * Loads value (HL) to register A. 
+     */
+    pub fn ld_a_mhl(&mut self, memory: &Memory) {
+        self.registers.a = memory.read_8(self.registers.read_hl());
+
+        println!("LD A,(HL)");
+
+        self.registers.pc += 1;
+    }
+
+    /** 
      * Loads register H to register A. 
      */
     pub fn ld_a_h(&mut self) {
@@ -266,6 +332,20 @@ impl CPU {
         let mem_addr: u16 = 0xFF00 + to_sum;
 
         memory.write_8(mem_addr, self.registers.a);
+
+        self.registers.pc += 2;
+    }
+
+    /** 
+     * Writes value from  memory address $FF00 + n to register A. 
+     */
+    pub fn ldh_a_n(&mut self, memory: &mut Memory) {
+        let to_sum: u16 = memory.read_8(self.registers.pc + 1) as u16;
+
+        println!("LDH ($FF00 + {:X}),A", to_sum);
+
+        let mem_addr: u16 = 0xFF00 + to_sum;
+        self.registers.a = memory.read_8(mem_addr);
 
         self.registers.pc += 2;
     }
@@ -357,6 +437,36 @@ impl CPU {
         self.registers.pc += 2;
 
         if self.registers.is_flag_z() {
+            self.registers.pc += possible_value as u16;
+        }
+    }
+
+    /**
+     * Jumps to the current PC + n only if the flag C is set. Otherwise, continues to the next instruction.
+     */
+    pub fn jr_c_n(&mut self, memory: &Memory) {
+        let possible_value : u8 = memory.read_8(self.registers.pc + 1);
+
+        println!("JR C,{:X}", possible_value);
+
+        self.registers.pc += 2;
+
+        if self.registers.is_flag_c() {
+            self.registers.pc += possible_value as u16;
+        }
+    }
+
+    /**
+     * Jumps to the current PC + n only if the flag C is not set. Otherwise, continues to the next instruction.
+     */
+    pub fn jr_nc_n(&mut self, memory: &Memory) {
+        let possible_value : u8 = memory.read_8(self.registers.pc + 1);
+
+        println!("JR NC,{:X}", possible_value);
+
+        self.registers.pc += 2;
+
+        if !self.registers.is_flag_c() {
             self.registers.pc += possible_value as u16;
         }
     }
