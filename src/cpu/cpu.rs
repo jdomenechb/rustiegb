@@ -113,6 +113,22 @@ impl CPU {
         self.registers.pc += 1;
     }
 
+    /** 
+     * OR of C with register A, result in A.
+     */
+    pub fn or_c(&mut self) {
+        println!("OR C");
+
+        let value1 : u8 = self.registers.c;
+        let value2 : u8 = self.registers.a;
+
+        let result: u8 = self.alu.or_n(&mut self.registers, value1, value2); 
+
+        self.registers.a = result;
+
+        self.registers.pc += 1;
+    }
+
 
     // --- WRITE INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------
 
@@ -326,6 +342,21 @@ impl CPU {
         self.registers.pc += 2;
 
         if !self.registers.is_flag_z() {
+            self.registers.pc += possible_value as u16;
+        }
+    }
+
+    /**
+     * Jumps to the current PC + n only if the flag Z is set. Otherwise, continues to the next instruction.
+     */
+    pub fn jr_z_n(&mut self, memory: &Memory) {
+        let possible_value : u8 = memory.read_8(self.registers.pc + 1);
+
+        println!("JR Z,{:X}", possible_value);
+
+        self.registers.pc += 2;
+
+        if self.registers.is_flag_z() {
             self.registers.pc += possible_value as u16;
         }
     }
