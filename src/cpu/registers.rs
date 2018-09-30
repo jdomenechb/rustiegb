@@ -16,14 +16,14 @@ pub struct CPURegisters {
 impl CPURegisters {
     pub fn new() -> CPURegisters {
         return CPURegisters {
-            a: 0x0,
+            a: 0x01,
             b: 0x0,
-            c: 0x0,
+            c: 0x13,
             d: 0x0,
-            e: 0x0,
-            f: 0x0,
-            h: 0x0,
-            l: 0x0,
+            e: 0xd8,
+            f: 0xb0,
+            h: 0x01,
+            l: 0x4d,
             pc: 0x0100,
             sp: 0xFFFE,
             flags: 0x0,
