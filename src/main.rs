@@ -55,6 +55,7 @@ fn main() {
             0xB1 => cpu.or_c(),
             0xC3 => cpu.jp_nn(&memory),
             0xC5 => cpu.push_bc(&mut memory),
+            0xC6 => cpu.add_a_n(&memory),
             0xC9 => cpu.ret(&mut memory),
             0xCD => cpu.call(&mut memory),
             0xE0 => cpu.ldh_n_a(&mut memory),

@@ -79,6 +79,18 @@ impl CPU {
         self.registers.pc += 1;
     }
 
+    pub fn add_a_n(&mut self, memory: &Memory) {
+        let value1 :u8 = memory.read_8(self.registers.pc + 1);
+        let value2 :u8 = self.registers.a;
+
+        println!("ADD A,{:X}", value1);
+
+        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+        self.registers.a = result;
+
+        self.registers.pc += 2;
+    }
+
 
     /**
      * Rotates A right through carry flag.
