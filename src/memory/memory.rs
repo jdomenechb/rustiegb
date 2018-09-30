@@ -1,12 +1,14 @@
 use super::read_only_memory_sector::ReadOnlyMemorySector;
 use super::internal_ram_memory_sector::InternalRamMemorySector;
 use super::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
+use super::timer_control::TimerControl;
 use std::fs::File;
 use std::io::Read;
 
 pub struct Memory {
     rom: ReadOnlyMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
+    timer_control: TimerControl,
     internal_ram: InternalRamMemorySector
 }
 
@@ -19,6 +21,7 @@ impl Memory {
         return Memory {
             rom: ReadOnlyMemorySector::new(data),
             internal_ram_8k: InternalRam8kMemorySector::new(),
+            timer_control: TimerControl::new(),
             internal_ram: InternalRamMemorySector::new()
         };
     }
@@ -73,12 +76,20 @@ impl Memory {
 
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
-            return self.internal_ram_8k.write_8(position - 0xC000, value);
+            self.internal_ram_8k.write_8(position - 0xC000, value);
+            return;
+        }
+
+        // Timer Control
+        if position == 0xFF07 {
+            self.timer_control.from_u8(value);
+            return;
         }
 
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
-            return self.internal_ram.write_8(position - 0xFF80, value);
+            self.internal_ram.write_8(position - 0xFF80, value);
+            return;
         }
 
         println!("ERROR: Memory address {:X} not accessible", position);
