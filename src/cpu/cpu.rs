@@ -46,6 +46,19 @@ impl CPU {
     }
 
     /**
+     * Decrease register C.
+     */
+    pub fn dec_c(&mut self) {
+        println!("DEC C");
+
+        let value = self.registers.c;
+        let value = self.alu.sub_n(&mut self.registers, value, 1);
+        self.registers.c = value;
+
+        self.registers.pc += 1;
+    }
+
+    /**
      * Decrease register D.
      */
     pub fn dec_d(&mut self) {
@@ -394,7 +407,7 @@ impl CPU {
     }
 
     /** 
-     * Writes value from  memory address $FF00 + n to register A. 
+     * Writes value from memory address $FF00 + n to register A. 
      */
     pub fn ldh_a_n(&mut self, memory: &mut Memory) {
         let to_sum: u16 = memory.read_8(self.registers.pc + 1) as u16;
@@ -423,13 +436,14 @@ impl CPU {
     /** 
      * Writes value from register A to memory address contained in HL. 
      */
-    pub fn ldd_hl_a(&mut self, memory: &mut Memory) {
+    pub fn ldd_mhl_a(&mut self, memory: &mut Memory) {
         println!("LDD (HL),A");
 
         memory.write_8(self.registers.read_hl(), self.registers.a);
 
-        // TODO: Decrement HL
-
+        let value :u16 = self.registers.read_hl() - 1;
+        self.registers.write_hl(value);
+    
         self.registers.pc += 1;
     }
 
@@ -461,7 +475,7 @@ impl CPU {
      * Jumps to the current PC + n
      */
     pub fn jr_n(&mut self, memory: &Memory) {
-        let to_sum = memory.read_8(self.registers.pc + 1) + 2;
+        let to_sum = memory.read_8_signed(self.registers.pc + 1) + 2;
 
         self.registers.pc += to_sum as u16;
 
@@ -472,14 +486,14 @@ impl CPU {
      * Jumps to the current PC + n only if the flag Z is not set. Otherwise, continues to the next instruction.
      */
     pub fn jr_nz_n(&mut self, memory: &Memory) {
-        let possible_value : u8 = memory.read_8(self.registers.pc + 1);
+        let possible_value : i8 = memory.read_8_signed(self.registers.pc + 1);
 
         println!("JR NZ,{:X}", possible_value);
 
         self.registers.pc += 2;
 
         if !self.registers.is_flag_z() {
-            self.registers.pc += possible_value as u16;
+            self.registers.pc = (self.registers.pc as i16 + possible_value as i16) as u16;
         }
     }
 
@@ -487,14 +501,14 @@ impl CPU {
      * Jumps to the current PC + n only if the flag Z is set. Otherwise, continues to the next instruction.
      */
     pub fn jr_z_n(&mut self, memory: &Memory) {
-        let possible_value : u8 = memory.read_8(self.registers.pc + 1);
+        let possible_value : i8 = memory.read_8_signed(self.registers.pc + 1);
 
         println!("JR Z,{:X}", possible_value);
 
         self.registers.pc += 2;
 
         if self.registers.is_flag_z() {
-            self.registers.pc += possible_value as u16;
+            self.registers.pc = (self.registers.pc as i16 + possible_value as i16) as u16;
         }
     }
 
@@ -502,14 +516,14 @@ impl CPU {
      * Jumps to the current PC + n only if the flag C is set. Otherwise, continues to the next instruction.
      */
     pub fn jr_c_n(&mut self, memory: &Memory) {
-        let possible_value : u8 = memory.read_8(self.registers.pc + 1);
+        let possible_value : i8 = memory.read_8_signed(self.registers.pc + 1);
 
         println!("JR C,{:X}", possible_value);
 
         self.registers.pc += 2;
 
         if self.registers.is_flag_c() {
-            self.registers.pc += possible_value as u16;
+            self.registers.pc = (self.registers.pc as i16 + possible_value as i16) as u16;
         }
     }
 
@@ -517,14 +531,14 @@ impl CPU {
      * Jumps to the current PC + n only if the flag C is not set. Otherwise, continues to the next instruction.
      */
     pub fn jr_nc_n(&mut self, memory: &Memory) {
-        let possible_value : u8 = memory.read_8(self.registers.pc + 1);
+        let possible_value : i8 = memory.read_8_signed(self.registers.pc + 1);
 
         println!("JR NC,{:X}", possible_value);
 
         self.registers.pc += 2;
 
         if !self.registers.is_flag_c() {
-            self.registers.pc += possible_value as u16;
+            self.registers.pc = (self.registers.pc as i16 + possible_value as i16) as u16;
         }
     }
 

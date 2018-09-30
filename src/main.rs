@@ -12,12 +12,17 @@ fn main() {
     let mut cpu = CPU::new();
 
     // Setting up memory
-    //let mut memory = Memory::new("./cpu_instrs.gb");
-    let mut memory = Memory::new("./t.gb");
+    let mut memory = Memory::new("./cpu_instrs.gb");
+    //let mut memory = Memory::new("./t.gb");
 
     // Main loop
     loop {
-        let instruction: &u8 = &memory.read_8(cpu.registers.pc);
+        let instruction: u8 = memory.read_8(cpu.registers.pc);
+
+        /*if instruction == 0x3E {
+            println!("{:#X?}", cpu);
+            break;
+        }*/
 
         print!("{:X}: ", cpu.registers.pc);
 
@@ -28,8 +33,9 @@ fn main() {
             0x05 => cpu.dec_b(),
             0x06 => cpu.ld_b_n(&memory),
             0x0C => cpu.inc_c(),
+            0x0D => cpu.dec_c(),
             0x0E => cpu.ld_c_n(&memory),
-            0x14 => cpu.inc_d(),
+            0x14 => cpu.inc_d   (),
             0x15 => cpu.dec_d(),
             0x18 => cpu.jr_n(&memory),
             0x1E => cpu.ld_e_n(&memory),
@@ -41,7 +47,7 @@ fn main() {
             0x2A => cpu.ldi_a_mhl(&memory),
             0x30 => cpu.jr_nc_n(&memory),
             0x31 => cpu.ld_sp_nn(&memory),
-            0x32 => cpu.ldd_hl_a(&mut memory),
+            0x32 => cpu.ldd_mhl_a(&mut memory),
             0x38 => cpu.jr_c_n(&memory),
             0x3C => cpu.inc_a(),
             0x3E => cpu.ld_a_n(&memory),
@@ -81,6 +87,6 @@ fn main() {
             }
         }
 
-        sleep(Duration::from_millis(300));
+        //sleep(Duration::from_millis(100));
     }
 }

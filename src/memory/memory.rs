@@ -8,7 +8,14 @@ use std::io::Read;
 pub struct Memory {
     rom: ReadOnlyMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
+
+    // FF07
     timer_control: TimerControl,
+
+    // FF44
+    ly: u8,
+
+    // FF80 - FFFF
     internal_ram: InternalRamMemorySector
 }
 
@@ -22,6 +29,7 @@ impl Memory {
             rom: ReadOnlyMemorySector::new(data),
             internal_ram_8k: InternalRam8kMemorySector::new(),
             timer_control: TimerControl::new(),
+            ly: 0,
             internal_ram: InternalRamMemorySector::new()
         };
     }
@@ -37,6 +45,11 @@ impl Memory {
             return self.internal_ram_8k.read_8(position - 0xC000);
         }
 
+        // LY
+        if position == 0xFF44 {
+            return self.ly;
+        }
+
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
             return self.internal_ram.read_8(position - 0xFF80);
@@ -45,6 +58,12 @@ impl Memory {
         println!("ERROR: Memory address {:X} not accessible", position);
 
         return 0;
+    }
+
+    pub fn read_8_signed(&self, position: u16) -> i8 {
+        let value :u8 = self.read_8(position);
+
+        return value as i8;
     }
 
     pub fn read_16(&self, position: u16) -> u16 {
@@ -77,6 +96,12 @@ impl Memory {
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             self.internal_ram_8k.write_8(position - 0xC000, value);
+            return;
+        }
+
+        // LY
+        if position == 0xFF44 {
+            self.ly = value;
             return;
         }
 
