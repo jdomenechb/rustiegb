@@ -200,6 +200,17 @@ impl CPU {
     }
 
     /** 
+     * Loads register C to register C. 
+     */
+    pub fn ld_a_d(&mut self) {
+        self.registers.a = self.registers.d;
+
+        println!("LD A,D");
+
+        self.registers.pc += 1;
+    }
+
+    /** 
      * Loads register H to register B. 
      */
     pub fn ld_h_b(&mut self) {

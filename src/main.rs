@@ -12,7 +12,8 @@ fn main() {
     let mut cpu = CPU::new();
 
     // Setting up memory
-    let mut memory = Memory::new("./cpu_instrs.gb");
+    //let mut memory = Memory::new("./cpu_instrs.gb");
+    let mut memory = Memory::new("./t.gb");
 
     // Main loop
     loop {
@@ -48,6 +49,7 @@ fn main() {
             0x66 => cpu.ld_h_mhl(&memory),
             0x6E => cpu.ld_l_mhl(&memory),
             0x78 => cpu.ld_a_b(),
+            0x7A => cpu.ld_a_d(),
             0x7C => cpu.ld_a_h(),
             0x7D => cpu.ld_a_l(),
             0x7E => cpu.ld_a_mhl(&memory),
