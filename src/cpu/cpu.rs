@@ -434,15 +434,26 @@ impl CPU {
     }
 
     /** 
-     * Writes value from register A to memory address contained in HL. 
+     * Writes value from register A to memory address contained in HL and decreases HL. 
      */
     pub fn ldd_mhl_a(&mut self, memory: &mut Memory) {
         println!("LDD (HL),A");
 
         memory.write_8(self.registers.read_hl(), self.registers.a);
 
-        let value :u16 = self.registers.read_hl() - 1;
-        self.registers.write_hl(value);
+        let value :u16 = self.registers.read_hl();
+        self.registers.write_hl(self.alu.dec_nn(value));
+    
+        self.registers.pc += 1;
+    }
+
+    /** 
+     * Writes value from register A to memory address contained in BC. 
+     */
+    pub fn ld_mbc_a(&mut self, memory: &mut Memory) {
+        println!("LD (BC),A");
+
+        memory.write_8(self.registers.read_bc(), self.registers.a);
     
         self.registers.pc += 1;
     }
@@ -572,6 +583,20 @@ impl CPU {
     pub fn ret(&mut self, memory: &mut Memory) {
         println!("RET");
         self.registers.pc = self.pop_nn(memory);
+    }
+
+    /**
+     * Pop two bytes from stack & jump to that address if flag Z is not set.
+     */
+    pub fn ret_nz(&mut self, memory: &mut Memory) {
+        println!("RET NZ");
+
+        if !self.registers.is_flag_z() {
+            self.registers.pc = self.pop_nn(memory);
+        } else {
+            self.registers.pc += 1;
+        }
+        
     }
 
 

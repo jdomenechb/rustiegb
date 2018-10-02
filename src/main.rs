@@ -29,6 +29,7 @@ fn main() {
         match instruction {
             0x00 => cpu.nop(),
             0x01 => cpu.ld_bc_nn(&memory),
+            0x02 => cpu.ld_mbc_a(&mut memory),
             0x03 => cpu.inc_bc(),
             0x05 => cpu.dec_b(),
             0x06 => cpu.ld_b_n(&memory),
@@ -64,6 +65,7 @@ fn main() {
             0x89 => cpu.adc_a_c(),
             0xAF => cpu.xor_a(),
             0xB1 => cpu.or_c(),
+            0xC1 => cpu.ret_nz(&mut memory),
             0xC3 => cpu.jp_nn(&memory),
             0xC5 => cpu.push_bc(&mut memory),
             0xC6 => cpu.add_a_n(&memory),
