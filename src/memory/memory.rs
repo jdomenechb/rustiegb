@@ -2,6 +2,7 @@ use super::read_only_memory_sector::ReadOnlyMemorySector;
 use super::internal_ram_memory_sector::InternalRamMemorySector;
 use super::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use super::timer_control::TimerControl;
+use super::interrupt_flag::InterruptFlag;
 use std::fs::File;
 use std::io::Read;
 
@@ -11,6 +12,9 @@ pub struct Memory {
 
     // FF07
     timer_control: TimerControl,
+
+    // FF0F
+    interrupt_flag: InterruptFlag,
 
     // FF44
     ly: u8,
@@ -29,6 +33,7 @@ impl Memory {
             rom: ReadOnlyMemorySector::new(data),
             internal_ram_8k: InternalRam8kMemorySector::new(),
             timer_control: TimerControl::new(),
+            interrupt_flag: InterruptFlag::new(),
             ly: 0,
             internal_ram: InternalRamMemorySector::new()
         };
@@ -96,6 +101,12 @@ impl Memory {
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             self.internal_ram_8k.write_8(position - 0xC000, value);
+            return;
+        }
+
+        // Interrupt Flag
+        if position == 0xFF0F {
+            self.interrupt_flag.from_u8(value);
             return;
         }
 
