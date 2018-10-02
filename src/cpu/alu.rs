@@ -68,4 +68,13 @@ impl ALU {
         let half_carry : bool = b > a & 0x0f;
         registers.set_flag_h(half_carry);
     }
+
+    pub fn inc_nn(&self, value: u16) -> u16 {
+        let value = Wrapping(value);
+        let to_add = Wrapping(1);
+
+        let value :u16 = (value + to_add).0;
+
+        return value;
+    }
 }

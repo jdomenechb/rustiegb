@@ -74,16 +74,16 @@ impl CPU {
     pub fn inc_hl(&mut self) {
         println!("INC HL");
 
-        let value = self.registers.read_hl() + 1;
-        self.registers.write_hl(value);
+        let value = self.registers.read_hl();
+        self.registers.write_bc(self.alu.inc_nn(value));
         self.registers.pc += 1;
     }
 
     pub fn inc_bc(&mut self) {
         println!("INC BC");
 
-        let value = self.registers.read_bc() + 1;
-        self.registers.write_bc(value);
+        let value = self.registers.read_bc();
+        self.registers.write_bc(self.alu.inc_nn(value));
         self.registers.pc += 1;
     }
 
