@@ -19,8 +19,11 @@ pub struct Memory {
     // FF44
     ly: u8,
 
-    // FF80 - FFFF
-    internal_ram: InternalRamMemorySector
+    // FF80 - FFFE
+    internal_ram: InternalRamMemorySector,
+
+    // FFFF
+    interrupt_enable: InterruptFlag,
 }
 
 impl Memory {
@@ -35,7 +38,8 @@ impl Memory {
             timer_control: TimerControl::new(),
             interrupt_flag: InterruptFlag::new(),
             ly: 0,
-            internal_ram: InternalRamMemorySector::new()
+            internal_ram: InternalRamMemorySector::new(),
+            interrupt_enable: InterruptFlag::new()
         };
     }
 
@@ -125,6 +129,11 @@ impl Memory {
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
             self.internal_ram.write_8(position - 0xFF80, value);
+            return;
+        }
+
+        if position == 0xFFFF {
+            self.interrupt_enable.from_u8(value);
             return;
         }
 
