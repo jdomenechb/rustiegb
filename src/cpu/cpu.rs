@@ -75,7 +75,7 @@ impl CPU {
         println!("INC HL");
 
         let value = self.registers.read_hl();
-        self.registers.write_bc(self.alu.inc_nn(value));
+        self.registers.write_hl(self.alu.inc_nn(value));
         self.registers.pc += 1;
     }
 
@@ -138,6 +138,20 @@ impl CPU {
         self.registers.pc += 2;
     }
 
+    /**
+     * Substract n from A.
+     */
+    pub fn sub_n(&mut self, memory: &Memory) {
+        println!("SUB n");
+
+        let value = self.registers.a;
+        let to_subtract :u8 = memory.read_8(self.registers.pc + 1);
+        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        self.registers.d = value;
+
+        self.registers.pc += 2;
+    }
+
 
     /**
      * Rotates A right through carry flag.
@@ -168,7 +182,7 @@ impl CPU {
     pub fn xor_a(&mut self) {
         println!("XOR A");
 
-        self.registers.a ^= self.registers.a;
+        self.registers.a = self.registers.a ^ self.registers.a;
 
         let zero :bool = self.registers.a == 0;
         self.registers.set_flag_z(zero);
@@ -659,6 +673,18 @@ impl CPU {
 
         let popped: u16 = self.pop_nn(memory);
         self.registers.write_af(popped);
+        
+        self.registers.pc += 1;
+    }
+
+    /**
+     * Pops stack to AF.
+     */
+    pub fn pop_bc(&mut self, memory : &mut Memory) {
+        println!("POP BC");
+
+        let popped: u16 = self.pop_nn(memory);
+        self.registers.write_bc(popped);
         
         self.registers.pc += 1;
     }

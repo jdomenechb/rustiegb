@@ -6,18 +6,43 @@ use cpu::cpu::CPU;
 use memory::memory::Memory;
 use std::thread::sleep;
 use std::time::Duration;
+use std::io;
+
+fn pause() {
+    let mut to_discard = String::new();
+    let _ = io::stdin().read_line(&mut to_discard);
+}
 
 fn main() {
     // Setting up CPU
     let mut cpu = CPU::new();
 
     // Setting up memory
-    let mut memory = Memory::new("./cpu_instrs.gb");
-    //let mut memory = Memory::new("./t.gb");
+    //let mut memory = Memory::new("./cpu_instrs.gb");
+    let mut memory = Memory::new("./t.gb");
 
     // Main loop
+    let mut debug :bool = false;
+    let mut i = 1;
+
     loop {
+        if cpu.registers.pc == 0x29A {
+            debug = true;
+        }
+
+        if debug && i % 1 == 0 {
+            println!("{:#X?}", cpu);
+            pause();
+        }
+
         let instruction: u8 = memory.read_8(cpu.registers.pc);
+
+        //println!("{:X} ", memory.read_8(0x2A4));
+
+        // if cpu.registers.pc == 0x2A4 {
+        //     print!("{:X}: ", instruction);
+        //     break;
+        // }
 
         /*if instruction == 0x3E {
             println!("{:#X?}", cpu);
@@ -65,12 +90,14 @@ fn main() {
             0x89 => cpu.adc_a_c(),
             0xAF => cpu.xor_a(),
             0xB1 => cpu.or_c(),
-            0xC1 => cpu.ret_nz(&mut memory),
+            0xC0 => cpu.ret_nz(&mut memory),
+            0xC1 => cpu.pop_bc(&mut memory),
             0xC3 => cpu.jp_nn(&memory),
             0xC5 => cpu.push_bc(&mut memory),
             0xC6 => cpu.add_a_n(&memory),
             0xC9 => cpu.ret(&mut memory),
             0xCD => cpu.call(&mut memory),
+            0xD6 => cpu.sub_n(&memory),
             0xDF => cpu.rst_18(&mut memory),
             0xE0 => cpu.ldh_n_a(&mut memory),
             0xE1 => cpu.pop_hl(&mut memory),
@@ -88,6 +115,8 @@ fn main() {
                 break;
             }
         }
+
+        i += 1;
 
         //sleep(Duration::from_millis(100));
     }

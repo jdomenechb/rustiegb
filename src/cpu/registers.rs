@@ -27,6 +27,17 @@ impl CPURegisters {
             pc: 0x0100,
             sp: 0xFFFE,
             flags: 0x0,
+            // a: 0x11,
+            // b: 0x0,
+            // c: 0x00,
+            // d: 0xFF,
+            // e: 0x56,
+            // f: 0x80,
+            // h: 0x00,
+            // l: 0x0d,
+            // pc: 0x0100,
+            // sp: 0xFFFE,
+            // flags: 0xB0,
         };
     }
 

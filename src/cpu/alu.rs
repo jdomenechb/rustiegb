@@ -13,6 +13,9 @@ impl ALU {
         let half_carry : bool = b > a & 0x0f;
         registers.set_flag_h(half_carry);
 
+        let carry: bool = (b as i8) > (a as i8);
+        registers.set_flag_c(carry);
+
         let value = Wrapping(a);
         let to_subtract = Wrapping(b);
 
