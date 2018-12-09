@@ -75,6 +75,7 @@ impl CPU {
             0x20 => self.jr_nz_n(memory),
             0x21 => self.ld_hl_nn(memory),
             0x23 => self.inc_hl(),
+            0x24 => self.inc_h(),
             0x28 => self.jr_z_n(memory),
             0x2A => self.ldi_a_mhl(memory),
             0x2C => self.inc_l(),
@@ -256,6 +257,17 @@ impl CPU {
         let value :u8 = self.registers.l;
         let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
         self.registers.l = value;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    pub fn inc_h(&mut self) {
+        println!("INC H");
+
+        let value :u8 = self.registers.h;
+        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
+        self.registers.h = value;
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
