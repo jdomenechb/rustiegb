@@ -94,8 +94,9 @@ impl CPU {
             0x3E => self.ld_a_n(memory),
             0x46 => self.ld_b_mhl(memory),
             0x47 => self.ld_b_a(),
-            0x4E => self.ld_c_mhl(memory),
             0x49 => self.ld_c_c(),
+            0x4E => self.ld_c_mhl(memory),
+            0x4F => self.ld_c_a(),
             0x56 => self.ld_d_mhl(memory),
             0x5F => self.ld_e_a(),
             0x60 => self.ld_h_b(),
@@ -804,6 +805,18 @@ impl CPU {
         self.registers.b = self.registers.a;
 
         println!("LD B,A");
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /** 
+     * Loads register A to register C. 
+     */
+    pub fn ld_c_a(&mut self) {
+        self.registers.c = self.registers.a;
+
+        println!("LD C,A");
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
