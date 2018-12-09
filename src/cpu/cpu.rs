@@ -67,6 +67,7 @@ impl CPU {
             0x0C => self.inc_c(),
             0x0D => self.dec_c(),
             0x0E => self.ld_c_n(memory),
+            0x11 => self.ld_de_nn(memory),
             0x14 => self.inc_d(),
             0x15 => self.dec_d(),
             0x18 => self.jr_n(memory),
@@ -713,13 +714,26 @@ impl CPU {
     }
 
     /** 
-     * Loads value nn to register SP. 
+     * Loads value nn to register BC. 
      */
     pub fn ld_bc_nn(&mut self, memory: &Memory) {
         let value: u16 = memory.read_16(self.registers.pc + 1);
         self.registers.write_bc(value);
 
         println!("LD BC,{:X}", self.registers.read_bc());
+
+        self.pc_to_increment = 3;
+        self.last_instruction_ccycles = 12;
+    }
+
+    /** 
+     * Loads value nn to register DE. 
+     */
+    pub fn ld_de_nn(&mut self, memory: &Memory) {
+        let value: u16 = memory.read_16(self.registers.pc + 1);
+        self.registers.write_de(value);
+
+        println!("LD DE,{:X}", self.registers.read_de());
 
         self.pc_to_increment = 3;
         self.last_instruction_ccycles = 12;

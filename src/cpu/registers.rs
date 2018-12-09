@@ -74,6 +74,12 @@ impl CPURegisters {
         return ::math::two_u8_to_u16(self.d, self.e);
     }
 
+    pub fn write_de(&mut self, value : u16) {
+        let parts: (u8, u8) = ::math::u16_to_two_u8(value);
+        self.d = parts.0;
+        self.e = parts.1;
+    }
+
     /**
      * Reads combination of register H and register L.
      */
