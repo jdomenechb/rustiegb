@@ -88,6 +88,7 @@ impl CPU {
             0x60 => self.ld_h_b(),
             0x66 => self.ld_h_mhl(memory),
             0x6E => self.ld_l_mhl(memory),
+            0x77 => self.ld_mhl_a(memory),
             0x78 => self.ld_a_b(),
             0x7A => self.ld_a_d(),
             0x7C => self.ld_a_h(),
@@ -660,6 +661,18 @@ impl CPU {
         println!("LD (BC),A");
 
         memory.write_8(self.registers.read_bc(), self.registers.a);
+    
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /** 
+     * Writes value from register A to memory address contained in HL. 
+     */
+    pub fn ld_mhl_a(&mut self, memory: &mut Memory) {
+        println!("LD (HL),A");
+
+        memory.write_8(self.registers.read_hl(), self.registers.a);
     
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
