@@ -99,6 +99,7 @@ impl CPU {
             0xC0 => self.ret_nz(memory),
             0xC1 => self.pop_bc(memory),
             0xC3 => self.jp_nn(memory),
+            0xC4 => self.call_nz_nn(memory),
             0xC5 => self.push_bc(memory),
             0xC6 => self.add_a_n(memory),
             0xC9 => self.ret(memory),
@@ -810,6 +811,26 @@ impl CPU {
 
         println!("CALL {:X}", self.registers.pc);
 
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 24;
+    }
+
+    /** 
+     * If flag Z is reset, push address of next instruction onto stack and then jump to address nn.
+     */
+    pub fn call_nz_nn(&mut self, memory: &mut Memory) {
+        println!("CALL NZ,{:X}", self.registers.pc);
+
+        if self.registers.is_flag_z() {
+            self.pc_to_increment = 3;
+            self.last_instruction_ccycles = 12;
+        }
+
+        let next_pc :u16 = self.registers.pc + 3;
+        self.push_nn(memory, next_pc);
+        
+        self.registers.pc = memory.read_16(self.registers.pc + 1);
+        
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 24;
     }
