@@ -93,6 +93,7 @@ impl CPU {
             0x46 => self.ld_b_mhl(memory),
             0x4E => self.ld_c_mhl(memory),
             0x49 => self.ld_c_c(),
+            0x56 => self.ld_d_mhl(memory),
             0x60 => self.ld_h_b(),
             0x66 => self.ld_h_mhl(memory),
             0x6E => self.ld_l_mhl(memory),
@@ -608,6 +609,18 @@ impl CPU {
         self.registers.c = memory.read_8(self.registers.read_hl());
 
         println!("LD C,(HL)");
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /** 
+     * Loads value (HL) to register D. 
+     */
+    pub fn ld_d_mhl(&mut self, memory: &Memory) {
+        self.registers.d = memory.read_8(self.registers.read_hl());
+
+        println!("LD D,(HL)");
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
