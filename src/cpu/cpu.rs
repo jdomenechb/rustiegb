@@ -104,6 +104,7 @@ impl CPU {
             0xA9 => self.xor_c(),
             0xAF => self.xor_a(),
             0xB1 => self.or_c(),
+            0xB7 => self.or_a(),
             0xC0 => self.ret_nz(memory),
             0xC1 => self.pop_bc(memory),
             0xC3 => self.jp_nn(memory),
@@ -112,6 +113,7 @@ impl CPU {
             0xC6 => self.add_a_n(memory),
             0xC9 => self.ret(memory),
             0xCD => self.call(memory),
+            0xD5 => self.push_de(memory),
             0xD6 => self.sub_n(memory),
             0xDF => self.rst_18(memory),
             0xE0 => self.ldh_n_a(memory),
@@ -387,6 +389,23 @@ impl CPU {
         self.registers.set_flag_c(false);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /** 
+     * OR of A with register A, result in A.
+     */
+    pub fn or_a(&mut self) {
+        println!("OR A");
+
+        let value1 : u8 = self.registers.a;
+        let value2 : u8 = self.registers.a;
+
+        let result: u8 = self.alu.or_n(&mut self.registers, value1, value2); 
+
+        self.registers.a = result;
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
@@ -1033,6 +1052,18 @@ impl CPU {
     pub fn push_af(&mut self, memory : &mut Memory) {
         println!("PUSH AF");
         let reg: u16 = self.registers.read_af();
+        self.push_nn(memory, reg);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 16;
+    }
+
+    /**
+     * Push DE into stack.
+     */
+    pub fn push_de(&mut self, memory : &mut Memory) {
+        println!("PUSH DE");
+        let reg: u16 = self.registers.read_de();
         self.push_nn(memory, reg);
 
         self.pc_to_increment = 1;
