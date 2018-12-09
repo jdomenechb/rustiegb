@@ -3,6 +3,7 @@ use super::internal_ram_memory_sector::InternalRamMemorySector;
 use super::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use super::timer_control::TimerControl;
 use super::interrupt_flag::InterruptFlag;
+use super::lcdc::LCDC;
 use std::fs::File;
 use std::io::Read;
 
@@ -15,6 +16,9 @@ pub struct Memory {
 
     // FF0F
     interrupt_flag: InterruptFlag,
+
+    // FF40
+    lcdc: LCDC,
 
     // FF44
     ly: u8,
@@ -37,6 +41,7 @@ impl Memory {
             internal_ram_8k: InternalRam8kMemorySector::new(),
             timer_control: TimerControl::new(),
             interrupt_flag: InterruptFlag::new(),
+            lcdc: LCDC::new(),
             ly: 0,
             internal_ram: InternalRamMemorySector::new(),
             interrupt_enable: InterruptFlag::new()
@@ -111,6 +116,12 @@ impl Memory {
         // Interrupt Flag
         if position == 0xFF0F {
             self.interrupt_flag.from_u8(value);
+            return;
+        }
+
+        // Interrupt Flag
+        if position == 0xFF40 {
+            self.lcdc.from_u8(value);
             return;
         }
 
