@@ -108,6 +108,7 @@ impl CPU {
             0xE0 => self.ldh_n_a(memory),
             0xE1 => self.pop_hl(memory),
             0xE5 => self.push_hl(memory),
+            0xE6 => self.and_n(memory),
             0xEA => self.ld_nn_a(memory),
             0xF0 => self.ldh_a_n(memory),
             0xF1 => self.pop_af(memory),
@@ -346,6 +347,23 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
+    }
+
+    /** 
+     * AND of n with register A, result in A.
+     */
+    pub fn and_n(&mut self, memory: &Memory) {
+        let value1 :u8 = memory.read_8(self.registers.pc + 1);
+        let value2 :u8 = self.registers.a;
+
+        println!("AND {:X}", value1);
+
+        let result: u8 = self.alu.and_n(&mut self.registers, value1, value2); 
+
+        self.registers.a = result;
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
 

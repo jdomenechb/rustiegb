@@ -59,6 +59,18 @@ impl ALU {
         return result;
     }
 
+    pub fn and_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
+        let result :u8 = a & b;
+        let zero :bool = result == 0;
+
+        registers.set_flag_h(false);
+        registers.set_flag_n(false);
+        registers.set_flag_z(zero);
+        registers.set_flag_c(false);
+
+        return result;
+    }
+
     pub fn cp_n(&self, registers: &mut CPURegisters, a: u8, b: u8) {
         registers.set_flag_n(true);
 
