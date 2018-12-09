@@ -18,6 +18,91 @@ impl CPU {
         }
     }
 
+    pub fn step(&mut self, memory: &mut Memory) -> bool {
+        let instruction: u8 = memory.read_8(self.registers.pc);
+
+        //println!("{:X} ", memory.read_8(0x2A4));
+
+        // if cpu.registers.pc == 0x2A4 {
+        //     print!("{:X}: ", instruction);
+        //     break;
+        // }
+
+        /*if instruction == 0x3E {
+            println!("{:#X?}", cpu);
+            break;
+        }*/
+
+        print!("{:X}: ", self.registers.pc);
+
+        match instruction {
+            0x00 => self.nop(),
+            0x01 => self.ld_bc_nn(memory),
+            0x02 => self.ld_mbc_a(memory),
+            0x03 => self.inc_bc(),
+            0x05 => self.dec_b(),
+            0x06 => self.ld_b_n(&memory),
+            0x0C => self.inc_c(),
+            0x0D => self.dec_c(),
+            0x0E => self.ld_c_n(memory),
+            0x14 => self.inc_d(),
+            0x15 => self.dec_d(),
+            0x18 => self.jr_n(memory),
+            0x1E => self.ld_e_n(memory),
+            0x1F => self.rra(),
+            0x20 => self.jr_nz_n(memory),
+            0x21 => self.ld_hl_nn(memory),
+            0x23 => self.inc_hl(),
+            0x28 => self.jr_z_n(memory),
+            0x2A => self.ldi_a_mhl(memory),
+            0x30 => self.jr_nc_n(memory),
+            0x31 => self.ld_sp_nn(memory),
+            0x32 => self.ldd_mhl_a(memory),
+            0x38 => self.jr_c_n(memory),
+            0x3C => self.inc_a(),
+            0x3E => self.ld_a_n(memory),
+            0x4E => self.ld_c_mhl(memory),
+            0x49 => self.ld_c_c(),
+            0x60 => self.ld_h_b(),
+            0x66 => self.ld_h_mhl(memory),
+            0x6E => self.ld_l_mhl(memory),
+            0x78 => self.ld_a_b(),
+            0x7A => self.ld_a_d(),
+            0x7C => self.ld_a_h(),
+            0x7D => self.ld_a_l(),
+            0x7E => self.ld_a_mhl(memory),
+            0x89 => self.adc_a_c(),
+            0xAF => self.xor_a(),
+            0xB1 => self.or_c(),
+            0xC0 => self.ret_nz(memory),
+            0xC1 => self.pop_bc(memory),
+            0xC3 => self.jp_nn(memory),
+            0xC5 => self.push_bc(memory),
+            0xC6 => self.add_a_n(memory),
+            0xC9 => self.ret(memory),
+            0xCD => self.call(memory),
+            0xD6 => self.sub_n(memory),
+            0xDF => self.rst_18(memory),
+            0xE0 => self.ldh_n_a(memory),
+            0xE1 => self.pop_hl(memory),
+            0xE5 => self.push_hl(memory),
+            0xEA => self.ld_nn_a(memory),
+            0xF0 => self.ldh_a_n(memory),
+            0xF1 => self.pop_af(memory),
+            0xF3 => self.di(),
+            0xF5 => self.push_af(memory),
+            0xFE => self.cp_n(memory),
+            0xFF => self.rst_38(memory),
+            _ => {
+                println!("Instruction not implemented: {:X}", instruction);
+                println!("{:#X?}", self);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // --- INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------------
 
     /**
