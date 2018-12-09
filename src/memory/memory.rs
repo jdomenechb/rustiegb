@@ -1,6 +1,7 @@
 use super::read_only_memory_sector::ReadOnlyMemorySector;
 use super::internal_ram_memory_sector::InternalRamMemorySector;
 use super::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
+use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use super::timer_control::TimerControl;
 use super::interrupt_flag::InterruptFlag;
 use super::lcdc::LCDC;
@@ -9,6 +10,7 @@ use std::io::Read;
 
 pub struct Memory {
     rom: ReadOnlyMemorySector,
+    video_ram: VideoRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
 
     // FF07
@@ -16,6 +18,15 @@ pub struct Memory {
 
     // FF0F
     interrupt_flag: InterruptFlag,
+
+    // FF24
+    nr50: u8,
+
+    // FF25
+    nr51: u8,
+
+    // FF26
+    nr52: u8,
 
     // FF40
     lcdc: LCDC,
@@ -38,9 +49,13 @@ impl Memory {
 
         return Memory {
             rom: ReadOnlyMemorySector::new(data),
+            video_ram: VideoRam8kMemorySector::new(),
             internal_ram_8k: InternalRam8kMemorySector::new(),
             timer_control: TimerControl::new(),
             interrupt_flag: InterruptFlag::new(),
+            nr50: 0x77,
+            nr51: 0xf3,
+            nr52: 0xf1,
             lcdc: LCDC::new(),
             ly: 0,
             internal_ram: InternalRamMemorySector::new(),
@@ -54,9 +69,29 @@ impl Memory {
             return self.rom.read_8(position);
         }
 
+        // Video RAM
+        if position >= 0x8000 && position < 0xA000 {
+            return self.video_ram.read_8(position - 0x8000);
+        }
+
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             return self.internal_ram_8k.read_8(position - 0xC000);
+        }
+
+        // NR50
+        if position == 0xFF24 {
+            return self.nr50;
+        }
+
+        // NR51
+        if position == 0xFF25 {
+            return self.nr51;
+        }
+
+        // NR52
+        if position == 0xFF26 {
+            return self.nr52;
         }
 
         // LY
@@ -69,7 +104,7 @@ impl Memory {
             return self.internal_ram.read_8(position - 0xFF80);
         }
 
-        println!("ERROR: Memory address {:X} not accessible", position);
+        panic!("ERROR: Memory address {:X} not readable", position);
 
         return 0;
     }
@@ -86,6 +121,11 @@ impl Memory {
             return self.rom.read_16(position);
         }
 
+        // Video RAM
+        if position >= 0x8000 && position < 0xA000 {
+            return self.video_ram.read_16(position - 0x8000);
+        }
+
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             return self.internal_ram_8k.read_16(position - 0xC000);
@@ -96,7 +136,7 @@ impl Memory {
             return self.internal_ram.read_16(position - 0xFF80);
         }
 
-        println!("ERROR: Memory address {:X} not accessible", position);
+        panic!("ERROR: Memory address {:X} not readable", position);
 
         return 0;
     }
@@ -107,9 +147,21 @@ impl Memory {
             panic!("ROM is not writable!!!");
         }
 
+        // Video RAM
+        if position >= 0x8000 && position < 0xA000 {
+            self.video_ram.write_8(position - 0x8000, value);
+            return;
+        }
+
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             self.internal_ram_8k.write_8(position - 0xC000, value);
+            return;
+        }
+
+        // Timer Control
+        if position == 0xFF07 {
+            self.timer_control.from_u8(value);
             return;
         }
 
@@ -118,8 +170,26 @@ impl Memory {
             self.interrupt_flag.from_u8(value);
             return;
         }
+    
+        // NR50
+        if position == 0xFF24 {
+            self.nr50 = value;
+            return;
+        }
 
-        // Interrupt Flag
+        // NR51
+        if position == 0xFF25 {
+            self.nr51 = value;
+            return;
+        }
+
+        // NR52
+        if position == 0xFF26 {
+            self.nr52 = value;
+            return;
+        }
+
+        // LCDC
         if position == 0xFF40 {
             self.lcdc.from_u8(value);
             return;
@@ -131,12 +201,13 @@ impl Memory {
             return;
         }
 
-        // Timer Control
-        if position == 0xFF07 {
-            self.timer_control.from_u8(value);
+        // Empty but unusable for I/O
+        if position >= 0xFF4C && position < 0xFF80 {
+            println!("Attmept to write at position {:X}", position);
             return;
         }
 
+        
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
             self.internal_ram.write_8(position - 0xFF80, value);
@@ -148,7 +219,7 @@ impl Memory {
             return;
         }
 
-        println!("ERROR: Memory address {:X} not accessible", position);
+        panic!("ERROR: Memory address {:X} not writable", position);
     }
 
     pub fn write_16(&mut self, position: u16, value: u16) {
@@ -167,6 +238,6 @@ impl Memory {
             return self.internal_ram.write_16(position - 0xFF80, value);
         }
 
-        println!("ERROR: Memory address {:X} not accessible", position);
+        panic!("ERROR: Memory address {:X} not writable", position);
     }
 }
