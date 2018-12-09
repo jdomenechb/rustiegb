@@ -105,6 +105,7 @@ impl CPU {
             0x7E => self.ld_a_mhl(memory),
             0x89 => self.adc_a_c(),
             0xA9 => self.xor_c(),
+            0xAE => self.xor_mhl(memory),
             0xAF => self.xor_a(),
             0xB1 => self.or_c(),
             0xB7 => self.or_a(),
@@ -409,6 +410,26 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * XORs value in memory address HL with register A. Saves result in A. Sets flag Z if result is 0, resets N, H and C. 
+     */
+    pub fn xor_mhl(&mut self, memory: &Memory) {
+        println!("XOR (HL)");
+
+        let value = memory.read_8(self.registers.read_hl());
+        self.registers.a = value ^ self.registers.a;
+
+        let zero :bool = self.registers.a == 0;
+        self.registers.set_flag_z(zero);
+
+        self.registers.set_flag_c(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
