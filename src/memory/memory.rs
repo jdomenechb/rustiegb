@@ -31,6 +31,10 @@ pub struct Memory {
     // FF40
     lcdc: LCDC,
 
+    // FF42 and FF43
+    scy: u8, 
+    scx: u8,
+
     // FF44
     ly: u8,
 
@@ -57,6 +61,8 @@ impl Memory {
             nr51: 0xf3,
             nr52: 0xf1,
             lcdc: LCDC::new(),
+            scy: 0,
+            scx: 0,
             ly: 0,
             internal_ram: InternalRamMemorySector::new(),
             interrupt_enable: InterruptFlag::new()
@@ -92,6 +98,16 @@ impl Memory {
         // NR52
         if position == 0xFF26 {
             return self.nr52;
+        }
+
+        // SCY
+        if position == 0xFF42 {
+            return self.scy;
+        }
+
+        // SCX
+        if position == 0xFF43 {
+            return self.scx;
         }
 
         // LY
@@ -192,6 +208,18 @@ impl Memory {
         // LCDC
         if position == 0xFF40 {
             self.lcdc.from_u8(value);
+            return;
+        }
+
+        // SCY
+        if position == 0xFF42 {
+            self.scy = value;
+            return;
+        }
+
+        // SCX
+        if position == 0xFF43 {
+            self.scx = value;
             return;
         }
 
