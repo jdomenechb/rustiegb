@@ -93,6 +93,7 @@ impl CPU {
             0x3C => self.inc_a(),
             0x3E => self.ld_a_n(memory),
             0x46 => self.ld_b_mhl(memory),
+            0x47 => self.ld_b_a(),
             0x4E => self.ld_c_mhl(memory),
             0x49 => self.ld_c_c(),
             0x56 => self.ld_d_mhl(memory),
@@ -129,6 +130,7 @@ impl CPU {
             0xE5 => self.push_hl(memory),
             0xE6 => self.and_n(memory),
             0xEA => self.ld_nn_a(memory),
+            0xEE => self.xor_n(memory),
             0xF0 => self.ldh_a_n(memory),
             0xF1 => self.pop_af(memory),
             0xF3 => self.di(),
@@ -428,6 +430,26 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * XORs value 8 bits with register A. Saves result in A. Sets flag Z if result is 0, resets N, H and C. 
+     */
+    pub fn xor_n(&mut self, memory: &Memory) {
+        let value: u8 = memory.read_8(self.registers.pc + 1);
+        println!("XOR {:X}", value);
+
+        self.registers.a = value ^ self.registers.a;
+
+        let zero :bool = self.registers.a == 0;
+        self.registers.set_flag_z(zero);
+
+        self.registers.set_flag_c(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
     /**
@@ -757,6 +779,18 @@ impl CPU {
         self.registers.a = self.registers.b;
 
         println!("LD A,B");
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /** 
+     * Loads register A to register B. 
+     */
+    pub fn ld_b_a(&mut self) {
+        self.registers.b = self.registers.a;
+
+        println!("LD B,A");
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
