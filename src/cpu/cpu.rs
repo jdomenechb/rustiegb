@@ -117,6 +117,7 @@ impl CPU {
             0xC5 => self.push_bc(memory),
             0xC6 => self.add_a_n(memory),
             0xC9 => self.ret(memory),
+            0xCB => self.prefix_cb(memory),
             0xCD => self.call(memory),
             0xD5 => self.push_de(memory),
             0xD6 => self.sub_n(memory),
@@ -1183,6 +1184,67 @@ impl CPU {
         
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;
+    }
+
+    // --- PREFIX CB -----------------------------------------------------------------------------------------------------------------------
+
+    pub fn prefix_cb(&mut self, memory : &mut Memory)
+    {
+        let op: u8 = memory.read_8(self.registers.pc + 1);
+
+        print!("CB {:X}: ", op);
+
+        match op {
+            0x19 => self.rr_c(),
+            0x38 => self.srl_b(),
+            _ => {
+                println!("CB Instruction not implemented: {:X}", op);
+                panic!("{:#X?}", self);
+            }
+        }
+    }
+
+    /** 
+     * 
+     */
+    pub fn rr_c(&mut self)
+    {
+        println!("RR C");
+        let carry : bool = self.registers.b & 0b1 == 1;
+        let msf : u8 = if self.registers.is_flag_c() {0b10000000} else {0};
+
+        self.registers.b = msf | ((self.registers.b >> 1) & 0b01111111);
+
+        let zero :bool = self.registers.b == 0;
+        self.registers.set_flag_z(zero);
+        self.registers.set_flag_c(carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /** 
+     * Shifts bit 0 of register B to Carry, resets other flags, Z gets updated and MSF is preserved.
+     */
+    pub fn srl_b(&mut self)
+    {
+        println!("SRL B");
+        let carry : bool = self.registers.b & 0b1 == 1;
+        let msf : u8 = self.registers.b & 0b10000000;
+
+        self.registers.b = msf | ((self.registers.b >> 1) & 0b01111111);
+
+        let zero :bool = self.registers.b == 0;
+
+        self.registers.set_flag_z(zero);
+        self.registers.set_flag_c(carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
 
