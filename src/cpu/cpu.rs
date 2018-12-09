@@ -113,6 +113,7 @@ impl CPU {
             0xF1 => self.pop_af(memory),
             0xF3 => self.di(),
             0xF5 => self.push_af(memory),
+            0xFA => self.ld_a_nn(memory),
             0xFE => self.cp_n(memory),
             0xFF => self.rst_38(memory),
             _ => {
@@ -599,6 +600,20 @@ impl CPU {
         println!("LD ({:X}),A", mem_addr);
 
         memory.write_8(mem_addr, self.registers.a);
+
+        self.pc_to_increment = 3;
+        self.last_instruction_ccycles = 16;
+    }
+
+    /** 
+     * Writes value from memory address nn to register A. 
+     */
+    pub fn ld_a_nn(&mut self, memory: &mut Memory) {
+        let mem_addr:u16 = memory.read_16(self.registers.pc + 1);
+
+        println!("LD A, ({:X})", mem_addr);
+
+        self.registers.a = memory.read_8(mem_addr);
 
         self.pc_to_increment = 3;
         self.last_instruction_ccycles = 16;
