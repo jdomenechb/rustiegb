@@ -98,6 +98,7 @@ impl CPU {
             0x4E => self.ld_c_mhl(memory),
             0x4F => self.ld_c_a(),
             0x56 => self.ld_d_mhl(memory),
+            0x57 => self.ld_d_a(),
             0x5F => self.ld_e_a(),
             0x60 => self.ld_h_b(),
             0x66 => self.ld_h_mhl(memory),
@@ -106,6 +107,7 @@ impl CPU {
             0x78 => self.ld_a_b(),
             0x79 => self.ld_a_c(),
             0x7A => self.ld_a_d(),
+            0x7B => self.ld_a_e(),
             0x7C => self.ld_a_h(),
             0x7D => self.ld_a_l(),
             0x7E => self.ld_a_mhl(memory),
@@ -593,18 +595,6 @@ impl CPU {
     }
 
     /** 
-     * Loads register D to register A 
-     */
-    pub fn ld_a_d(&mut self) {
-        self.registers.a = self.registers.d;
-
-        println!("LD A,D");
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
      * Loads register H to register B. 
      */
     pub fn ld_h_b(&mut self) {
@@ -775,6 +765,30 @@ impl CPU {
     }
 
     /** 
+     * Loads register D to register A 
+     */
+    pub fn ld_a_d(&mut self) {
+        self.registers.a = self.registers.d;
+
+        println!("LD A,D");
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /** 
+     * Loads register E to register A 
+     */
+    pub fn ld_a_e(&mut self) {
+        self.registers.a = self.registers.e;
+
+        println!("LD A,E");
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /** 
      * Loads register H to register A. 
      */
     pub fn ld_a_h(&mut self) {
@@ -817,6 +831,18 @@ impl CPU {
         self.registers.c = self.registers.a;
 
         println!("LD C,A");
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /** 
+     * Loads register A to register D. 
+     */
+    pub fn ld_d_a(&mut self) {
+        self.registers.d = self.registers.a;
+
+        println!("LD D,A");
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
