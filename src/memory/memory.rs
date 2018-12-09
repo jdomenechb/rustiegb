@@ -12,35 +12,27 @@ pub struct Memory {
     rom: ReadOnlyMemorySector,
     video_ram: VideoRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
-
     // FF07
     timer_control: TimerControl,
-
     // FF0F
     interrupt_flag: InterruptFlag,
-
     // FF24
     nr50: u8,
-
     // FF25
     nr51: u8,
-
     // FF26
     nr52: u8,
-
     // FF40
     lcdc: LCDC,
-
-    // FF42 and FF43
+    // FF42 - FF43
     scy: u8, 
     scx: u8,
-
     // FF44
     ly: u8,
-
+    // FF47
+    bgp: u8,
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
-
     // FFFF
     interrupt_enable: InterruptFlag,
 }
@@ -64,6 +56,7 @@ impl Memory {
             scy: 0,
             scx: 0,
             ly: 0,
+            bgp: 0xFC,
             internal_ram: InternalRamMemorySector::new(),
             interrupt_enable: InterruptFlag::new()
         };
@@ -113,6 +106,11 @@ impl Memory {
         // LY
         if position == 0xFF44 {
             return self.ly;
+        }
+
+        // BGP
+        if position == 0xFF47 {
+            return self.bgp;
         }
 
         // Internal RAM
@@ -226,6 +224,12 @@ impl Memory {
         // LY
         if position == 0xFF44 {
             self.ly = value;
+            return;
+        }
+
+        // LY
+        if position == 0xFF47 {
+            self.bgp = value;
             return;
         }
 
