@@ -68,13 +68,16 @@ impl CPU {
             0x0D => self.dec_c(),
             0x0E => self.ld_c_n(memory),
             0x11 => self.ld_de_nn(memory),
+            0x13 => self.inc_de(),
             0x14 => self.inc_d(),
             0x15 => self.dec_d(),
             0x18 => self.jr_n(memory),
+            0x1A => self.ld_a_mde(memory),
             0x1E => self.ld_e_n(memory),
             0x1F => self.rra(),
             0x20 => self.jr_nz_n(memory),
             0x21 => self.ld_hl_nn(memory),
+            0x22 => self.ldi_mhl_a(memory),
             0x23 => self.inc_hl(),
             0x24 => self.inc_h(),
             0x28 => self.jr_z_n(memory),
@@ -98,6 +101,7 @@ impl CPU {
             0x7D => self.ld_a_l(),
             0x7E => self.ld_a_mhl(memory),
             0x89 => self.adc_a_c(),
+            0xA9 => self.xor_c(),
             0xAF => self.xor_a(),
             0xB1 => self.or_c(),
             0xC0 => self.ret_nz(memory),
@@ -199,21 +203,31 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
-    pub fn inc_hl(&mut self) {
-        println!("INC HL");
-
-        let value = self.registers.read_hl();
-        self.registers.write_hl(self.alu.inc_nn(value));
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
     pub fn inc_bc(&mut self) {
         println!("INC BC");
 
         let value = self.registers.read_bc();
         self.registers.write_bc(self.alu.inc_nn(value));
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    pub fn inc_de(&mut self) {
+        println!("INC DE");
+
+        let value = self.registers.read_de();
+        self.registers.write_de(self.alu.inc_nn(value));
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    pub fn inc_hl(&mut self) {
+        println!("INC HL");
+
+        let value = self.registers.read_hl();
+        self.registers.write_hl(self.alu.inc_nn(value));
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
@@ -347,6 +361,25 @@ impl CPU {
         println!("XOR A");
 
         self.registers.a = self.registers.a ^ self.registers.a;
+
+        let zero :bool = self.registers.a == 0;
+        self.registers.set_flag_z(zero);
+
+        self.registers.set_flag_c(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * XORs register C with register A. Saves result in A. Sets flag Z if result is 0, resets N, H and C. 
+     */
+    pub fn xor_c(&mut self) {
+        println!("XOR C");
+
+        self.registers.a = self.registers.c ^ self.registers.a;
 
         let zero :bool = self.registers.a == 0;
         self.registers.set_flag_z(zero);
@@ -557,6 +590,18 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+     /** 
+     * Loads value (DE) to register A. 
+     */
+    pub fn ld_a_mde(&mut self, memory: &Memory) {
+        self.registers.a = memory.read_8(self.registers.read_de());
+
+        println!("LD A,(DE)");
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
     /** 
      * Loads value (HL) to register A. 
      */
@@ -674,6 +719,21 @@ impl CPU {
 
         let value :u16 = self.registers.read_hl();
         self.registers.write_hl(self.alu.dec_nn(value));
+    
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /** 
+     * Writes value from register A to memory address contained in HL and increases HL. 
+     */
+    pub fn ldi_mhl_a(&mut self, memory: &mut Memory) {
+        println!("LDI (HL),A");
+
+        memory.write_8(self.registers.read_hl(), self.registers.a);
+
+        let value :u16 = self.registers.read_hl();
+        self.registers.write_hl(self.alu.inc_nn(value));
     
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
