@@ -52,8 +52,6 @@ fn main() {
         // Keys
         // TODO
 
-        //sleep(Duration::from_millis(50));
-
         if let Some(r) = e.render_args() {
             if debug && i % 1 == 0 {
                 println!("{:#X?}", cpu);
@@ -61,12 +59,17 @@ fn main() {
             }
 
             gpu.render(&r);
+            cpu.reset_available_ccycles();
 
             i += 1;
         }
 
         if let Some(u) = e.update_args() {
-            cpu.step(&mut memory);
+            while cpu.has_available_ccycles() {
+                cpu.step(&mut memory);
+                //sleep(Duration::from_millis(200));
+            }
+
             gpu.update(&u);
         }
     }

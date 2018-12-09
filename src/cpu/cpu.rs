@@ -6,19 +6,41 @@ use ::memory::memory::Memory;
 pub struct CPU {
     pub registers: CPURegisters,
     alu: ALU,
-    trace: bool
+    trace: bool,
+    available_cycles: i32,
+
+    pc_to_increment: i8,
+    last_instruction_ccycles: i8,
+
 }
 
 impl CPU {
+    const AVAILABLE_CCYCLES_PER_FRAME: i32 = 70224;
+
     pub fn new() -> CPU {
         return CPU {
             registers: CPURegisters::new(),
             alu: ALU {},
-            trace: false
+            trace: false,
+            available_cycles: CPU::AVAILABLE_CCYCLES_PER_FRAME,
+
+            pc_to_increment: -1,
+            last_instruction_ccycles: -1
         }
     }
 
-    pub fn step(&mut self, memory: &mut Memory) -> bool {
+    pub fn reset_available_ccycles(&mut self) {
+        self.available_cycles = CPU::AVAILABLE_CCYCLES_PER_FRAME;
+    }
+
+    pub fn has_available_ccycles(&self) -> bool {
+        return self.available_cycles > 0;
+    }
+
+    pub fn step(&mut self, memory: &mut Memory) {
+        self.pc_to_increment = -1;
+        self.last_instruction_ccycles = -1;
+
         let instruction: u8 = memory.read_8(self.registers.pc);
 
         //println!("{:X} ", memory.read_8(0x2A4));
@@ -95,12 +117,22 @@ impl CPU {
             0xFF => self.rst_38(memory),
             _ => {
                 println!("Instruction not implemented: {:X}", instruction);
-                println!("{:#X?}", self);
-                return false;
+                panic!("{:#X?}", self);
             }
         }
 
-        return true;
+        if self.last_instruction_ccycles < 0 {
+            panic!("Instruction does not count ccycles: {:X}", instruction);
+        }
+
+        if self.pc_to_increment < 0 {
+            panic!("Instruction does not increment PC: {:X}", instruction);
+        }
+
+        self.available_cycles -= self.last_instruction_ccycles as i32;
+        //println!("Cycles left: {}", self.available_cycles);
+
+        self.registers.pc += self.pc_to_increment as u16;
     }
 
     // --- INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------------
@@ -111,7 +143,8 @@ impl CPU {
     pub fn nop(&mut self) {
         println!("NOP");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
 
@@ -127,7 +160,8 @@ impl CPU {
         let value = self.alu.sub_n(&mut self.registers, value, 1);
         self.registers.b = value;
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /**
@@ -140,7 +174,8 @@ impl CPU {
         let value = self.alu.sub_n(&mut self.registers, value, 1);
         self.registers.c = value;
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /**
@@ -153,7 +188,8 @@ impl CPU {
         let value = self.alu.sub_n(&mut self.registers, value, 1);
         self.registers.d = value;
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     pub fn inc_hl(&mut self) {
@@ -161,7 +197,9 @@ impl CPU {
 
         let value = self.registers.read_hl();
         self.registers.write_hl(self.alu.inc_nn(value));
-        self.registers.pc += 1;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     pub fn inc_bc(&mut self) {
@@ -169,7 +207,9 @@ impl CPU {
 
         let value = self.registers.read_bc();
         self.registers.write_bc(self.alu.inc_nn(value));
-        self.registers.pc += 1;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     pub fn inc_a(&mut self) {
@@ -178,7 +218,9 @@ impl CPU {
         let value :u8 = self.registers.a;
         let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
         self.registers.a = value;
-        self.registers.pc += 1;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     pub fn inc_d(&mut self) {
@@ -187,7 +229,9 @@ impl CPU {
         let value :u8 = self.registers.d;
         let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
         self.registers.d = value;
-        self.registers.pc += 1;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     pub fn inc_c(&mut self) {
@@ -196,7 +240,9 @@ impl CPU {
         let value :u8 = self.registers.c;
         let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
         self.registers.c = value;
-        self.registers.pc += 1;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     pub fn adc_a_c(&mut self) {
@@ -208,7 +254,8 @@ impl CPU {
         let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
         self.registers.a = result;
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     pub fn add_a_n(&mut self, memory: &Memory) {
@@ -220,7 +267,8 @@ impl CPU {
         let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
         self.registers.a = result;
 
-        self.registers.pc += 2;
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
     /**
@@ -234,7 +282,8 @@ impl CPU {
         let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
         self.registers.d = value;
 
-        self.registers.pc += 2;
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
 
@@ -258,7 +307,8 @@ impl CPU {
 
         self.registers.a = new_a;
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /**
@@ -276,7 +326,8 @@ impl CPU {
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /** 
@@ -292,7 +343,8 @@ impl CPU {
 
         self.registers.a = result;
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
 
@@ -306,7 +358,8 @@ impl CPU {
 
         self.alu.cp_n(&mut self.registers, a, n);
 
-        self.registers.pc += 2;
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
 
@@ -320,7 +373,8 @@ impl CPU {
 
         println!("LD B,{:X}", self.registers.b);
 
-        self.registers.pc += 2;
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -331,7 +385,8 @@ impl CPU {
 
         println!("LD C,{:X}", self.registers.c);
 
-        self.registers.pc += 2;
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -342,18 +397,20 @@ impl CPU {
 
         println!("LD C,C");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /** 
-     * Loads register C to register C. 
+     * Loads register D to register A 
      */
     pub fn ld_a_d(&mut self) {
         self.registers.a = self.registers.d;
 
         println!("LD A,D");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /** 
@@ -364,7 +421,8 @@ impl CPU {
 
         println!("LD H,B");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
      
 
@@ -376,7 +434,8 @@ impl CPU {
 
         println!("LD E,{:X}", self.registers.e);
 
-        self.registers.pc += 2;
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -388,7 +447,8 @@ impl CPU {
 
         println!("LD HL,{:X}", self.registers.read_hl());
 
-        self.registers.pc += 3;
+        self.pc_to_increment = 3;
+        self.last_instruction_ccycles = 12;
     }
 
     /** 
@@ -399,7 +459,8 @@ impl CPU {
 
         println!("LD SP,{:X}", self.registers.sp);
 
-        self.registers.pc += 3;
+        self.pc_to_increment = 3;
+        self.last_instruction_ccycles = 12;
     }
 
     /** 
@@ -410,7 +471,8 @@ impl CPU {
 
         println!("LD A,{:X}", self.registers.a);
 
-        self.registers.pc += 2;
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -421,7 +483,8 @@ impl CPU {
 
         println!("LD C,(HL)");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -432,7 +495,8 @@ impl CPU {
 
         println!("LD L,(HL)");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -443,7 +507,8 @@ impl CPU {
 
         println!("LD H,(HL)");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -454,7 +519,8 @@ impl CPU {
 
         println!("LD A,(HL)");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -465,7 +531,8 @@ impl CPU {
 
         println!("LD A,H");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /** 
@@ -476,7 +543,8 @@ impl CPU {
 
         println!("LD A,L");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /** 
@@ -487,7 +555,8 @@ impl CPU {
 
         println!("LD A,B");
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /** 
@@ -502,7 +571,8 @@ impl CPU {
 
         memory.write_8(mem_addr, self.registers.a);
 
-        self.registers.pc += 2;
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 12;
     }
 
     /** 
@@ -516,7 +586,8 @@ impl CPU {
         let mem_addr: u16 = 0xFF00 + to_sum;
         self.registers.a = memory.read_8(mem_addr);
 
-        self.registers.pc += 2;
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 12;
     }
 
     /** 
@@ -529,7 +600,8 @@ impl CPU {
 
         memory.write_8(mem_addr, self.registers.a);
 
-        self.registers.pc += 3;
+        self.pc_to_increment = 3;
+        self.last_instruction_ccycles = 16;
     }
 
     /** 
@@ -543,7 +615,8 @@ impl CPU {
         let value :u16 = self.registers.read_hl();
         self.registers.write_hl(self.alu.dec_nn(value));
     
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /** 
@@ -554,7 +627,8 @@ impl CPU {
 
         memory.write_8(self.registers.read_bc(), self.registers.a);
     
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     pub fn ldi_a_mhl(&mut self, memory: &Memory) {
@@ -563,7 +637,8 @@ impl CPU {
         let value: u8 = memory.read_8(self.registers.read_hl());
         self.registers.a = value;
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -575,7 +650,8 @@ impl CPU {
 
         println!("LD BC,{:X}", self.registers.read_bc());
 
-        self.registers.pc += 3;
+        self.pc_to_increment = 3;
+        self.last_instruction_ccycles = 12;
     }
 
 
@@ -588,6 +664,9 @@ impl CPU {
         let to_sum = memory.read_8_signed(self.registers.pc + 1) + 2;
 
         self.registers.pc += to_sum as u16;
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 12;
 
         println!("JR {:X}", self.registers.pc);
     }
@@ -604,7 +683,12 @@ impl CPU {
 
         if !self.registers.is_flag_z() {
             self.registers.pc = (self.registers.pc as i16 + possible_value as i16) as u16;
+            self.last_instruction_ccycles = 12;
+        } else {
+            self.last_instruction_ccycles = 8;
         }
+
+        self.pc_to_increment = 0;
     }
 
     /**
@@ -619,7 +703,12 @@ impl CPU {
 
         if self.registers.is_flag_z() {
             self.registers.pc = (self.registers.pc as i16 + possible_value as i16) as u16;
+            self.last_instruction_ccycles = 12;
+        } else {
+            self.last_instruction_ccycles = 8;
         }
+
+        self.pc_to_increment = 0;
     }
 
     /**
@@ -634,7 +723,12 @@ impl CPU {
 
         if self.registers.is_flag_c() {
             self.registers.pc = (self.registers.pc as i16 + possible_value as i16) as u16;
+            self.last_instruction_ccycles = 12;
+        } else {
+            self.last_instruction_ccycles = 8;
         }
+
+        self.pc_to_increment = 0;
     }
 
     /**
@@ -649,7 +743,12 @@ impl CPU {
 
         if !self.registers.is_flag_c() {
             self.registers.pc = (self.registers.pc as i16 + possible_value as i16) as u16;
+            self.last_instruction_ccycles = 12;
+        } else {
+            self.last_instruction_ccycles = 8;
         }
+
+        self.pc_to_increment = 0;
     }
 
     /**
@@ -659,6 +758,9 @@ impl CPU {
         self.registers.pc = memory.read_16(self.registers.pc + 1);
 
         println!("JP {:X}", self.registers.pc);
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 16;
     }
 
 
@@ -674,6 +776,9 @@ impl CPU {
         self.registers.pc = memory.read_16(self.registers.pc + 1);
 
         println!("CALL {:X}", self.registers.pc);
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 24;
     }
 
     /**
@@ -681,7 +786,11 @@ impl CPU {
      */
     pub fn ret(&mut self, memory: &mut Memory) {
         println!("RET");
+
         self.registers.pc = self.pop_nn(memory);
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 16;
     }
 
     /**
@@ -692,10 +801,13 @@ impl CPU {
 
         if !self.registers.is_flag_z() {
             self.registers.pc = self.pop_nn(memory);
+            self.last_instruction_ccycles = 20;
         } else {
             self.registers.pc += 1;
+            self.last_instruction_ccycles = 8;
         }
         
+        self.pc_to_increment = 0;
     }
 
 
@@ -707,6 +819,9 @@ impl CPU {
         self.push_nn(memory, current_addr);
 
         self.registers.pc = 0x18;
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 16;
     }
 
     pub fn rst_38(&mut self, memory: &mut Memory) {
@@ -715,6 +830,9 @@ impl CPU {
         self.push_nn(memory, current_addr);
 
         self.registers.pc = 0x38;
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 16;
     }
 
 
@@ -727,7 +845,9 @@ impl CPU {
         println!("PUSH HL");
         let reg: u16 = self.registers.read_hl();
         self.push_nn(memory, reg);
-        self.registers.pc += 1;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 16;
     }
 
     /**
@@ -737,7 +857,9 @@ impl CPU {
         println!("PUSH BC");
         let reg: u16 = self.registers.read_bc();
         self.push_nn(memory, reg);
-        self.registers.pc += 1;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 16;
     }
 
     /**
@@ -747,7 +869,9 @@ impl CPU {
         println!("PUSH AF");
         let reg: u16 = self.registers.read_af();
         self.push_nn(memory, reg);
-        self.registers.pc += 1;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 16;
     }
 
     /**
@@ -759,7 +883,8 @@ impl CPU {
         let popped: u16 = self.pop_nn(memory);
         self.registers.write_af(popped);
         
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 12;
     }
 
     /**
@@ -771,7 +896,8 @@ impl CPU {
         let popped: u16 = self.pop_nn(memory);
         self.registers.write_bc(popped);
         
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 12;
     }
 
     /**
@@ -783,7 +909,8 @@ impl CPU {
         let popped: u16 = self.pop_nn(memory);
         self.registers.write_hl(popped);
         
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 12;
     }
 
 
@@ -797,7 +924,8 @@ impl CPU {
         
         // TODO
 
-        self.registers.pc += 1;
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
 
