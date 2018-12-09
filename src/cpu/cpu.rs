@@ -80,6 +80,7 @@ impl CPU {
             0x22 => self.ldi_mhl_a(memory),
             0x23 => self.inc_hl(),
             0x24 => self.inc_h(),
+            0x25 => self.dec_h(),
             0x26 => self.ld_h_n(&memory),
             0x28 => self.jr_z_n(memory),
             0x2A => self.ldi_a_mhl(memory),
@@ -206,6 +207,20 @@ impl CPU {
         let value = self.registers.d;
         let value = self.alu.sub_n(&mut self.registers, value, 1);
         self.registers.d = value;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * Decrease register H.
+     */
+    pub fn dec_h(&mut self) {
+        println!("DEC H");
+
+        let value = self.registers.h;
+        let value = self.alu.sub_n(&mut self.registers, value, 1);
+        self.registers.h = value;
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
