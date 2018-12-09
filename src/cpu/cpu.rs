@@ -764,7 +764,7 @@ impl CPU {
     }
 
     pub fn ldi_a_mhl(&mut self, memory: &Memory) {
-        println!("LDI A, (HL)");
+        println!("LDI A,(HL)");
 
         let value: u8 = memory.read_8(self.registers.read_hl());
         self.registers.a = value;
