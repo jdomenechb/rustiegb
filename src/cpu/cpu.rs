@@ -1196,6 +1196,7 @@ impl CPU {
 
         match op {
             0x19 => self.rr_c(),
+            0x1A => self.rr_d(),
             0x38 => self.srl_b(),
             _ => {
                 println!("CB Instruction not implemented: {:X}", op);
@@ -1205,17 +1206,38 @@ impl CPU {
     }
 
     /** 
-     * 
+     * Rotate right through carry register C.
      */
     pub fn rr_c(&mut self)
     {
         println!("RR C");
-        let carry : bool = self.registers.b & 0b1 == 1;
+        let carry : bool = self.registers.c & 0b1 == 1;
         let msf : u8 = if self.registers.is_flag_c() {0b10000000} else {0};
 
-        self.registers.b = msf | ((self.registers.b >> 1) & 0b01111111);
+        self.registers.c = msf | ((self.registers.c >> 1) & 0b01111111);
 
-        let zero :bool = self.registers.b == 0;
+        let zero :bool = self.registers.c == 0;
+        self.registers.set_flag_z(zero);
+        self.registers.set_flag_c(carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /** 
+     * Rotate right through carry register D.
+     */
+    pub fn rr_d(&mut self)
+    {
+        println!("RR D");
+        let carry : bool = self.registers.d & 0b1 == 1;
+        let msf : u8 = if self.registers.is_flag_c() {0b10000000} else {0};
+
+        self.registers.d = msf | ((self.registers.d >> 1) & 0b01111111);
+
+        let zero :bool = self.registers.d == 0;
         self.registers.set_flag_z(zero);
         self.registers.set_flag_c(carry);
         self.registers.set_flag_h(false);
