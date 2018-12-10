@@ -12,6 +12,11 @@ pub struct Memory {
     rom: ReadOnlyMemorySector,
     video_ram: VideoRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
+    
+    // FF01
+    serial_transfer_data: u8,
+    // FF02
+    sio_control: u8,
     // FF07
     timer_control: TimerControl,
     // FF0F
@@ -47,6 +52,8 @@ impl Memory {
             rom: ReadOnlyMemorySector::new(data),
             video_ram: VideoRam8kMemorySector::new(),
             internal_ram_8k: InternalRam8kMemorySector::new(),
+            serial_transfer_data: 0,
+            sio_control: 0,
             timer_control: TimerControl::new(),
             interrupt_flag: InterruptFlag::new(),
             nr50: 0x77,
@@ -76,6 +83,16 @@ impl Memory {
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             return self.internal_ram_8k.read_8(position - 0xC000);
+        }
+
+        // Serial transfer data
+        if position == 0xFF01 {
+            return self.serial_transfer_data;
+        }
+
+        // SIO control
+        if position == 0xFF02 {
+            return self.sio_control;
         }
 
         // NR50
@@ -170,6 +187,18 @@ impl Memory {
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             self.internal_ram_8k.write_8(position - 0xC000, value);
+            return;
+        }
+
+        // Serial transfer data
+        if position == 0xFF01 {
+            self.serial_transfer_data = value;
+            return;
+        }
+
+        // Serial transfer data
+        if position == 0xFF02 {
+            self.sio_control = value;
             return;
         }
 
