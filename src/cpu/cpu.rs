@@ -120,6 +120,7 @@ impl CPU {
             0xAE => self.xor_mhl(memory),
             0xAF => self.xor_a(),
             0xB1 => self.or_c(),
+            0xB6 => self.or_mhl(memory),
             0xB7 => self.or_a(),
             0xC0 => self.ret_nz(memory),
             0xC1 => self.pop_bc(memory),
@@ -543,6 +544,23 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
+    }
+
+    /** 
+     * OR of memory address HL with register A, result in A.
+     */
+    pub fn or_mhl(&mut self, memory: &Memory) {
+        println!("OR (HL)");
+
+        let value1 : u8 = memory.read_8(self.registers.read_hl());
+        let value2 : u8 = self.registers.a;
+
+        let result: u8 = self.alu.or_n(&mut self.registers, value1, value2); 
+
+        self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
