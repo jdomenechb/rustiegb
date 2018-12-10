@@ -129,6 +129,7 @@ impl CPU {
             0xC9 => self.ret(memory),
             0xCB => self.prefix_cb(memory),
             0xCD => self.call(memory),
+            0xCE => self.adc_a_n(memory),
             0xD1 => self.pop_de(memory),
             0xD5 => self.push_de(memory),
             0xD6 => self.sub_n(memory),
@@ -347,6 +348,20 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
+    }
+
+    pub fn adc_a_n(&mut self, memory : &Memory) {
+        let value1 :u8 = self.registers.a;
+        let mut value2 :u8 = memory.read_8(self.registers.pc + 1);
+        println!("ADC A,{:X}", value2);
+
+        value2 += self.registers.is_flag_c() as u8;
+
+        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+        self.registers.a = result;
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
     pub fn add_a_n(&mut self, memory: &Memory) {
