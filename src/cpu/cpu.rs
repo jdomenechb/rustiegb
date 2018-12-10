@@ -103,6 +103,8 @@ impl CPU {
             0x60 => self.ld_h_b(),
             0x66 => self.ld_h_mhl(memory),
             0x6E => self.ld_l_mhl(memory),
+            0x70 => self.ld_mhl_b(memory),
+            0x71 => self.ld_mhl_c(memory),
             0x72 => self.ld_mhl_d(memory),
             0x77 => self.ld_mhl_a(memory),
             0x78 => self.ld_a_b(),
@@ -127,6 +129,7 @@ impl CPU {
             0xC9 => self.ret(memory),
             0xCB => self.prefix_cb(memory),
             0xCD => self.call(memory),
+            0xD1 => self.pop_de(memory),
             0xD5 => self.push_de(memory),
             0xD6 => self.sub_n(memory),
             0xDF => self.rst_18(memory),
@@ -975,6 +978,30 @@ impl CPU {
     }
 
     /** 
+     * Writes value from register B to memory address contained in HL. 
+     */
+    pub fn ld_mhl_b(&mut self, memory: &mut Memory) {
+        println!("LD (HL),B");
+
+        memory.write_8(self.registers.read_hl(), self.registers.b);
+    
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /** 
+     * Writes value from register C to memory address contained in HL. 
+     */
+    pub fn ld_mhl_c(&mut self, memory: &mut Memory) {
+        println!("LD (HL),C");
+
+        memory.write_8(self.registers.read_hl(), self.registers.c);
+    
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /** 
      * Writes value from register D to memory address contained in HL. 
      */
     pub fn ld_mhl_d(&mut self, memory: &mut Memory) {
@@ -1295,6 +1322,19 @@ impl CPU {
 
         let popped: u16 = self.pop_nn(memory);
         self.registers.write_bc(popped);
+        
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 12;
+    }
+
+    /**
+     * Pops stack to DE.
+     */
+    pub fn pop_de(&mut self, memory : &mut Memory) {
+        println!("POP DE");
+
+        let popped: u16 = self.pop_nn(memory);
+        self.registers.write_de(popped);
         
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;
