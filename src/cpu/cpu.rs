@@ -91,6 +91,7 @@ impl CPU {
             0x32 => self.ldd_mhl_a(memory),
             0x38 => self.jr_c_n(memory),
             0x3C => self.inc_a(),
+            0x3D => self.dec_a(),
             0x3E => self.ld_a_n(memory),
             0x46 => self.ld_b_mhl(memory),
             0x47 => self.ld_b_a(),
@@ -130,6 +131,7 @@ impl CPU {
             0xCB => self.prefix_cb(memory),
             0xCD => self.call(memory),
             0xCE => self.adc_a_n(memory),
+            0xD0 => self.ret_nc(memory),
             0xD1 => self.pop_de(memory),
             0xD5 => self.push_de(memory),
             0xD6 => self.sub_n(memory),
@@ -181,6 +183,20 @@ impl CPU {
 
 
     // --- ARITHMETIC INSTRUCTIONS ----------------------------------------------------------------------------------------------------------
+
+    /**
+     * Decrease register A.
+     */
+    pub fn dec_a(&mut self) {
+        println!("DEC A");
+
+        let value = self.registers.a;
+        let value = self.alu.sub_n(&mut self.registers, value, 1);
+        self.registers.a = value;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
 
     /**
      * Decrease register B.
@@ -1240,6 +1256,22 @@ impl CPU {
         self.pc_to_increment = 0;
     }
 
+    /**
+     * Pop two bytes from stack & jump to that address if flag C is not set.
+     */
+    pub fn ret_nc(&mut self, memory: &mut Memory) {
+        println!("RET NC");
+
+        if !self.registers.is_flag_c() {
+            self.registers.pc = self.pop_nn(memory);
+            self.last_instruction_ccycles = 20;
+        } else {
+            self.registers.pc += 1;
+            self.last_instruction_ccycles = 8;
+        }
+        
+        self.pc_to_increment = 0;
+    }
 
     // --- RESTART INSTRUCTIONS ------------------------------------------------------------------------------------------------------------
 
