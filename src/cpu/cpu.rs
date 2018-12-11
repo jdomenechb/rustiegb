@@ -96,6 +96,7 @@ impl CPU {
             0x31 => self.ld_sp_nn(memory),
             0x32 => self.ldd_mhl_a(memory),
             0x35 => self.dec_mhl(memory),
+            0x36 => self.ld_mhl_n(memory),
             0x38 => self.jr_c_n(memory),
             0x3C => self.inc_a(),
             0x3D => self.dec_a(),
@@ -1076,6 +1077,20 @@ impl CPU {
     
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
+    }
+
+    /** 
+     * Writes 8bit value to memory address contained in HL. 
+     */
+    pub fn ld_mhl_n(&mut self, memory: &mut Memory) {
+        let value = memory.read_8(self.registers.pc + 1);
+
+        println!("LD (HL),{:X}", value);
+
+        memory.write_8(self.registers.read_hl(), value);
+    
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 12;
     }
 
     pub fn ldi_a_mhl(&mut self, memory: &Memory) {
