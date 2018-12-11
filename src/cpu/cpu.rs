@@ -89,6 +89,7 @@ impl CPU {
             0x30 => self.jr_nc_n(memory),
             0x31 => self.ld_sp_nn(memory),
             0x32 => self.ldd_mhl_a(memory),
+            0x35 => self.dec_mhl(memory),
             0x38 => self.jr_c_n(memory),
             0x3C => self.inc_a(),
             0x3D => self.dec_a(),
@@ -267,6 +268,20 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * Decrease value of memory address in HL.
+     */
+    pub fn dec_mhl(&mut self, memory: &mut Memory) {
+        println!("DEC (HL)");
+
+        let value = memory.read_8(self.registers.read_hl());
+        let value = self.alu.sub_n(&mut self.registers, value, 1);
+        memory.write_8(self.registers.read_hl(), value);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 12;
     }
 
     pub fn inc_bc(&mut self) {
