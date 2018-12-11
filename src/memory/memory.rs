@@ -29,6 +29,8 @@ pub struct Memory {
     nr52: u8,
     // FF40
     lcdc: LCDC,
+    // FF41
+    stat: u8,
     // FF42 - FF43
     scy: u8, 
     scx: u8,
@@ -60,6 +62,7 @@ impl Memory {
             nr51: 0xf3,
             nr52: 0xf1,
             lcdc: LCDC::new(),
+            stat: 0,
             scy: 0,
             scx: 0,
             ly: 0,
@@ -108,6 +111,11 @@ impl Memory {
         // NR52
         if position == 0xFF26 {
             return self.nr52;
+        }
+
+        // STAT
+        if position == 0xFF41 {
+            return self.stat;
         }
 
         // SCY
@@ -238,6 +246,12 @@ impl Memory {
             return;
         }
 
+        // STAT
+        if position == 0xFF41 {
+            self.stat = value;
+            return;
+        }
+
         // SCY
         if position == 0xFF42 {
             self.scy = value;
@@ -256,7 +270,7 @@ impl Memory {
             return;
         }
 
-        // LY
+        // BGP
         if position == 0xFF47 {
             self.bgp = value;
             return;
@@ -275,6 +289,7 @@ impl Memory {
             return;
         }
 
+        // Interrupt enable
         if position == 0xFFFF {
             self.interrupt_enable.from_u8(value);
             return;
@@ -287,6 +302,10 @@ impl Memory {
         // ROM
         if position < 0x8000 {
             panic!("ROM is not writable!!!");
+        }
+
+        if position >= 0x8000 && position < 0xA000 {
+            return self.video_ram.write_16(position - 0x8000, value);
         }
 
         // Internal RAM 8k
