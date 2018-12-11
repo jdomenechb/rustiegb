@@ -37,6 +37,12 @@ impl CPU {
         return self.available_cycles > 0;
     }
 
+    pub fn get_last_instruction_ccycles(&self) -> u8 {
+        debug_assert!(self.last_instruction_ccycles >= 0, "No instruction has been executed yet");
+
+        return self.last_instruction_ccycles as u8;
+    }
+
     pub fn step(&mut self, memory: &mut Memory) {
         self.pc_to_increment = -1;
         self.last_instruction_ccycles = -1;
@@ -157,13 +163,8 @@ impl CPU {
             }
         }
 
-        if self.last_instruction_ccycles < 0 {
-            panic!("Instruction does not count ccycles: {:X}", instruction);
-        }
-
-        if self.pc_to_increment < 0 {
-            panic!("Instruction does not increment PC: {:X}", instruction);
-        }
+        debug_assert!(self.last_instruction_ccycles >= 0, "Instruction does not count ccycles: {:X}", instruction);
+        debug_assert!(self.pc_to_increment >= 0, "Instruction does not increment PC: {:X}", instruction);
 
         self.available_cycles -= self.last_instruction_ccycles as i32;
         //println!("Cycles left: {}", self.available_cycles);

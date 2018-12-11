@@ -5,6 +5,8 @@ use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use super::timer_control::TimerControl;
 use super::interrupt_flag::InterruptFlag;
 use super::lcdc::LCDC;
+use super::stat::STAT;
+
 use std::fs::File;
 use std::io::Read;
 
@@ -30,14 +32,16 @@ pub struct Memory {
     // FF40
     lcdc: LCDC,
     // FF41
-    stat: u8,
+    pub stat: STAT,
     // FF42 - FF43
     scy: u8, 
     scx: u8,
     // FF44
-    ly: u8,
-    // FF47
+    pub ly: u8,
+    // FF47 - FF49
     bgp: u8,
+    obp1: u8,
+    obp2: u8,
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
     // FFFF
@@ -62,11 +66,13 @@ impl Memory {
             nr51: 0xf3,
             nr52: 0xf1,
             lcdc: LCDC::new(),
-            stat: 0,
+            stat: STAT::new(),
             scy: 0,
             scx: 0,
             ly: 0,
             bgp: 0xFC,
+            obp1: 0xFF,
+            obp2: 0xFF,
             internal_ram: InternalRamMemorySector::new(),
             interrupt_enable: InterruptFlag::new()
         };
@@ -115,7 +121,7 @@ impl Memory {
 
         // STAT
         if position == 0xFF41 {
-            return self.stat;
+            return self.stat.to_u8();
         }
 
         // SCY
@@ -136,6 +142,16 @@ impl Memory {
         // BGP
         if position == 0xFF47 {
             return self.bgp;
+        }
+
+        // OBP1
+        if position == 0xFF48 {
+            return self.obp1;
+        }
+
+        // OBP2
+        if position == 0xFF49 {
+            return self.obp2;
         }
 
         // Internal RAM
@@ -248,7 +264,7 @@ impl Memory {
 
         // STAT
         if position == 0xFF41 {
-            self.stat = value;
+            self.stat.from_u8(value);
             return;
         }
 
@@ -273,6 +289,18 @@ impl Memory {
         // BGP
         if position == 0xFF47 {
             self.bgp = value;
+            return;
+        }
+
+        // OBP1
+        if position == 0xFF48 {
+            self.obp1 = value;
+            return;
+        }
+
+        // OBP2
+        if position == 0xFF49 {
+            self.obp2 = value;
             return;
         }
 

@@ -6,3 +6,4 @@ pub mod read_only_memory_sector;
 pub mod timer_control;
 pub mod interrupt_flag;
 pub mod lcdc;
+pub mod stat;

@@ -67,6 +67,7 @@ fn main() {
         if let Some(u) = e.update_args() {
             while cpu.has_available_ccycles() {
                 cpu.step(&mut memory);
+                gpu.step(cpu.get_last_instruction_ccycles(), &mut memory);
                 //sleep(Duration::from_millis(200));
             }
 
