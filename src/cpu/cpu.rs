@@ -1,6 +1,7 @@
 use super::registers::CPURegisters;
 use super::alu::ALU;
-use ::memory::memory::Memory;
+use crate::memory::memory::Memory;
+
 
 #[derive(Debug)]
 pub struct CPU {

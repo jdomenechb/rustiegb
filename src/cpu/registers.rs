@@ -45,11 +45,11 @@ impl CPURegisters {
      * Reads combination of register A and register F.
      */
     pub fn read_af(&self) -> u16 {
-        return ::math::two_u8_to_u16(self.a, self.f);
+        return crate::math::two_u8_to_u16(self.a, self.f);
     }
 
     pub fn write_af(&mut self, value : u16) {
-        let parts: (u8, u8) = ::math::u16_to_two_u8(value);
+        let parts: (u8, u8) = crate::math::u16_to_two_u8(value);
         self.a = parts.0;
         self.f = parts.1;
     }
@@ -58,11 +58,11 @@ impl CPURegisters {
      * Reads combination of register B and register C.
      */
     pub fn read_bc(&self) -> u16 {
-        return ::math::two_u8_to_u16(self.b, self.c);
+        return crate::math::two_u8_to_u16(self.b, self.c);
     }
 
     pub fn write_bc(&mut self, value : u16) {
-        let parts: (u8, u8) = ::math::u16_to_two_u8(value);
+        let parts: (u8, u8) = crate::math::u16_to_two_u8(value);
         self.b = parts.0;
         self.c = parts.1;
     }
@@ -71,11 +71,11 @@ impl CPURegisters {
      * Reads combination of register D and register E.
      */
     pub fn read_de(&self) -> u16 {
-        return ::math::two_u8_to_u16(self.d, self.e);
+        return crate::math::two_u8_to_u16(self.d, self.e);
     }
 
     pub fn write_de(&mut self, value : u16) {
-        let parts: (u8, u8) = ::math::u16_to_two_u8(value);
+        let parts: (u8, u8) = crate::math::u16_to_two_u8(value);
         self.d = parts.0;
         self.e = parts.1;
     }
@@ -84,11 +84,11 @@ impl CPURegisters {
      * Reads combination of register H and register L.
      */
     pub fn read_hl(&self) -> u16 {
-        return ::math::two_u8_to_u16(self.h, self.l);
+        return crate::math::two_u8_to_u16(self.h, self.l);
     }
 
     pub fn write_hl(&mut self, value : u16) {
-        let parts: (u8, u8) = ::math::u16_to_two_u8(value);
+        let parts: (u8, u8) = crate::math::u16_to_two_u8(value);
         self.h = parts.0;
         self.l = parts.1;
     }

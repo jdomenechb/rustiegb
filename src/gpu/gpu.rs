@@ -1,18 +1,15 @@
-use piston::input::*;
-use opengl_graphics::{ GlGraphics };
-use graphics::*;
-use super::super::memory::memory::Memory;
-use super::color::Color;
+use crate::memory::memory::Memory;
+use crate::gpu::color::Color;
+use piston_window::*;
+
 
 pub struct GPU {
-    gl: GlGraphics,
     cycles_acumulated: u16,
 }
 
 impl GPU {
-    pub fn new(gl: GlGraphics) -> GPU {
+    pub fn new() -> GPU {
         return GPU {
-            gl: gl,
             cycles_acumulated: 0,
         }
     }
@@ -75,18 +72,21 @@ impl GPU {
         }
     }
 
-    pub fn render(&mut self, args: &RenderArgs) {
-        let pixel_size: (f64, f64) = (args.width / 160.0, args.height / 144.0);
+    pub fn render(&mut self, window: & mut PistonWindow, event: &Event, window_size: [f64; 2]) {
+        let pixel_size: (f64, f64) = (
+            window_size.get(0).unwrap() / 160.0,
+            window_size.get(1).unwrap() / 144.0
+        );
 
         let square = rectangle::rectangle_by_corners(0.0, 0.0, pixel_size.0, pixel_size.1);
     
-        self.gl.draw(args.viewport(), |c, gl| {
-            clear(Color::WHITE, gl);
+        window.draw_2d(event, |context, graphics, _device| {
+            clear(Color::WHITE, graphics);
 
-            let transform = c.transform;
+            let transform = context.transform;
 
             // Draw a box rotating around the middle of the screen.
-            rectangle(Color::BLACK, square, transform, gl);
+            rectangle(Color::BLACK, square, transform, graphics);
         });
     }
 
