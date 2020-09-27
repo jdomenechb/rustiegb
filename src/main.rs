@@ -20,8 +20,18 @@ fn pause() {
     let _ = io::stdin().read_line(&mut to_discard);
 }
 
-
 fn main() {
+    // --- Other vars
+    let debug :bool = false;
+    let mut i = 1;
+
+    // --- Setting up GB components
+    let mut cpu = CPU::new();
+    let mut memory = Memory::new("./cpu_instrs.gb");
+    //let mut memory = Memory::new("./t.gb");
+    let mut gpu = GPU::new();
+
+    // --- Seting up window
     let mut window: PistonWindow =
         WindowSettings::new("RustieGB", [640, 576])
             .exit_on_esc(true)
@@ -29,21 +39,16 @@ fn main() {
             .build()
             .unwrap();
 
-    // Setting up CGB components
-    let mut cpu = CPU::new();
-    let mut memory = Memory::new("./cpu_instrs.gb");
-    //let mut memory = Memory::new("./t.gb");
-    let mut gpu = GPU::new();
-
-    // Window loop
-    let debug :bool = false;
-    let mut i = 1;
+    let mut event_settings = EventSettings::new();
+    event_settings.set_max_fps(60);
+    event_settings.set_ups(60);
+    window.events.set_event_settings(event_settings);
 
     while let Some(event) = window.next() {
-        // Keys
-        // TODO
+        // TODO: Keys
 
-        if let Some(render_args) = event.render_args() {
+        // Actions to do on render
+        event.render(|render_args| {
             if debug && i % 1 == 0 {
                 println!("{:#X?}", cpu);
                 pause();
@@ -53,16 +58,17 @@ fn main() {
             cpu.reset_available_ccycles();
 
             i += 1;
-        }
+        });
 
-        if let Some(u) = event.update_args() {
+
+        // Actions to do on update
+        event.update(|update_args| {
             while cpu.has_available_ccycles() {
                 cpu.step(&mut memory);
                 gpu.step(cpu.get_last_instruction_ccycles(), &mut memory);
-                //sleep(Duration::from_millis(200));
             }
 
-            gpu.update(&u);
-        }
+            gpu.update(&update_args);
+        });
     }
 }

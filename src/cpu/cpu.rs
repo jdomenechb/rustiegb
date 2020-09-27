@@ -2,7 +2,6 @@ use super::registers::CPURegisters;
 use super::alu::ALU;
 use crate::memory::memory::Memory;
 
-
 #[derive(Debug)]
 pub struct CPU {
     pub registers: CPURegisters,
@@ -12,11 +11,10 @@ pub struct CPU {
 
     pc_to_increment: i8,
     last_instruction_ccycles: i8,
-
 }
 
 impl CPU {
-    const AVAILABLE_CCYCLES_PER_FRAME: i32 = 70224;
+    const AVAILABLE_CCYCLES_PER_FRAME: i32 = 70221;
 
     pub fn new() -> CPU {
         return CPU {
