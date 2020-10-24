@@ -146,6 +146,7 @@ impl CPU {
             0xDF => self.rst_18(memory),
             0xE0 => self.ldh_n_a(memory),
             0xE1 => self.pop_hl(memory),
+            0xE2 => self.ld_mc_a(memory),
             0xE5 => self.push_hl(memory),
             0xE6 => self.and_n(memory),
             0xEA => self.ld_nn_a(memory),
@@ -945,6 +946,19 @@ impl CPU {
         self.last_instruction_ccycles = 12;
     }
 
+    /**
+     * Writes value from register A to memory address $FF00 + C.
+     */
+    pub fn ld_mc_a(&mut self, memory: &mut Memory) {
+        println!("LD ($FF00 + C),A");
+
+        let mem_addr: u16 = 0xFF00 + self.registers.c as u16;
+        memory.write_8(mem_addr, self.registers.a);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
     /** 
      * Writes value from memory address $FF00 + n to register A. 
      */
@@ -1459,6 +1473,7 @@ impl CPU {
         match op {
             0x19 => self.rr_c(),
             0x1A => self.rr_d(),
+            0x7C => self.bit_7_h(),
             0x38 => self.srl_b(),
             _ => {
                 println!("CB Instruction not implemented: {:X}", op);
@@ -1526,6 +1541,22 @@ impl CPU {
         self.registers.set_flag_c(carry);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /**
+    * Tests if bit 7 of H is Zero
+    */
+    pub fn bit_7_h(&mut self) {
+        println!("BIT 7,H");
+
+        let zero = self.registers.h & 0b10000000 != 0b10000000;
+
+        self.registers.set_flag_z(zero);
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h(true);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
