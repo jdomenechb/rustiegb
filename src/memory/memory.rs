@@ -23,6 +23,10 @@ pub struct Memory {
     timer_control: TimerControl,
     // FF0F
     interrupt_flag: InterruptFlag,
+    // FF11
+    nr11: u8,
+    // FF12
+    nr12: u8,
     // FF24
     nr50: u8,
     // FF25
@@ -62,6 +66,8 @@ impl Memory {
             sio_control: 0,
             timer_control: TimerControl::new(),
             interrupt_flag: InterruptFlag::new(),
+            nr11: 0xBF,
+            nr12: 0xF3,
             nr50: 0x77,
             nr51: 0xf3,
             nr52: 0xf1,
@@ -102,6 +108,16 @@ impl Memory {
         // SIO control
         if position == 0xFF02 {
             return self.sio_control;
+        }
+
+        // NR11
+        if position == 0xFF11 {
+            return self.nr11;
+        }
+
+        // NR12
+        if position == 0xFF12 {
+            return self.nr12;
         }
 
         // NR50
@@ -235,6 +251,18 @@ impl Memory {
         // Interrupt Flag
         if position == 0xFF0F {
             self.interrupt_flag.from_u8(value);
+            return;
+        }
+
+        // NR11
+        if position == 0xFF11 {
+            self.nr11 = value;
+            return;
+        }
+
+        // NR11
+        if position == 0xFF12 {
+            self.nr12 = value;
             return;
         }
     
