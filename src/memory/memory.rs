@@ -27,6 +27,10 @@ pub struct Memory {
     nr11: u8,
     // FF12
     nr12: u8,
+    // FF13
+    nr13: u8,
+    // FF14
+    nr14: u8,
     // FF24
     nr50: u8,
     // FF25
@@ -78,6 +82,8 @@ impl Memory {
             interrupt_flag: InterruptFlag::new(),
             nr11: 0xBF,
             nr12: 0xF3,
+            nr13: 0x00,
+            nr14: 0xBF,
             nr50: 0x77,
             nr51: 0xf3,
             nr52: 0xf1,
@@ -128,6 +134,13 @@ impl Memory {
         // NR12
         if position == 0xFF12 {
             return self.nr12;
+        }
+
+        // NR13 is not readable
+
+        // NR14
+        if position == 0xFF14 {
+            return self.nr14;
         }
 
         // NR50
@@ -266,9 +279,21 @@ impl Memory {
             return;
         }
 
-        // NR11
+        // NR12
         if position == 0xFF12 {
             self.nr12 = value;
+            return;
+        }
+
+        // NR13
+        if position == 0xFF13 {
+            self.nr13 = value;
+            return;
+        }
+
+        // NR14
+        if position == 0xFF14 {
+            self.nr14 = value;
             return;
         }
     
