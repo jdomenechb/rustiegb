@@ -2,3 +2,4 @@
 /target
 **/*.rs.bk
 /t.gb
+/DMG_ROM.bin

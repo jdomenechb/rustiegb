@@ -23,12 +23,17 @@ fn pause() {
 fn main() {
     // --- Other vars
     let debug :bool = false;
+    let bootstrap = true;
     let mut i = 1;
 
     // --- Setting up GB components
     let mut cpu = CPU::new();
-    let mut memory = Memory::new("./cpu_instrs.gb");
-    //let mut memory = Memory::new("./t.gb");
+    let mut  memory = Memory::new("./cpu_instrs.gb", bootstrap);
+
+    if bootstrap {
+        cpu.registers.pc = 0;
+    }
+
     let mut gpu = GPU::new();
 
     // --- Seting up window
@@ -59,7 +64,6 @@ fn main() {
 
             i += 1;
         });
-
 
         // Actions to do on update
         event.update(|update_args| {

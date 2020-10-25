@@ -53,10 +53,20 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(rom_path : &str) -> Memory {
+    pub fn new(rom_path: &str, bootstrap: bool) -> Memory {
         let mut data:Vec<u8> = Vec::with_capacity(0x8000);
         let mut rom_file = File::open(rom_path).expect("file not found");
         rom_file.read_to_end(&mut data).expect("Error on reading ROM contents");
+
+        if bootstrap {
+            let bootstrap_rom_path = "./DMG_ROM.bin";
+            let mut bootstrap_data: Vec<u8> = Vec::with_capacity(0x256);
+
+            let mut bootstrap_rom = File::open(bootstrap_rom_path).expect("file not found");
+            bootstrap_rom.read_to_end(&mut bootstrap_data).expect("Error on reading ROM contents");
+
+            data.splice(0..256, bootstrap_data.iter().cloned());
+        }
 
         return Memory {
             rom: ReadOnlyMemorySector::new(data),
@@ -176,8 +186,6 @@ impl Memory {
         }
 
         panic!("ERROR: Memory address {:X} not readable", position);
-
-        return 0;
     }
 
     pub fn read_8_signed(&self, position: u16) -> i8 {
