@@ -1,6 +1,7 @@
 use crate::memory::memory::Memory;
 use crate::gpu::color::Color;
 use piston_window::*;
+use crate::pause;
 
 pub struct GPU {
     cycles_acumulated: u16,
@@ -71,21 +72,41 @@ impl GPU {
         }
     }
 
-    pub fn render(&mut self, window: & mut PistonWindow, event: &Event, window_size: [f64; 2]) {
+    pub fn render(&mut self, window: & mut PistonWindow, event: &Event, window_size: [f64; 2], memory: &Memory) {
         let pixel_size: (f64, f64) = (
             window_size.get(0).unwrap() / 160.0,
             window_size.get(1).unwrap() / 144.0
         );
 
-        let square = rectangle::rectangle_by_corners(0.0, 0.0, pixel_size.0, pixel_size.1);
-    
         window.draw_2d(event, |context, graphics, _device| {
             clear(Color::WHITE, graphics);
 
             let transform = context.transform;
 
-            // Draw a box rotating around the middle of the screen.
-            rectangle(Color::BLACK, square, transform, graphics);
+            for byte_location in 0..32 {
+                let mem_location = 0x104 + byte_location;
+                let byte = memory.read_8(mem_location);
+
+                for bit_pos in (0..8).rev() {
+                    let bit = (byte >> bit_pos) & 0b1;
+                    let color = match bit {
+                        1 => Color::BLACK,
+                        0 => Color::WHITE,
+                        _ => panic!("Unrecognised color")
+                    };
+
+                    let x = (pixel_size.0 * 4.0 * (byte_location / 2) as f64) + (pixel_size.0 * (3.0 - ((bit_pos as f64) % 4.0)));
+                    let y = (pixel_size.1 * 2.0 * (byte_location as f64 % 2.0)) + pixel_size.1 * (1 - (bit_pos / 4)) as f64;
+
+                    //println!("{}, {}, {}", x, y, bit);
+
+                    let square = rectangle::rectangle_by_corners(x, y, x + pixel_size.0, y + pixel_size.1);
+
+                    rectangle(color, square, transform, graphics);
+                }
+
+                //pause();
+            }
         });
     }
 }

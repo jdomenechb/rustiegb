@@ -34,7 +34,7 @@ fn main() {
 
 
     // --- Other vars
-    let debug :bool = false;
+    let debug_frame_by_frame:bool = false;
     let debug_cpu :bool = matches.is_present("debug-cpu");
     let bootstrap = true;
     let mut i = 1;
@@ -67,12 +67,12 @@ fn main() {
 
         // Actions to do on render
         event.render(|render_args| {
-            if debug && i % 1 == 0 {
+            if debug_frame_by_frame && i % 1 == 0 {
                 println!("{:#X?}", cpu);
                 pause();
             }
 
-            gpu.render(&mut window, &event, render_args.window_size);
+            gpu.render(&mut window, &event, render_args.window_size, &memory);
             cpu.reset_available_ccycles();
 
             i += 1;
