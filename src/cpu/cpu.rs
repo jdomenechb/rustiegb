@@ -67,6 +67,7 @@ impl CPU {
             0x01 => self.ld_bc_nn(memory),
             0x02 => self.ld_mbc_a(memory),
             0x03 => self.inc_bc(),
+            0x04 => self.inc_b(),
             0x05 => self.dec_b(),
             0x06 => self.ld_b_n(&memory),
             0x0C => self.inc_c(),
@@ -76,8 +77,10 @@ impl CPU {
             0x13 => self.inc_de(),
             0x14 => self.inc_d(),
             0x15 => self.dec_d(),
+            0x17 => self.rla(),
             0x18 => self.jr_n(memory),
             0x1A => self.ld_a_mde(memory),
+            0x1D => self.dec_e(),
             0x1E => self.ld_e_n(memory),
             0x1F => self.rra(),
             0x20 => self.jr_nz_n(memory),
@@ -91,6 +94,7 @@ impl CPU {
             0x2A => self.ldi_a_mhl(memory),
             0x2C => self.inc_l(),
             0x2D => self.dec_l(),
+            0x2E => self.ld_l_n(memory),
             0x30 => self.jr_nc_n(memory),
             0x31 => self.ld_sp_nn(memory),
             0x32 => self.ldd_mhl_a(memory),
@@ -110,6 +114,7 @@ impl CPU {
             0x5F => self.ld_e_a(),
             0x60 => self.ld_h_b(),
             0x66 => self.ld_h_mhl(memory),
+            0x67 => self.ld_h_a(),
             0x6E => self.ld_l_mhl(memory),
             0x70 => self.ld_mhl_b(memory),
             0x71 => self.ld_mhl_c(memory),
@@ -123,6 +128,7 @@ impl CPU {
             0x7D => self.ld_a_l(),
             0x7E => self.ld_a_mhl(memory),
             0x89 => self.adc_a_c(),
+            0x90 => self.sub_b(),
             0xA9 => self.xor_c(),
             0xAE => self.xor_mhl(memory),
             0xAF => self.xor_a(),
@@ -245,6 +251,20 @@ impl CPU {
     }
 
     /**
+    * Decrease register E.
+    */
+    pub fn dec_e(&mut self) {
+        println!("DEC E");
+
+        let value = self.registers.e;
+        let value = self.alu.sub_n(&mut self.registers, value, 1);
+        self.registers.e = value;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
      * Decrease register H.
      */
     pub fn dec_h(&mut self) {
@@ -338,6 +358,17 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    pub fn inc_b(&mut self) {
+        println!("INC B");
+
+        let value :u8 = self.registers.b;
+        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
+        self.registers.b = value;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
     pub fn inc_c(&mut self) {
         println!("INC C");
 
@@ -424,6 +455,21 @@ impl CPU {
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
+    }
+
+    /**
+     * Substract B from A.
+     */
+    pub fn sub_b(&mut self) {
+        println!("SUB B");
+
+        let value = self.registers.a;
+        let to_subtract :u8 = self.registers.b;
+        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        self.registers.d = value;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
 
@@ -675,6 +721,18 @@ impl CPU {
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
     }
+
+    /**
+     * Loads from register A to register H;
+     */
+    pub fn ld_h_a(&mut self) {
+        self.registers.h = self.registers.a;
+
+        println!("LD H,A");
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
      
 
     /** 
@@ -721,6 +779,18 @@ impl CPU {
         self.registers.a = memory.read_8(self.registers.pc + 1);
 
         println!("LD A,{:X}", self.registers.a);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /**
+     * Loads value n to register L.
+     */
+    pub fn ld_l_n(&mut self, memory: &Memory) {
+        self.registers.l = memory.read_8(self.registers.pc + 1);
+
+        println!("LD L,{:X}", self.registers.l);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
@@ -1151,7 +1221,7 @@ impl CPU {
     pub fn jr_n(&mut self, memory: &Memory) {
         let to_sum = memory.read_8_signed(self.registers.pc + 1) + 2;
 
-        self.registers.pc += to_sum as u16;
+        self.registers.pc = self.registers.pc.overflowing_add(to_sum as u16).0;
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 12;
@@ -1471,6 +1541,7 @@ impl CPU {
         print!("CB {:X}: ", op);
 
         match op {
+            0x11 => self.rl_c(),
             0x19 => self.rr_c(),
             0x1A => self.rr_d(),
             0x7C => self.bit_7_h(),
@@ -1501,6 +1572,46 @@ impl CPU {
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
+    }
+
+    /**
+     * Rotate left through carry register C.
+     */
+    pub fn rl_c(&mut self)
+    {
+        println!("RL C");
+        let new_carry: bool = self.registers.c & 0b10000000 == 0b10000000;
+
+        self.registers.c = (self.registers.c << 1) & (0b11111110 ^ (self.registers.is_flag_c() as u8));
+
+        let zero :bool = self.registers.c == 0;
+        self.registers.set_flag_z(zero);
+        self.registers.set_flag_c(new_carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /**
+     * Rotate left through carry register A.
+     */
+    pub fn rla(&mut self)
+    {
+        println!("RLA");
+        let new_carry: bool = self.registers.a & 0b10000000 == 0b10000000;
+
+        self.registers.c = (self.registers.a << 1) & (0b11111110 ^ (self.registers.is_flag_c() as u8));
+
+        let zero :bool = self.registers.a == 0;
+        self.registers.set_flag_z(zero);
+        self.registers.set_flag_c(new_carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /** 
