@@ -14,6 +14,7 @@ use std::time::Duration;
 use std::io;
 
 use piston_window::*;
+use clap::{App, Arg};
 
 fn pause() {
     let mut to_discard = String::new();
@@ -21,13 +22,25 @@ fn pause() {
 }
 
 fn main() {
+    let app_name = "RustieGB";
+
+    let matches = App::new(app_name)
+        .arg(
+            Arg::with_name("debug-cpu")
+                .long("debug-cpu")
+                .help("Prints CPU instructions on command line")
+        )
+        .get_matches();
+
+
     // --- Other vars
     let debug :bool = false;
+    let debug_cpu :bool = matches.is_present("debug-cpu");
     let bootstrap = true;
     let mut i = 1;
 
     // --- Setting up GB components
-    let mut cpu = CPU::new();
+    let mut cpu = CPU::new(debug_cpu);
     let mut  memory = Memory::new("./cpu_instrs.gb", bootstrap);
 
     if bootstrap {
@@ -38,7 +51,7 @@ fn main() {
 
     // --- Seting up window
     let mut window: PistonWindow =
-        WindowSettings::new("RustieGB", [640, 576])
+        WindowSettings::new(app_name, [640, 576])
             .exit_on_esc(true)
             .resizable(false)
             .build()
@@ -71,8 +84,6 @@ fn main() {
                 cpu.step(&mut memory);
                 gpu.step(cpu.get_last_instruction_ccycles(), &mut memory);
             }
-
-            gpu.update(&update_args);
         });
     }
 }

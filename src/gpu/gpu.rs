@@ -2,7 +2,6 @@ use crate::memory::memory::Memory;
 use crate::gpu::color::Color;
 use piston_window::*;
 
-
 pub struct GPU {
     cycles_acumulated: u16,
 }
@@ -88,9 +87,5 @@ impl GPU {
             // Draw a box rotating around the middle of the screen.
             rectangle(Color::BLACK, square, transform, graphics);
         });
-    }
-
-    pub fn update(&mut self, args: &UpdateArgs) {
-        // TODO
     }
 }

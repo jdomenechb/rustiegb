@@ -216,8 +216,6 @@ impl Memory {
         }
 
         panic!("ERROR: Memory address {:X} not readable", position);
-
-        return 0;
     }
 
     pub fn write_8(&mut self, position: u16, value: u8) {
