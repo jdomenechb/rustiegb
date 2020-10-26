@@ -38,7 +38,7 @@ pub struct Memory {
     // FF26
     nr52: u8,
     // FF40
-    lcdc: LCDC,
+    pub lcdc: LCDC,
     // FF41
     pub stat: STAT,
     // FF42 - FF43
@@ -406,5 +406,17 @@ impl Memory {
         }
 
         panic!("ERROR: Memory address {:X} not writable", position);
+    }
+
+    pub fn scx(&self) -> u8 {
+        self.read_8(0xFF43)
+    }
+
+    pub fn scy(&self) -> u8 {
+        self.read_8(0xFF42)
+    }
+
+    pub fn bgp(&self) -> u8 {
+        self.read_8(0xFF47)
     }
 }

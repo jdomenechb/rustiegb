@@ -1574,7 +1574,7 @@ impl CPU {
         self.last_executed_instruction = format!("RL C").to_string();
         let new_carry: bool = self.registers.c & 0b10000000 == 0b10000000;
 
-        self.registers.c = (self.registers.c << 1) & (0b11111110 ^ (self.registers.is_flag_c() as u8));
+        self.registers.c = (self.registers.c << 1) | (0b00000001 & (self.registers.is_flag_c() as u8));
 
         let zero :bool = self.registers.c == 0;
         self.registers.set_flag_z(zero);
@@ -1594,7 +1594,8 @@ impl CPU {
         self.last_executed_instruction = format!("RLA").to_string();
         let new_carry: bool = self.registers.a & 0b10000000 == 0b10000000;
 
-        self.registers.c = (self.registers.a << 1) & (0b11111110 ^ (self.registers.is_flag_c() as u8));
+        self.registers.a = self.registers.a << 1;
+        self.registers.a = self.registers.a | (0b00000001 & (self.registers.is_flag_c() as u8));
 
         let zero :bool = self.registers.a == 0;
         self.registers.set_flag_z(zero);

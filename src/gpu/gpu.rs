@@ -73,39 +73,78 @@ impl GPU {
     }
 
     pub fn render(&mut self, window: & mut PistonWindow, event: &Event, window_size: [f64; 2], memory: &Memory) {
+        const PIXEL_WIDTH: u8 = 160;
+        const PIXEL_HEIGHT: u8 = 144;
+        const TILE_SIZE_BYTES : u8 = 16;
+        const BACKGROUND_MAP_TILE_SIZE_X: u16 = 32;
+        const PIXELS_PER_TILE: u16 = 8;
+
+        let tmp = window_size.get(0).unwrap();
+        let tmp: f64 = *tmp / (PIXEL_WIDTH as f64);
+
         let pixel_size: (f64, f64) = (
-            window_size.get(0).unwrap() / 160.0,
-            window_size.get(1).unwrap() / 144.0
+            window_size.get(0).unwrap() / (PIXEL_WIDTH as f64),
+            window_size.get(1).unwrap() / (PIXEL_HEIGHT as f64)
         );
 
         window.draw_2d(event, |context, graphics, _device| {
+            let lcdc = &memory.lcdc;
+
             clear(Color::WHITE, graphics);
+
+            if !lcdc.lcd_control_operation() {
+                return;
+            }
+
+            let bg_tile_map_location = if lcdc.bg_tile_map_display_select() {0x9C00} else { 0x9800 };
+            let bg_data_location = if lcdc.bg_and_window_tile_data_select() {0x8000} else { 0x8800 };
+            let scx = memory.scx();
+            let scy = memory.scy();
+
+            //println!("{:X}", scy);
+            let bgp = memory.bgp();
 
             let transform = context.transform;
 
-            for byte_location in 0..32 {
-                let mem_location = 0x104 + byte_location;
-                let byte = memory.read_8(mem_location);
+            for y in 0..18 {
+                for x in 0..20 {
+                    let mem_location = bg_tile_map_location + y * BACKGROUND_MAP_TILE_SIZE_X + x;
+                    let bg_offset = bg_data_location + memory.read_8(mem_location) as u16 * TILE_SIZE_BYTES as u16;
 
-                for bit_pos in (0..8).rev() {
-                    let bit = (byte >> bit_pos) & 0b1;
-                    let color = match bit {
-                        1 => Color::BLACK,
-                        0 => Color::WHITE,
-                        _ => panic!("Unrecognised color")
-                    };
+                    for tile_row in 0u16..PIXELS_PER_TILE {
+                        let byte1 = memory.read_8(bg_offset + (tile_row as u16) * 2);
+                        let byte2 = memory.read_8(bg_offset + (tile_row as u16) * 2 + 1);
 
-                    let x = (pixel_size.0 * 4.0 * (byte_location / 2) as f64) + (pixel_size.0 * (3.0 - ((bit_pos as f64) % 4.0)));
-                    let y = (pixel_size.1 * 2.0 * (byte_location as f64 % 2.0)) + pixel_size.1 * (1 - (bit_pos / 4)) as f64;
+                        for bit_pos in (0..8u8).rev() {
+                            let pixel_bit1 = (byte1 >> bit_pos) & 0b1;
+                            let pixel_bit0 = (byte2 >> bit_pos) & 0b1;
 
-                    //println!("{}, {}, {}", x, y, bit);
+                            let pixel = ((pixel_bit1 << 1) | pixel_bit0) & 0b11;
+                            let pixel = match pixel {
+                                0b11 => bgp >> 6,
+                                0b10 => bgp >> 4,
+                                0b01 => bgp >> 2,
+                                0b00 => bgp >> 0,
+                                _ => panic!("Unrecognised color")
+                            } & 0b11;
 
-                    let square = rectangle::rectangle_by_corners(x, y, x + pixel_size.0, y + pixel_size.1);
+                            let color = match pixel {
+                                0b00 => Color::WHITE,
+                                0b01 => Color::DARK_GRAY,
+                                0b10 => Color::GRAY,
+                                0b11 => Color::BLACK,
+                                _ => panic!("Unrecognised color")
+                            };
 
-                    rectangle(color, square, transform, graphics);
+                            let x_pixel = (x as u16) * (PIXELS_PER_TILE as u16) + (7 - bit_pos as u16);
+                            let y_pixel = (y as u16) * (PIXELS_PER_TILE as u16) + (tile_row as u16);
+
+                            let square = rectangle::rectangle_by_corners(x_pixel as f64 * pixel_size.0, y_pixel as f64 * pixel_size.1, (x_pixel + 1) as f64 * pixel_size.0, (y_pixel + 1) as f64 * pixel_size.1);
+
+                            rectangle(color, square, transform, graphics);
+                        }
+                    }
                 }
-
-                //pause();
             }
         });
     }

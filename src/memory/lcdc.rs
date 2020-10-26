@@ -56,4 +56,37 @@ impl LCDC {
         self.obj_sprite_display = value & 0b10 == 0b10;
         self.bg_and_window_display = value & 0b1 == 0b1;
     }
+
+    pub fn lcd_control_operation(&self) -> bool {
+        return self.lcd_control_operation;
+    }
+
+    pub fn window_tile_map_display_select(&self) -> bool {
+        return self.window_tile_map_display_select;
+    }
+
+    pub fn window_display(&self) -> bool {
+        return self.window_display;
+    }
+
+    pub fn bg_and_window_tile_data_select(&self) -> bool {
+        return self.bg_and_window_tile_data_select;
+    }
+
+    pub fn bg_tile_map_display_select(&self) -> bool {
+        return self.bg_tile_map_display_select;
+    }
+
+    pub fn obj_sprite_size(&self) -> bool {
+        return self.obj_sprite_size;
+    }
+
+    pub fn obj_sprite_display(&self) -> bool {
+        return self.obj_sprite_display;
+    }
+
+    pub fn bg_and_window_display(&self) -> bool {
+        return self.bg_and_window_display;
+    }
+
 }
