@@ -18,9 +18,9 @@ pub struct CPU {
 impl CPU {
     const AVAILABLE_CCYCLES_PER_FRAME: i32 = 70221;
 
-    pub fn new(debug: bool) -> CPU {
+    pub fn new(debug: bool, bootstrap: bool) -> CPU {
         return CPU {
-            registers: CPURegisters::new(),
+            registers: CPURegisters::new(bootstrap),
             alu: ALU {},
             trace: false,
             available_cycles: CPU::AVAILABLE_CCYCLES_PER_FRAME,

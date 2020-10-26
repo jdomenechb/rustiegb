@@ -40,13 +40,8 @@ fn main() {
     let mut i = 1;
 
     // --- Setting up GB components
-    let mut cpu = CPU::new(debug_cpu);
-    let mut  memory = Memory::new("./cpu_instrs.gb", bootstrap);
-
-    if bootstrap {
-        cpu.registers.pc = 0;
-    }
-
+    let mut cpu = CPU::new(debug_cpu, bootstrap);
+    let mut memory = Memory::new("./cpu_instrs.gb", bootstrap);
     let mut gpu = GPU::new();
 
     // --- Seting up window

@@ -14,7 +14,7 @@ pub struct CPURegisters {
 }
 
 impl CPURegisters {
-    pub fn new() -> CPURegisters {
+    pub fn new(bootstrap: bool) -> CPURegisters {
         return CPURegisters {
             a: 0x01,
             b: 0x0,
@@ -24,7 +24,7 @@ impl CPURegisters {
             f: 0xb0,
             h: 0x01,
             l: 0x4d,
-            pc: 0x0100,
+            pc: if bootstrap { 0x0001 } else { 0x0100 },
             sp: 0xFFFE,
             flags: 0x0,
         };

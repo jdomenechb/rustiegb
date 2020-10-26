@@ -11,6 +11,7 @@ use std::fs::File;
 use std::io::Read;
 
 pub struct Memory {
+    bootstrap_rom: Option<ReadOnlyMemorySector>,
     rom: ReadOnlyMemorySector,
     video_ram: VideoRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
@@ -62,17 +63,22 @@ impl Memory {
         let mut rom_file = File::open(rom_path).expect("file not found");
         rom_file.read_to_end(&mut data).expect("Error on reading ROM contents");
 
+        let bootstrap_rom;
+
         if bootstrap {
             let bootstrap_rom_path = "./DMG_ROM.bin";
             let mut bootstrap_data: Vec<u8> = Vec::with_capacity(0x256);
 
-            let mut bootstrap_rom = File::open(bootstrap_rom_path).expect("file not found");
-            bootstrap_rom.read_to_end(&mut bootstrap_data).expect("Error on reading ROM contents");
+            let mut bootstrap_rom_file = File::open(bootstrap_rom_path).expect("file not found");
+            bootstrap_rom_file.read_to_end(&mut bootstrap_data).expect("Error on reading ROM contents");
 
-            data.splice(0..256, bootstrap_data.iter().cloned());
+            bootstrap_rom = Some(ReadOnlyMemorySector::new(bootstrap_data));
+        } else {
+            bootstrap_rom = None;
         }
 
         return Memory {
+            bootstrap_rom,
             rom: ReadOnlyMemorySector::new(data),
             video_ram: VideoRam8kMemorySector::new(),
             internal_ram_8k: InternalRam8kMemorySector::new(),
@@ -101,6 +107,11 @@ impl Memory {
     }
 
     pub fn read_8(&self, position: u16) -> u8 {
+        // Bootstrap rom
+        if self.bootstrap_rom.is_some() && position < 0x100 {
+            return self.bootstrap_rom.as_ref().unwrap().read_8(position);
+        }
+
         // ROM
         if position < 0x8000 {
             return self.rom.read_8(position);
@@ -208,6 +219,11 @@ impl Memory {
     }
 
     pub fn read_16(&self, position: u16) -> u16 {
+        // Bootstrap rom
+        if self.bootstrap_rom.is_some() && position < 0x100 {
+            return self.bootstrap_rom.as_ref().unwrap().read_16(position);
+        }
+
         // ROM
         if position < 0x8000 {
             return self.rom.read_16(position);
