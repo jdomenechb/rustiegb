@@ -67,6 +67,7 @@ impl CPU {
             0x13 => self.inc_de(),
             0x14 => self.inc_d(),
             0x15 => self.dec_d(),
+            0x16 => self.ld_d_n(&memory),
             0x17 => self.rla(),
             0x18 => self.jr_n(memory),
             0x1A => self.ld_a_mde(memory),
@@ -445,7 +446,7 @@ impl CPU {
         let value = self.registers.a;
         let to_subtract :u8 = memory.read_8(self.registers.pc + 1);
         let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
-        self.registers.d = value;
+        self.registers.a = value;
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
@@ -460,7 +461,7 @@ impl CPU {
         let value = self.registers.a;
         let to_subtract :u8 = self.registers.b;
         let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
-        self.registers.d = value;
+        self.registers.a = value;
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
@@ -640,7 +641,7 @@ impl CPU {
 
     // --- COMPARE INSTRUCTIONS -------------------------------------------------------------------------------------------------------------
 
-    pub fn cp_n(&mut self, memory: &Memory) {       
+    pub fn cp_n(&mut self, memory: &Memory) {
         let n :u8 = memory.read_8(self.registers.pc + 1);
         let a :u8 = self.registers.a;
 
@@ -674,6 +675,18 @@ impl CPU {
         self.registers.c = memory.read_8(self.registers.pc + 1);
 
         self.last_executed_instruction = format!("LD C,{:X}", self.registers.c).to_string();
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /**
+     * Loads value n to register D.
+     */
+    pub fn ld_d_n(&mut self, memory: &Memory) {
+        self.registers.d = memory.read_8(self.registers.pc + 1);
+
+        self.last_executed_instruction = format!("LD D,{:X}", self.registers.d).to_string();
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
