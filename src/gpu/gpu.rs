@@ -109,19 +109,22 @@ impl GPU {
             for screen_y in 0..(PIXEL_HEIGHT as u16) {
                 for screen_x in 0..(PIXEL_WIDTH as u16) {
                     // Background
+                    let screen_y_with_offset = screen_y + scy as u16;
+                    let screen_x_with_offset = screen_x + scx as u16;
+
                     let bg_tile_map_location = bg_tile_map_start_location
-                        + (screen_y / PIXELS_PER_TILE) * BACKGROUND_MAP_TILE_SIZE_X
-                        + (screen_x / PIXELS_PER_TILE);
+                        + (screen_y_with_offset / PIXELS_PER_TILE) * BACKGROUND_MAP_TILE_SIZE_X
+                        + (screen_x_with_offset / PIXELS_PER_TILE);
 
                     let bg_data_location = bg_data_start_location
                         + memory.read_8(bg_tile_map_location) as u16 * TILE_SIZE_BYTES as u16;
 
-                    let tile_row = screen_y as u16 % 8;
+                    let tile_row = screen_y_with_offset as u16 % 8;
 
                     let byte1 = memory.read_8(bg_data_location + tile_row * 2);
                     let byte2 = memory.read_8(bg_data_location + tile_row * 2 + 1);
 
-                    let bit_pos = 7 - (screen_x % 8);
+                    let bit_pos = 7 - (screen_x_with_offset % 8);
 
                     let pixel_bit1 = (byte1 >> bit_pos) & 0b1;
                     let pixel_bit0 = (byte2 >> bit_pos) & 0b1;
@@ -142,9 +145,6 @@ impl GPU {
                         0b11 => Color::BLACK,
                         _ => panic!("Unrecognised color")
                     };
-
-                    let x_pixel = (screen_x as u16) + (7 - bit_pos as u16);
-                    let y_pixel = (screen_y as u16) + (tile_row as u16);
 
                     let square = rectangle::rectangle_by_corners(
                         screen_x as f64 * pixel_size.0,
