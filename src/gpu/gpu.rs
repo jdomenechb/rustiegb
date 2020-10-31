@@ -79,9 +79,6 @@ impl GPU {
         const BACKGROUND_MAP_TILE_SIZE_X: u16 = 32;
         const PIXELS_PER_TILE: u16 = 8;
 
-        let tmp = window_size.get(0).unwrap();
-        let tmp: f64 = *tmp / (PIXEL_WIDTH as f64);
-
         let pixel_size: (f64, f64) = (
             window_size.get(0).unwrap() / (PIXEL_WIDTH as f64),
             window_size.get(1).unwrap() / (PIXEL_HEIGHT as f64)
