@@ -158,6 +158,7 @@ impl CPU {
             0xF3 => self.di(),
             0xF5 => self.push_af(memory),
             0xFA => self.ld_a_nn(memory),
+            0xFB => self.ei(),
             0xFE => self.cp_n(memory),
             0xFF => self.rst_38(memory),
             _ => {
@@ -1727,6 +1728,18 @@ impl CPU {
     pub fn di(&mut self) {
         self.last_executed_instruction = "DI".to_string();
         
+        // TODO
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * Enables interrupts
+     */
+    pub fn ei(&mut self) {
+        self.last_executed_instruction = "EI".to_string();
+
         // TODO
 
         self.pc_to_increment = 1;
