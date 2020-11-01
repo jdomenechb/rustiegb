@@ -36,7 +36,6 @@ fn main() {
 
 
     // --- Other vars
-    let debug_frame_by_frame:bool = false;
     let debug_cpu :bool = matches.is_present("debug-cpu");
     let bootstrap = false;
     let mut i = 1;
@@ -77,11 +76,6 @@ fn main() {
 
         // Actions to do on render
         event.render(|render_args| {
-            if debug_frame_by_frame && i % 1 == 0 {
-                println!("{:#X?}", cpu);
-                pause();
-            }
-
             texture.update(&mut texture_context, &canvas).unwrap();
 
             gpu.render(&mut window, &event, render_args.window_size, &memory, &mut texture_context, &mut canvas, &texture);
