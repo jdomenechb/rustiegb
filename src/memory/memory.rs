@@ -280,6 +280,11 @@ impl Memory {
             return;
         }
 
+        if position >= 0xFEA0 && position < 0xFF00 {
+            // Not writable, as it is unused, but some games write to this (e.g. Tetris)
+            return;
+        }
+
         // Serial transfer data
         if position == 0xFF01 {
             self.serial_transfer_data = value;
@@ -434,6 +439,11 @@ impl Memory {
 
         if position >= 0xE000 && position < 0xFE00 {
             return self.internal_ram_8k.write_16(position - 0xE000, value);
+        }
+
+        if position >= 0xFEA0 && position < 0xFF00 {
+            // Not writable, as it is unused, but some games write to this (e.g. Tetris)
+            return;
         }
 
         // Internal RAM
