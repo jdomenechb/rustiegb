@@ -50,6 +50,8 @@ impl CPU {
         self.pc_to_increment = -1;
         self.last_instruction_ccycles = -1;
 
+        //if (self.registers.)
+
         let instruction: u8 = memory.read_8(self.registers.pc);
 
         let current_pc = self.registers.pc;
@@ -157,6 +159,7 @@ impl CPU {
             0xE6 => self.and_n(memory),
             0xEA => self.ld_nn_a(memory),
             0xEE => self.xor_n(memory),
+            0xEF => self.rst_28(memory),
             0xF0 => self.ldh_a_n(memory),
             0xF1 => self.pop_af(memory),
             0xF3 => self.di(),
@@ -1446,7 +1449,7 @@ impl CPU {
      */
     pub fn call(&mut self, memory: &mut Memory) {
         let next_pc :u16 = self.registers.pc + 3;
-        self.push_nn(memory, next_pc);
+        self.push_dd(memory, next_pc);
         
         self.registers.pc = memory.read_16(self.registers.pc + 1);
 
@@ -1468,7 +1471,7 @@ impl CPU {
         }
 
         let next_pc :u16 = self.registers.pc + 3;
-        self.push_nn(memory, next_pc);
+        self.push_dd(memory, next_pc);
         
         self.registers.pc = memory.read_16(self.registers.pc + 1);
         
@@ -1482,7 +1485,7 @@ impl CPU {
     pub fn ret(&mut self, memory: &mut Memory) {
         self.last_executed_instruction = "RET".to_string();
 
-        self.registers.pc = self.pop_nn(memory);
+        self.registers.pc = self.pop_dd(memory);
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 16;
@@ -1495,7 +1498,7 @@ impl CPU {
         self.last_executed_instruction = "RET NZ".to_string();
 
         if !self.registers.is_flag_z() {
-            self.registers.pc = self.pop_nn(memory);
+            self.registers.pc = self.pop_dd(memory);
             self.last_instruction_ccycles = 20;
         } else {
             self.registers.pc += 1;
@@ -1512,7 +1515,7 @@ impl CPU {
         self.last_executed_instruction = "RET NC".to_string();
 
         if !self.registers.is_flag_c() {
-            self.registers.pc = self.pop_nn(memory);
+            self.registers.pc = self.pop_dd(memory);
             self.last_instruction_ccycles = 20;
         } else {
             self.registers.pc += 1;
@@ -1524,26 +1527,19 @@ impl CPU {
 
     // --- RESTART INSTRUCTIONS ------------------------------------------------------------------------------------------------------------
 
-    pub fn rst_18(&mut self, memory: &mut Memory) {     
+    pub fn rst_18(&mut self, memory: &mut Memory) {
         self.last_executed_instruction = "RST $18".to_string();
-        let current_addr :u16 = self.registers.pc;
-        self.push_nn(memory, current_addr);
-
-        self.registers.pc = 0x18;
-
-        self.pc_to_increment = 0;
-        self.last_instruction_ccycles = 16;
+        self.rst_d(memory, 0x18)
     }
 
     pub fn rst_38(&mut self, memory: &mut Memory) {
         self.last_executed_instruction = "RST $38".to_string();
-        let current_addr :u16 = self.registers.pc;
-        self.push_nn(memory, current_addr);
+        self.rst_d(memory, 0x38);
+    }
 
-        self.registers.pc = 0x38;
-
-        self.pc_to_increment = 0;
-        self.last_instruction_ccycles = 16;
+    fn rst_28(&mut self, memory : &mut Memory) {
+        self.last_executed_instruction = "RST $28".to_string();
+        self.rst_d(memory, 0x28);
     }
 
 
@@ -1555,7 +1551,7 @@ impl CPU {
     pub fn push_hl(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "PUSH HL".to_string();
         let reg: u16 = self.registers.read_hl();
-        self.push_nn(memory, reg);
+        self.push_dd(memory, reg);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 16;
@@ -1567,7 +1563,7 @@ impl CPU {
     pub fn push_bc(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "PUSH BC".to_string();
         let reg: u16 = self.registers.read_bc();
-        self.push_nn(memory, reg);
+        self.push_dd(memory, reg);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 16;
@@ -1579,7 +1575,7 @@ impl CPU {
     pub fn push_af(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "PUSH AF".to_string();
         let reg: u16 = self.registers.read_af();
-        self.push_nn(memory, reg);
+        self.push_dd(memory, reg);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 16;
@@ -1591,7 +1587,7 @@ impl CPU {
     pub fn push_de(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "PUSH DE".to_string();
         let reg: u16 = self.registers.read_de();
-        self.push_nn(memory, reg);
+        self.push_dd(memory, reg);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 16;
@@ -1603,7 +1599,7 @@ impl CPU {
     pub fn pop_af(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "POP AF".to_string();
 
-        let popped: u16 = self.pop_nn(memory);
+        let popped: u16 = self.pop_dd(memory);
         self.registers.write_af(popped);
         
         self.pc_to_increment = 1;
@@ -1616,7 +1612,7 @@ impl CPU {
     pub fn pop_bc(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "POP BC".to_string();
 
-        let popped: u16 = self.pop_nn(memory);
+        let popped: u16 = self.pop_dd(memory);
         self.registers.write_bc(popped);
         
         self.pc_to_increment = 1;
@@ -1629,7 +1625,7 @@ impl CPU {
     pub fn pop_de(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "POP DE".to_string();
 
-        let popped: u16 = self.pop_nn(memory);
+        let popped: u16 = self.pop_dd(memory);
         self.registers.write_de(popped);
         
         self.pc_to_increment = 1;
@@ -1642,7 +1638,7 @@ impl CPU {
     pub fn pop_hl(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "POP HL".to_string();
 
-        let popped: u16 = self.pop_nn(memory);
+        let popped: u16 = self.pop_dd(memory);
         self.registers.write_hl(popped);
         
         self.pc_to_increment = 1;
@@ -1827,17 +1823,26 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    // --- INTERNAL --------------------------------------------------------------------------
 
-    // --- PRIVATE METHODS -----------------------------------------------------------------------------------------------------------------
-    fn push_nn(&mut self, memory : &mut Memory, value: u16) {
+    fn push_dd(&mut self, memory : &mut Memory, value: u16) {
         memory.write_16(self.registers.sp - 2, value);
         self.registers.sp = self.registers.sp - 2;
     }
 
-    fn pop_nn(&mut self, memory : &mut Memory) -> u16 {
+    fn pop_dd(&mut self, memory : &mut Memory) -> u16 {
         let value = memory.read_16(self.registers.sp);
         self.registers.sp += 2;
 
         return value;
+    }
+
+    fn rst_d(&mut self, memory: &mut Memory, value: u8) {
+        self.push_dd(memory, self.registers.pc);
+
+        self.registers.pc = value as u16;
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 16;
     }
 }
