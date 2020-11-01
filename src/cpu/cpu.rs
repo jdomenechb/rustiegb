@@ -71,6 +71,7 @@ impl CPU {
             0x0D => self.dec_c(),
             0x0E => self.ld_c_n(memory),
             0x11 => self.ld_de_nn(memory),
+            0x12 => self.ld_mde_a(memory),
             0x13 => self.inc_de(),
             0x14 => self.inc_d(),
             0x15 => self.dec_d(),
@@ -79,6 +80,7 @@ impl CPU {
             0x18 => self.jr_n(memory),
             0x19 => self.add_hl_de(),
             0x1A => self.ld_a_mde(memory),
+            0x1C => self.inc_e(),
             0x1D => self.dec_e(),
             0x1E => self.ld_e_n(memory),
             0x1F => self.rra(),
@@ -134,6 +136,7 @@ impl CPU {
             0x89 => self.adc_a_c(),
             0x90 => self.sub_b(),
             0xA1 => self.and_c(),
+            0xA7 => self.and_a(),
             0xA9 => self.xor_c(),
             0xAE => self.xor_mhl(memory),
             0xAF => self.xor_a(),
@@ -148,7 +151,9 @@ impl CPU {
             0xC4 => self.call_nz_nn(memory),
             0xC5 => self.push_bc(memory),
             0xC6 => self.add_a_n(memory),
+            0xC8 => self.ret_z(memory),
             0xC9 => self.ret(memory),
+            0xCA => self.jp_z_nn(memory),
             0xCB => self.prefix_cb(memory),
             0xCD => self.call(memory),
             0xCE => self.adc_a_n(memory),
@@ -377,6 +382,17 @@ impl CPU {
         let value :u8 = self.registers.d;
         let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
         self.registers.d = value;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    pub fn inc_e(&mut self) {
+        self.last_executed_instruction = "INC E".to_string();
+
+        let value :u8 = self.registers.e;
+        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
+        self.registers.e = value;
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
@@ -704,6 +720,23 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
+    }
+
+    /**
+     * AND of register A with register A, result in A.
+     */
+    pub fn and_a(&mut self) {
+        let value1 :u8 = self.registers.a;
+        let value2 :u8 = self.registers.a;
+
+        self.last_executed_instruction = "AND A".to_string();
+
+        let result: u8 = self.alu.and_n(&mut self.registers, value1, value2);
+
+        self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 
     /**
@@ -1278,6 +1311,18 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    /**
+     * Writes value from register A to memory address contained in DE.
+     */
+    pub fn ld_mde_a(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = "LD (DE),A".to_string();
+
+        memory.write_8(self.registers.read_de(), self.registers.a);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
     /** 
      * Writes value from register A to memory address contained in HL. 
      */
@@ -1497,6 +1542,26 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    /**
+     * Jumps to the indicated address only if the flag Z is set. Otherwise, continues to the next instruction.
+     */
+    pub fn jp_z_nn(&mut self, memory: &Memory) {
+        let possible_value = memory.read_16(self.registers.pc + 1);
+
+        self.last_executed_instruction = format!("JP Z,{:X}", possible_value).to_string();
+
+        self.registers.pc += 3;
+
+        if self.registers.is_flag_z() {
+            self.registers.pc = possible_value;
+            self.last_instruction_ccycles = 16;
+        } else {
+            self.last_instruction_ccycles = 12;
+        }
+
+        self.pc_to_increment = 0;
+    }
+
 
     // --- FUNC INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------
 
@@ -1561,6 +1626,23 @@ impl CPU {
             self.last_instruction_ccycles = 8;
         }
         
+        self.pc_to_increment = 0;
+    }
+
+    /**
+     * Pop two bytes from stack & jump to that address if flag Z is set.
+     */
+    pub fn ret_z(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = "RET Z".to_string();
+
+        if self.registers.is_flag_z() {
+            self.registers.pc = self.pop_dd(memory);
+            self.last_instruction_ccycles = 20;
+        } else {
+            self.registers.pc += 1;
+            self.last_instruction_ccycles = 8;
+        }
+
         self.pc_to_increment = 0;
     }
 
