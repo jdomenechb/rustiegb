@@ -77,7 +77,7 @@ impl CPU {
             0x16 => self.ld_d_n(&memory),
             0x17 => self.rla(),
             0x18 => self.jr_n(memory),
-            0x19 => self.add_hl_de(memory),
+            0x19 => self.add_hl_de(),
             0x1A => self.ld_a_mde(memory),
             0x1D => self.dec_e(),
             0x1E => self.ld_e_n(memory),
@@ -492,7 +492,7 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    pub fn add_hl_de(&mut self, memory: &Memory) {
+    pub fn add_hl_de(&mut self) {
         let value1 = self.registers.read_hl();
         let value2 = self.registers.read_de();
 
@@ -1894,7 +1894,7 @@ impl CPU {
     }
 
     fn rst_d(&mut self, memory: &mut Memory, value: u8) {
-        self.push_dd(memory, self.registers.pc);
+        self.push_dd(memory, self.registers.pc + 1);
 
         self.registers.pc = value as u16;
 
