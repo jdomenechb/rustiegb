@@ -1713,6 +1713,7 @@ impl CPU {
             0x1A => self.rr_d(),
             0x37 => self.swap_a(),
             0x7C => self.bit_7_h(),
+            0x87 => self.res_0_a(),
             0x38 => self.srl_b(),
             _ => {
                 println!("CB Instruction not implemented: {:X}", op);
@@ -1847,6 +1848,16 @@ impl CPU {
 
         let old_value = self.registers.a;
         self.registers.a = self.alu.swap_n(&mut self.registers, old_value);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    fn res_0_a(&mut self) {
+        self.last_executed_instruction = "RES 0,A".to_string();
+
+        let value = self.registers.a & 0b11111110;
+        self.registers.a = value;
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
