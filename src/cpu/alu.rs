@@ -83,6 +83,24 @@ impl ALU {
         registers.set_flag_h(half_carry);
     }
 
+    pub fn swap_n(&self, registers: &mut CPURegisters, value: u8) -> u8 {
+        registers.set_flag_n(false);
+        registers.set_flag_c(false);
+        registers.set_flag_h(false);
+
+        let new_low = (value >> 2) & 0b11;
+        let new_high = (value << 2) & 0b1100;
+
+        let new_value = new_low | new_high;
+
+        registers.set_flag_z(new_value == 0);
+
+        new_value
+
+
+
+    }
+
     pub fn inc_nn(&self, value: u16) -> u16 {
         let value = Wrapping(value);
         let to_add = Wrapping(1);

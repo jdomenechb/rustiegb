@@ -89,11 +89,13 @@ impl CPU {
             0x2C => self.inc_l(),
             0x2D => self.dec_l(),
             0x2E => self.ld_l_n(memory),
+            0x2F => self.cpl(),
             0x30 => self.jr_nc_n(memory),
             0x31 => self.ld_sp_nn(memory),
             0x32 => self.ldd_mhl_a(memory),
             0x35 => self.dec_mhl(memory),
             0x36 => self.ld_mhl_n(memory),
+            0x37 => self.scf(),
             0x38 => self.jr_c_n(memory),
             0x3C => self.inc_a(),
             0x3D => self.dec_a(),
@@ -124,9 +126,11 @@ impl CPU {
             0x86 => self.add_a_mhl(memory),
             0x89 => self.adc_a_c(),
             0x90 => self.sub_b(),
+            0xA1 => self.and_c(),
             0xA9 => self.xor_c(),
             0xAE => self.xor_mhl(memory),
             0xAF => self.xor_a(),
+            0xB0 => self.or_b(),
             0xB1 => self.or_c(),
             0xB6 => self.or_mhl(memory),
             0xB7 => self.or_a(),
@@ -616,6 +620,23 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    /**
+     * OR of B with register A, result in A.
+     */
+    pub fn or_b(&mut self) {
+        self.last_executed_instruction = "OR B".to_string();
+
+        let value1 : u8 = self.registers.b;
+        let value2 : u8 = self.registers.a;
+
+        let result: u8 = self.alu.or_n(&mut self.registers, value1, value2);
+
+        self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
     /** 
      * OR of C with register A, result in A.
      */
@@ -650,6 +671,23 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    /**
+     * AND of register C with register A, result in A.
+     */
+    pub fn and_c(&mut self) {
+        let value1 :u8 = self.registers.c;
+        let value2 :u8 = self.registers.a;
+
+        self.last_executed_instruction = "AND C".to_string();
+
+        let result: u8 = self.alu.and_n(&mut self.registers, value1, value2);
+
+        self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
     /** 
      * AND of n with register A, result in A.
      */
@@ -667,6 +705,38 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    /**
+    * Complement A register
+    */
+    pub fn cpl(&mut self) {
+        self.last_executed_instruction = "CPL".to_string();
+
+        self.registers.set_flag_n(true);
+        self.registers.set_flag_h(true);
+
+
+        self.registers.a = !self.registers.a;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+
+    // --- FLAG INSTRUCTIONS -------------------------------------------------------------------------------------------------------------
+
+    /**
+    * Set Carry flag
+    */
+    pub fn scf(&mut self) {
+        self.last_executed_instruction = "SCF".to_string();
+
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_c(true);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
 
     // --- COMPARE INSTRUCTIONS -------------------------------------------------------------------------------------------------------------
 
@@ -1589,6 +1659,7 @@ impl CPU {
             0x11 => self.rl_c(),
             0x19 => self.rr_c(),
             0x1A => self.rr_d(),
+            0x37 => self.swap_a(),
             0x7C => self.bit_7_h(),
             0x38 => self.srl_b(),
             _ => {
@@ -1714,6 +1785,16 @@ impl CPU {
         self.registers.set_flag_z(zero);
         self.registers.set_flag_n(false);
         self.registers.set_flag_h(true);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    fn swap_a(&mut self) {
+        self.last_executed_instruction = "SWAP A".to_string();
+
+        let old_value = self.registers.a;
+        self.registers.a = self.alu.swap_n(&mut self.registers, old_value);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
