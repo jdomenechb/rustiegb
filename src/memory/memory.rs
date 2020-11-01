@@ -26,6 +26,8 @@ pub struct Memory {
     timer_control: TimerControl,
     // FF0F
     interrupt_flag: InterruptFlag,
+    // FF10
+    nr10: u8,
     // FF11
     nr11: u8,
     // FF12
@@ -34,8 +36,16 @@ pub struct Memory {
     nr13: u8,
     // FF14
     nr14: u8,
-    //FF17
+    // FF17
     nr22: u8,
+    // FF19
+    nr24: u8,
+    // FF1A
+    nr30: u8,
+    // FF21
+    nr42: u8,
+    // FF23
+    nr44: u8,
     // FF24
     nr50: u8,
     // FF25
@@ -90,11 +100,16 @@ impl Memory {
             sio_control: 0,
             timer_control: TimerControl::new(),
             interrupt_flag: InterruptFlag::new(),
+            nr10: 0x80,
             nr11: 0xBF,
             nr12: 0xF3,
             nr13: 0x00,
             nr14: 0xBF,
             nr22: 0x00,
+            nr24: 0xBF,
+            nr30: 0x7F,
+            nr42: 0x00,
+            nr44: 0xBF,
             nr50: 0x77,
             nr51: 0xf3,
             nr52: 0xf1,
@@ -152,6 +167,11 @@ impl Memory {
             return self.sio_control;
         }
 
+        // NR10
+        if position == 0xFF10 {
+            return self.nr10;
+        }
+
         // NR11
         if position == 0xFF11 {
             return self.nr11;
@@ -172,6 +192,26 @@ impl Memory {
         // NR22
         if position == 0xFF17 {
             return self.nr22;
+        }
+
+        // NR24
+        if position == 0xFF19 {
+            return self.nr24;
+        }
+
+        // NR30
+        if position == 0xFF1A {
+            return self.nr30;
+        }
+
+        // NR42
+        if position == 0xFF21 {
+            return self.nr42;
+        }
+
+        // NR44
+        if position == 0xFF23 {
+            return self.nr44;
         }
 
         // NR50
@@ -333,6 +373,12 @@ impl Memory {
             return;
         }
 
+        // NR10
+        if position == 0xFF10 {
+            self.nr10 = value;
+            return;
+        }
+
         // NR11
         if position == 0xFF11 {
             self.nr11 = value;
@@ -360,6 +406,34 @@ impl Memory {
         // NR22
         if position == 0xFF17 {
             self.nr22 = value;
+            return;
+        }
+
+        // NR24
+        if position == 0xFF19 {
+            self.nr24 = value;
+            return;
+        }
+
+        // NR30
+        if position == 0xFF1A {
+            self.nr30 = value;
+            return;
+        }
+
+        // NR42 // NR30
+        if position == 0xFF1A {
+            self.nr30 = value;
+            return;
+        }
+        if position == 0xFF21 {
+            self.nr42 = value;
+            return;
+        }
+
+        // NR44
+        if position == 0xFF23 {
+            self.nr44 = value;
             return;
         }
     
