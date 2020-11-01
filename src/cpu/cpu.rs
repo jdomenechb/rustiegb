@@ -118,6 +118,7 @@ impl CPU {
             0x7C => self.ld_a_h(),
             0x7D => self.ld_a_l(),
             0x7E => self.ld_a_mhl(memory),
+            0x86 => self.add_a_mhl(memory),
             0x89 => self.adc_a_c(),
             0x90 => self.sub_b(),
             0xA9 => self.xor_c(),
@@ -126,6 +127,7 @@ impl CPU {
             0xB1 => self.or_c(),
             0xB6 => self.or_mhl(memory),
             0xB7 => self.or_a(),
+            0xBE => self.cp_mhl(memory),
             0xC0 => self.ret_nz(memory),
             0xC1 => self.pop_bc(memory),
             0xC3 => self.jp_nn(memory),
@@ -437,6 +439,19 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    pub fn add_a_mhl(&mut self, memory: &Memory) {
+        let value1 :u8 = memory.read_8(self.registers.read_hl());
+        let value2 :u8 = self.registers.a;
+
+        self.last_executed_instruction = format!("ADD A,(HL)").to_string();
+
+        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+        self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
     /**
      * Substract n from A.
      */
@@ -653,6 +668,17 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    pub fn cp_mhl(&mut self, memory: &Memory) {
+        let n :u8 = memory.read_8(self.registers.read_hl());
+        let a :u8 = self.registers.a;
+
+        self.last_executed_instruction = format!("CP (HL)").to_string();
+
+        self.alu.cp_n(&mut self.registers, a, n);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
 
     // --- WRITE INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------
 
