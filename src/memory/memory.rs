@@ -17,11 +17,14 @@ pub struct Memory {
     video_ram: VideoRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
     oam_ram: OamMemorySector,
-    
+    // FF00
+    p1: u8,
     // FF01
     serial_transfer_data: u8,
     // FF02
     sio_control: u8,
+    // FF06
+    tma: u8,
     // FF07
     timer_control: TimerControl,
     // FF0F
@@ -99,8 +102,10 @@ impl Memory {
             rom: ReadOnlyMemorySector::new(data),
             video_ram: VideoRam8kMemorySector::new(),
             internal_ram_8k: InternalRam8kMemorySector::new(),
+            p1: 0,
             serial_transfer_data: 0,
             sio_control: 0,
+            tma: 0,
             timer_control: TimerControl::new(),
             interrupt_flag: InterruptFlag::new(),
             nr10: 0x80,
@@ -162,6 +167,11 @@ impl Memory {
             return self.oam_ram.read_8(position - 0xFE00);
         }
 
+        // P1
+        if position == 0xFF00 {
+            return self.p1;
+        }
+
         // Serial transfer data
         if position == 0xFF01 {
             return self.serial_transfer_data;
@@ -170,6 +180,10 @@ impl Memory {
         // SIO control
         if position == 0xFF02 {
             return self.sio_control;
+        }
+
+        if position == 0xFF06 {
+            return self.tma;
         }
 
         // NR10
@@ -364,6 +378,12 @@ impl Memory {
             return;
         }
 
+        // P1
+        if position == 0xFF00 {
+            self.p1 = value;
+            return;
+        }
+
         // Serial transfer data
         if position == 0xFF01 {
             self.serial_transfer_data = value;
@@ -373,6 +393,11 @@ impl Memory {
         // Serial transfer data
         if position == 0xFF02 {
             self.sio_control = value;
+            return;
+        }
+
+        if position == 0xFF06 {
+            self.tma = value;
             return;
         }
 
