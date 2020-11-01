@@ -32,12 +32,17 @@ fn main() {
                 .long("debug-cpu")
                 .help("Prints CPU instructions on command line")
         )
+        .arg(
+            Arg::with_name("bootstrap")
+                .long("bootstrap")
+                .help("Uses bootstrap ROM")
+        )
         .get_matches();
 
 
     // --- Other vars
     let debug_cpu :bool = matches.is_present("debug-cpu");
-    let bootstrap = false;
+    let bootstrap = matches.is_present("bootstrap");
     let mut i = 1;
 
     // --- Setting up GB components
