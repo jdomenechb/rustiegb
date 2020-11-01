@@ -381,7 +381,7 @@ impl Memory {
 
         // Empty but unusable for I/O
         if position >= 0xFF4C && position < 0xFF80 {
-            println!("Attmept to write at position {:X}", position);
+            println!("Attempt to write at position {:X}", position);
             return;
         }
 

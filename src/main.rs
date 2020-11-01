@@ -38,7 +38,7 @@ fn main() {
     // --- Other vars
     let debug_frame_by_frame:bool = false;
     let debug_cpu :bool = matches.is_present("debug-cpu");
-    let bootstrap = true;
+    let bootstrap = false;
     let mut i = 1;
 
     // --- Setting up GB components

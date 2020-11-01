@@ -52,6 +52,8 @@ impl CPU {
 
         let instruction: u8 = memory.read_8(self.registers.pc);
 
+        let current_pc = self.registers.pc;
+
         match instruction {
             0x00 => self.nop(),
             0x01 => self.ld_bc_nn(memory),
@@ -163,12 +165,12 @@ impl CPU {
             }
         }
 
-        if self.debug {
-            println!("{:X}: {}", self.registers.pc, self.last_executed_instruction);
-        }
-
         debug_assert!(self.last_instruction_ccycles >= 0, "Instruction does not count ccycles: {:X}", instruction);
         debug_assert!(self.pc_to_increment >= 0, "Instruction does not increment PC: {:X}", instruction);
+
+        if self.debug {
+            println!("{:X}: {}", current_pc, self.last_executed_instruction);
+        }
 
         self.available_cycles -= self.last_instruction_ccycles as i32;
         //println!("Cycles left: {}", self.available_cycles);
