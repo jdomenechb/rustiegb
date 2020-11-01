@@ -24,4 +24,15 @@ impl InterruptFlag {
         self.lcdc = value & 0b10 == 0b10;
         self.vblank = value & 0b1 == 0b1;
     }
+
+    pub fn to_u8(&self) -> u8 {
+        let value =
+            ((self.p10_13_transition as u8) << 4)
+            | ((self.serial_io_transfer_complete as u8) << 3)
+            | ((self.timer_overflow as u8) << 2)
+            | ((self.lcdc as u8) << 1)
+            | (self.vblank as u8);
+
+        value
+    }
 }

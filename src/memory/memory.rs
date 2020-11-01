@@ -298,6 +298,11 @@ impl Memory {
             return self.internal_ram.read_8(position - 0xFF80);
         }
 
+        // Interrupt enable
+        if position == 0xFFFF {
+            return self.interrupt_enable.to_u8();
+        }
+
         panic!("ERROR: Memory address {:X} not readable", position);
     }
 
