@@ -248,6 +248,11 @@ impl Memory {
             return self.nr52;
         }
 
+        // LCDC
+        if position == 0xFF40 {
+            return self.lcdc.to_u8();
+        }
+
         // STAT
         if position == 0xFF41 {
             return self.stat.to_u8();

@@ -57,6 +57,20 @@ impl LCDC {
         self.bg_and_window_display = value & 0b1 == 0b1;
     }
 
+    pub fn to_u8(&self) -> u8 {
+        let value =
+            ((self.lcd_control_operation as u8) << 7)
+            | ((self.window_tile_map_display_select as u8) << 6)
+            | ((self.window_display as u8) << 5)
+            | ((self.bg_and_window_tile_data_select as u8) << 4)
+            | ((self.bg_tile_map_display_select as u8) << 3)
+            | ((self.obj_sprite_size as u8) << 2)
+            | ((self.obj_sprite_display as u8) << 1)
+            | (self.bg_and_window_display as u8);
+
+        value
+    }
+
     pub fn lcd_control_operation(&self) -> bool {
         return self.lcd_control_operation;
     }
