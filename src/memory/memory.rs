@@ -127,6 +127,11 @@ impl Memory {
             return self.internal_ram_8k.read_8(position - 0xC000);
         }
 
+        // Echo of Internal RAM
+        if position >= 0xE000 && position < 0xFE00 {
+            return self.internal_ram_8k.read_8(position - 0xE000);
+        }
+
         // Serial transfer data
         if position == 0xFF01 {
             return self.serial_transfer_data;
@@ -239,6 +244,10 @@ impl Memory {
             return self.internal_ram_8k.read_16(position - 0xC000);
         }
 
+        if position >= 0xE000 && position < 0xFE00 {
+            return self.internal_ram_8k.read_16(position - 0xE000);
+        }
+
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
             return self.internal_ram.read_16(position - 0xFF80);
@@ -250,7 +259,8 @@ impl Memory {
     pub fn write_8(&mut self, position: u16, value: u8) {
         // ROM
         if position < 0x8000 {
-            panic!("ROM is not writable!!!");
+            println!("Attempt to write at Memory {:X}. ROM is not writable!!!", position);
+            return;
         }
 
         // Video RAM
@@ -262,6 +272,11 @@ impl Memory {
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             self.internal_ram_8k.write_8(position - 0xC000, value);
+            return;
+        }
+
+        if position >= 0xE000 && position < 0xFE00 {
+            self.internal_ram_8k.write_8(position - 0xE000, value);
             return;
         }
 
@@ -404,7 +419,8 @@ impl Memory {
     pub fn write_16(&mut self, position: u16, value: u16) {
         // ROM
         if position < 0x8000 {
-            panic!("ROM is not writable!!!");
+            println!("Attempt to write at Memory {:X}. ROM is not writable!!!", position);
+            return;
         }
 
         if position >= 0x8000 && position < 0xA000 {
@@ -414,6 +430,10 @@ impl Memory {
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             return self.internal_ram_8k.write_16(position - 0xC000, value);
+        }
+
+        if position >= 0xE000 && position < 0xFE00 {
+            return self.internal_ram_8k.write_16(position - 0xE000, value);
         }
 
         // Internal RAM
