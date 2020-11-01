@@ -630,4 +630,12 @@ impl Memory {
     pub fn bgp(&self) -> u8 {
         self.read_8(0xFF47)
     }
+
+    pub fn has_bootstrap_rom(&self) -> bool {
+        self.bootstrap_rom.is_some()
+    }
+
+    pub fn erase_bootstrap_rom(&mut self) {
+        self.bootstrap_rom = None;
+    }
 }

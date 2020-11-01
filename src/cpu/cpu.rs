@@ -50,7 +50,9 @@ impl CPU {
         self.pc_to_increment = -1;
         self.last_instruction_ccycles = -1;
 
-        //if (self.registers.)
+        if self.registers.pc == 0x100 && memory.has_bootstrap_rom() {
+            memory.erase_bootstrap_rom();
+        }
 
         let instruction: u8 = memory.read_8(self.registers.pc);
 
