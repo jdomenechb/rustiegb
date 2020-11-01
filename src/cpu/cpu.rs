@@ -77,6 +77,7 @@ impl CPU {
             0x16 => self.ld_d_n(&memory),
             0x17 => self.rla(),
             0x18 => self.jr_n(memory),
+            0x19 => self.add_hl_de(memory),
             0x1A => self.ld_a_mde(memory),
             0x1D => self.dec_e(),
             0x1E => self.ld_e_n(memory),
@@ -128,6 +129,7 @@ impl CPU {
             0x7D => self.ld_a_l(),
             0x7E => self.ld_a_mhl(memory),
             0x86 => self.add_a_mhl(memory),
+            0x87 => self.add_a_a(),
             0x89 => self.adc_a_c(),
             0x90 => self.sub_b(),
             0xA1 => self.and_c(),
@@ -449,6 +451,19 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    pub fn add_a_a(&mut self) {
+        let value1 :u8 = self.registers.a;
+        let value2 :u8 = self.registers.a;
+
+        self.last_executed_instruction = "ADD A,A".to_string();
+
+        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+        self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
     pub fn add_a_n(&mut self, memory: &Memory) {
         let value1 :u8 = memory.read_8(self.registers.pc + 1);
         let value2 :u8 = self.registers.a;
@@ -470,6 +485,19 @@ impl CPU {
 
         let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
         self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    pub fn add_hl_de(&mut self, memory: &Memory) {
+        let value1 = self.registers.read_hl();
+        let value2 = self.registers.read_de();
+
+        self.last_executed_instruction = "ADD HL,DE".to_string();
+
+        let result = self.alu.add_nn(&mut self.registers, value1, value2);
+        self.registers.write_hl(result);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;

@@ -96,9 +96,29 @@ impl ALU {
         registers.set_flag_z(new_value == 0);
 
         new_value
+    }
 
 
+    // --- 16 bit ----------------------------------------------------------------------------------
 
+    pub fn add_nn(&self, registers: &mut CPURegisters, a: u16, b: u16) -> u16 {
+        registers.set_flag_n(false);
+
+        let half_carry : bool = ((a & 0b11111111111) + (b & 0b11111111111)) & 0b10000000000 == 0b10000000000;
+        registers.set_flag_h(half_carry);
+
+        let carry: bool = (a as u32 + b as u32) & 0b10000000000000000 == 0b10000000000000000;
+        registers.set_flag_c(carry);
+
+        let value = Wrapping(a);
+        let to_add = Wrapping(b);
+
+        let value = (value + to_add).0;
+
+        let zero :bool = value == 0;
+        registers.set_flag_z(zero);
+
+        return value;
     }
 
     pub fn inc_nn(&self, value: u16) -> u16 {
