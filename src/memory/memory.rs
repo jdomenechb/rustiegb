@@ -9,12 +9,14 @@ use super::stat::STAT;
 
 use std::fs::File;
 use std::io::Read;
+use crate::memory::oam_memory_sector::OamMemorySector;
 
 pub struct Memory {
     bootstrap_rom: Option<ReadOnlyMemorySector>,
     rom: ReadOnlyMemorySector,
     video_ram: VideoRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
+    oam_ram: OamMemorySector,
     
     // FF01
     serial_transfer_data: u8,
@@ -102,7 +104,8 @@ impl Memory {
             obp1: 0xFF,
             obp2: 0xFF,
             internal_ram: InternalRamMemorySector::new(),
-            interrupt_enable: InterruptFlag::new()
+            interrupt_enable: InterruptFlag::new(),
+            oam_ram: OamMemorySector::new(),
         };
     }
 
@@ -130,6 +133,10 @@ impl Memory {
         // Echo of Internal RAM
         if position >= 0xE000 && position < 0xFE00 {
             return self.internal_ram_8k.read_8(position - 0xE000);
+        }
+
+        if position >= 0xFE00 && position < 0xFEA0 {
+            return self.oam_ram.read_8(position - 0xFE00);
         }
 
         // Serial transfer data
@@ -248,6 +255,10 @@ impl Memory {
             return self.internal_ram_8k.read_16(position - 0xE000);
         }
 
+        if position >= 0xFE00 && position < 0xFEA0 {
+            return self.oam_ram.read_16(position - 0xFE00);
+        }
+
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
             return self.internal_ram.read_16(position - 0xFF80);
@@ -280,8 +291,13 @@ impl Memory {
             return;
         }
 
+        if position >= 0xFE00 && position < 0xFEA0 {
+            self.oam_ram.write_8(position - 0xFE00, value);
+            return;
+        }
+
         if position >= 0xFEA0 && position < 0xFF00 {
-            // Not writable, as it is unused, but some games write to this (e.g. Tetris)
+            println!("Attempt to write at an unused RAM position {:X}", position);
             return;
         }
 
@@ -401,7 +417,7 @@ impl Memory {
 
         // Empty but unusable for I/O
         if position >= 0xFF4C && position < 0xFF80 {
-            println!("Attempt to write at position {:X}", position);
+            println!("Attempt to write at an unused RAM position {:X}", position);
             return;
         }
 
@@ -441,8 +457,17 @@ impl Memory {
             return self.internal_ram_8k.write_16(position - 0xE000, value);
         }
 
+        if position >= 0xFE00 && position < 0xFEA0 {
+            return self.oam_ram.write_16(position - 0xE000, value);
+        }
+
         if position >= 0xFEA0 && position < 0xFF00 {
-            // Not writable, as it is unused, but some games write to this (e.g. Tetris)
+            println!("Attempt to write at an unused RAM position {:X}", position);
+            return;
+        }
+
+        if position >= 0xFF4C && position < 0xFF80 {
+            println!("Attempt to write at an unused RAM position {:X}", position);
             return;
         }
 
