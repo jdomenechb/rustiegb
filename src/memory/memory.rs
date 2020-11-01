@@ -65,6 +65,9 @@ pub struct Memory {
     bgp: u8,
     obp1: u8,
     obp2: u8,
+    // FF4A - FF4B
+    wy: u8,
+    wx: u8,
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
     // FFFF
@@ -121,6 +124,8 @@ impl Memory {
             bgp: 0xFC,
             obp1: 0xFF,
             obp2: 0xFF,
+            wy: 0x00,
+            wx: 0x00,
             internal_ram: InternalRamMemorySector::new(),
             interrupt_enable: InterruptFlag::new(),
             oam_ram: OamMemorySector::new(),
@@ -262,6 +267,16 @@ impl Memory {
         // OBP2
         if position == 0xFF49 {
             return self.obp2;
+        }
+
+        // Window Y
+        if position == 0xFF4A {
+            return self.wy;
+        }
+
+        // Window X
+        if position == 0xFF4B {
+            return self.wx;
         }
 
         // Internal RAM
@@ -500,6 +515,18 @@ impl Memory {
         // OBP2
         if position == 0xFF49 {
             self.obp2 = value;
+            return;
+        }
+
+        // Window Y
+        if position == 0xFF4A {
+            self.wy = value;
+            return;
+        }
+
+        // Window X
+        if position == 0xFF4B {
+            self.wx = value;
             return;
         }
 
