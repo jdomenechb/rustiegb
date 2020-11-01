@@ -112,6 +112,7 @@ impl CPU {
             0x4F => self.ld_c_a(),
             0x56 => self.ld_d_mhl(memory),
             0x57 => self.ld_d_a(),
+            0x5E => self.ld_e_mhl(memory),
             0x5F => self.ld_e_a(),
             0x60 => self.ld_h_b(),
             0x66 => self.ld_h_mhl(memory),
@@ -161,6 +162,7 @@ impl CPU {
             0xE2 => self.ld_mc_a(memory),
             0xE5 => self.push_hl(memory),
             0xE6 => self.and_n(memory),
+            0xE9 => self.jp_mhl(),
             0xEA => self.ld_nn_a(memory),
             0xEE => self.xor_n(memory),
             0xEF => self.rst_28(memory),
@@ -1150,6 +1152,18 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    /**
+     * Loads value (HL) to register E.
+     */
+    pub fn ld_e_mhl(&mut self, memory: &Memory) {
+        self.registers.e = memory.read_8(self.registers.read_hl());
+
+        self.last_executed_instruction = "LD E,(HL)".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
     /** 
      * Writes value from register A to memory address $FF00 + n. 
      */
@@ -1469,6 +1483,18 @@ impl CPU {
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 16;
+    }
+
+    /**
+     * Jumps to the 16 bit address contained in HL.
+     */
+    pub fn jp_mhl(&mut self) {
+        self.registers.pc = self.registers.read_hl();
+
+        self.last_executed_instruction = "JP (HL)".to_string();
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 4;
     }
 
 
