@@ -2,12 +2,17 @@ use crate::memory::memory::Memory;
 use crate::gpu::color::Color;
 use piston_window::*;
 use crate::pause;
+use gfx_device_gl::{Factory, Resources, CommandBuffer};
+use ::image::{RgbaImage, Rgba};
 
 pub struct GPU {
     cycles_acumulated: u16,
 }
 
 impl GPU {
+    pub const PIXEL_WIDTH: u8 = 160;
+    pub const PIXEL_HEIGHT: u8 = 144;
+
     pub fn new() -> GPU {
         return GPU {
             cycles_acumulated: 0,
@@ -72,22 +77,31 @@ impl GPU {
         }
     }
 
-    pub fn render(&mut self, window: & mut PistonWindow, event: &Event, window_size: [f64; 2], memory: &Memory) {
-        const PIXEL_WIDTH: u8 = 160;
-        const PIXEL_HEIGHT: u8 = 144;
+    pub fn render(
+        &mut self,
+        window: & mut PistonWindow,
+        event: &Event,
+        window_size: [f64; 2],
+        memory: &Memory,
+        texture_context: &mut TextureContext<Factory,Resources, CommandBuffer>,
+        canvas: &mut RgbaImage,
+        texture: &Texture<Resources>
+    ) {
         const TILE_SIZE_BYTES : u8 = 16;
         const BACKGROUND_MAP_TILE_SIZE_X: u16 = 32;
         const PIXELS_PER_TILE: u16 = 8;
 
         let pixel_size: (f64, f64) = (
-            window_size.get(0).unwrap() / (PIXEL_WIDTH as f64),
-            window_size.get(1).unwrap() / (PIXEL_HEIGHT as f64)
+            window_size.get(0).unwrap() / (GPU::PIXEL_WIDTH as f64),
+            window_size.get(1).unwrap() / (GPU::PIXEL_HEIGHT as f64)
         );
 
-        window.draw_2d(event, |context, graphics, _device| {
-            let lcdc = &memory.lcdc;
+        window.draw_2d(event, |context, graphics, device| {
+            texture_context.encoder.flush(device);
 
-            clear(Color::WHITE, graphics);
+            clear(Color::white().to_f_rgba(), graphics);
+
+            let lcdc = &memory.lcdc;
 
             if !lcdc.lcd_control_operation() {
                 return;
@@ -103,8 +117,8 @@ impl GPU {
 
             let transform = context.transform;
 
-            for screen_y in 0..(PIXEL_HEIGHT as u16) {
-                for screen_x in 0..(PIXEL_WIDTH as u16) {
+            for screen_y in 0..(GPU::PIXEL_HEIGHT as u16) {
+                for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
                     // Background
                     let screen_y_with_offset = screen_y + scy as u16;
                     let screen_x_with_offset = screen_x + scx as u16;
@@ -136,10 +150,10 @@ impl GPU {
                     } & 0b11;
 
                     let color = match pixel {
-                        0b00 => Color::WHITE,
-                        0b01 => Color::DARK_GRAY,
-                        0b10 => Color::GRAY,
-                        0b11 => Color::BLACK,
+                        0b00 => Color::white(),
+                        0b01 => Color::dark_grey(),
+                        0b10 => Color::light_grey(),
+                        0b11 => Color::black(),
                         _ => panic!("Unrecognised color")
                     };
 
@@ -150,9 +164,13 @@ impl GPU {
                         (screen_y + 1) as f64 * pixel_size.1
                     );
 
-                    rectangle(color, square, transform, graphics);
+                    canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(color.to_rgba()));
                 }
             }
+
+            let transform = transform.scale(pixel_size.0, pixel_size.1);
+
+            image(texture, transform, graphics);
         });
     }
 }

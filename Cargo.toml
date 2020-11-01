@@ -7,3 +7,5 @@ edition = "2018"
 [dependencies]
 piston_window = "0.113.0"
 clap = "2.33.3"
+gfx_device_gl = "0.16.2"
+image = "0.23.11"

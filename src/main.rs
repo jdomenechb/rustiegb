@@ -4,6 +4,7 @@ mod math;
 mod gpu;
 
 extern crate piston_window;
+extern crate image;
 
 use cpu::cpu::CPU;
 
@@ -15,6 +16,7 @@ use std::io;
 
 use piston_window::*;
 use clap::{App, Arg};
+use image::ImageBuffer;
 
 fn pause() {
     let mut to_discard = String::new();
@@ -42,6 +44,7 @@ fn main() {
     // --- Setting up GB components
     let mut cpu = CPU::new(debug_cpu, bootstrap);
     let mut memory = Memory::new("./cpu_instrs.gb", bootstrap);
+    //let mut memory = Memory::new("./t.gb", bootstrap);
     let mut gpu = GPU::new();
 
     // --- Seting up window
@@ -57,6 +60,18 @@ fn main() {
     event_settings.set_ups(60);
     window.events.set_event_settings(event_settings);
 
+    let mut canvas = ImageBuffer::new(GPU::PIXEL_WIDTH as u32, GPU::PIXEL_HEIGHT as u32);
+    let mut texture_context = TextureContext {
+        factory: window.factory.clone(),
+        encoder: window.factory.create_command_buffer().into()
+    };
+
+    let mut texture: G2dTexture = Texture::from_image(
+        &mut texture_context,
+        &canvas,
+        &TextureSettings::new()
+    ).unwrap();
+
     while let Some(event) = window.next() {
         // TODO: Keys
 
@@ -67,7 +82,9 @@ fn main() {
                 pause();
             }
 
-            gpu.render(&mut window, &event, render_args.window_size, &memory);
+            texture.update(&mut texture_context, &canvas).unwrap();
+
+            gpu.render(&mut window, &event, render_args.window_size, &memory, &mut texture_context, &mut canvas, &texture);
             cpu.reset_available_ccycles();
 
             i += 1;
