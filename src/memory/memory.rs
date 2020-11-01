@@ -34,6 +34,8 @@ pub struct Memory {
     nr13: u8,
     // FF14
     nr14: u8,
+    //FF17
+    nr22: u8,
     // FF24
     nr50: u8,
     // FF25
@@ -92,6 +94,7 @@ impl Memory {
             nr12: 0xF3,
             nr13: 0x00,
             nr14: 0xBF,
+            nr22: 0x00,
             nr50: 0x77,
             nr51: 0xf3,
             nr52: 0xf1,
@@ -164,6 +167,11 @@ impl Memory {
         // NR14
         if position == 0xFF14 {
             return self.nr14;
+        }
+
+        // NR22
+        if position == 0xFF17 {
+            return self.nr22;
         }
 
         // NR50
@@ -346,6 +354,12 @@ impl Memory {
         // NR14
         if position == 0xFF14 {
             self.nr14 = value;
+            return;
+        }
+
+        // NR22
+        if position == 0xFF17 {
+            self.nr22 = value;
             return;
         }
     
