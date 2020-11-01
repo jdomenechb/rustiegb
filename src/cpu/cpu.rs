@@ -62,6 +62,7 @@ impl CPU {
             0x04 => self.inc_b(),
             0x05 => self.dec_b(),
             0x06 => self.ld_b_n(&memory),
+            0x0B => self.dec_bc(),
             0x0C => self.inc_c(),
             0x0D => self.dec_c(),
             0x0E => self.ld_c_n(memory),
@@ -303,6 +304,16 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;
+    }
+
+    pub fn dec_bc(&mut self) {
+        self.last_executed_instruction = "DEC BC".to_string();
+
+        let value = self.registers.read_bc();
+        self.registers.write_bc(self.alu.dec_nn(value));
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     pub fn inc_bc(&mut self) {
