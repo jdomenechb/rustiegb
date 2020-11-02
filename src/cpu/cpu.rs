@@ -122,8 +122,10 @@ impl CPU {
             0x5E => self.ld_e_mhl(memory),
             0x5F => self.ld_e_a(),
             0x60 => self.ld_h_b(),
+            0x62 => self.ld_h_d(),
             0x66 => self.ld_h_mhl(memory),
             0x67 => self.ld_h_a(),
+            0x6B => self.ld_l_e(),
             0x6E => self.ld_l_mhl(memory),
             0x6F => self.ld_l_a(),
             0x70 => self.ld_mhl_b(memory),
@@ -137,10 +139,12 @@ impl CPU {
             0x7C => self.ld_a_h(),
             0x7D => self.ld_a_l(),
             0x7E => self.ld_a_mhl(memory),
+            0x81 => self.add_a_c(),
             0x86 => self.add_a_mhl(memory),
             0x87 => self.add_a_a(),
             0x89 => self.adc_a_c(),
             0x90 => self.sub_b(),
+            0x91 => self.sub_c(),
             0xA1 => self.and_c(),
             0xA7 => self.and_a(),
             0xA9 => self.xor_c(),
@@ -150,9 +154,17 @@ impl CPU {
             0xB1 => self.or_c(),
             0xB6 => self.or_mhl(memory),
             0xB7 => self.or_a(),
+            0xB8 => self.cp_b(),
+            0xB9 => self.cp_c(),
+            0xBA => self.cp_d(),
+            0xBB => self.cp_e(),
+            0xBC => self.cp_h(),
+            0xBD => self.cp_l(),
             0xBE => self.cp_mhl(memory),
+            0xBF => self.cp_a(),
             0xC0 => self.ret_nz(memory),
             0xC1 => self.pop_bc(memory),
+            0xC2 => self.jp_nz_nn(memory),
             0xC3 => self.jp_nn(memory),
             0xC4 => self.call_nz_nn(memory),
             0xC5 => self.push_bc(memory),
@@ -167,6 +179,7 @@ impl CPU {
             0xD1 => self.pop_de(memory),
             0xD5 => self.push_de(memory),
             0xD6 => self.sub_n(memory),
+            0xD8 => self.ret_c(memory),
             0xD9 => self.reti(memory),
             0xDF => self.rst_18(memory),
             0xE0 => self.ldh_n_a(memory),
@@ -183,6 +196,8 @@ impl CPU {
             0xF3 => self.di(),
             0xF5 => self.push_af(memory),
             0xF6 => self.or_n(memory),
+            0xF8 => self.ld_hl_sp_n(memory),
+            0xF9 => self.ld_sp_hl(),
             0xFA => self.ld_a_nn(memory),
             0xFB => self.ei(),
             0xFE => self.cp_n(memory),
@@ -503,6 +518,19 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    pub fn add_a_c(&mut self) {
+        let value1 :u8 = self.registers.a;
+        let value2 :u8 = self.registers.c;
+
+        self.last_executed_instruction = "ADD A,C".to_string();
+
+        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+        self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
     pub fn add_a_n(&mut self, memory: &Memory) {
         let value1 :u8 = memory.read_8(self.registers.pc + 1);
         let value2 :u8 = self.registers.a;
@@ -578,6 +606,21 @@ impl CPU {
 
         let value = self.registers.a;
         let to_subtract :u8 = self.registers.b;
+        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        self.registers.a = value;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * Substract C from A.
+     */
+    pub fn sub_c(&mut self) {
+        self.last_executed_instruction = "SUB C".to_string();
+
+        let value = self.registers.a;
+        let to_subtract :u8 = self.registers.c;
         let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
         self.registers.a = value;
 
@@ -871,7 +914,91 @@ impl CPU {
 
     // --- COMPARE INSTRUCTIONS -------------------------------------------------------------------------------------------------------------
 
-    pub fn cp_n(&mut self, memory: &Memory) {
+    fn cp_a(&mut self) {
+        let n :u8 = self.registers.a;
+        let a :u8 = self.registers.a;
+
+        self.last_executed_instruction = "CP A".to_string();
+
+        self.alu.cp_n(&mut self.registers, a, n);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn cp_b(&mut self) {
+        let n :u8 = self.registers.b;
+        let a :u8 = self.registers.a;
+
+        self.last_executed_instruction = "CP B".to_string();
+
+        self.alu.cp_n(&mut self.registers, a, n);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn cp_c(&mut self) {
+        let n :u8 = self.registers.c;
+        let a :u8 = self.registers.a;
+
+        self.last_executed_instruction = "CP C".to_string();
+
+        self.alu.cp_n(&mut self.registers, a, n);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn cp_d(&mut self) {
+        let n :u8 = self.registers.d;
+        let a :u8 = self.registers.a;
+
+        self.last_executed_instruction = "CP D".to_string();
+
+        self.alu.cp_n(&mut self.registers, a, n);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn cp_e(&mut self) {
+        let n :u8 = self.registers.e;
+        let a :u8 = self.registers.a;
+
+        self.last_executed_instruction = "CP E".to_string();
+
+        self.alu.cp_n(&mut self.registers, a, n);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn cp_h(&mut self) {
+        let n :u8 = self.registers.h;
+        let a :u8 = self.registers.a;
+
+        self.last_executed_instruction = "CP H".to_string();
+
+        self.alu.cp_n(&mut self.registers, a, n);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn cp_l(&mut self) {
+        let n :u8 = self.registers.l;
+        let a :u8 = self.registers.a;
+
+        self.last_executed_instruction = "CP L".to_string();
+
+        self.alu.cp_n(&mut self.registers, a, n);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn cp_n(&mut self, memory: &Memory) {
         let n :u8 = memory.read_8(self.registers.pc + 1);
         let a :u8 = self.registers.a;
 
@@ -883,7 +1010,7 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    pub fn cp_mhl(&mut self, memory: &Memory) {
+    fn cp_mhl(&mut self, memory: &Memory) {
         let n :u8 = memory.read_8(self.registers.read_hl());
         let a :u8 = self.registers.a;
 
@@ -958,20 +1085,8 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
-    /** 
-     * Loads register H to register B. 
-     */
-    pub fn ld_h_b(&mut self) {
-        self.registers.h = self.registers.b;
-
-        self.last_executed_instruction = "LD H,B".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
     /**
-     * Loads from register A to register H;
+     * Loads from register A to register H.
      */
     pub fn ld_h_a(&mut self) {
         self.registers.h = self.registers.a;
@@ -983,12 +1098,48 @@ impl CPU {
     }
 
     /**
-    * Loads from register A to register L;
+     * Loads from register B to register H.
+     */
+    pub fn ld_h_b(&mut self) {
+        self.registers.h = self.registers.b;
+
+        self.last_executed_instruction = "LD H,B".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * Loads from register D to register H.
+     */
+    pub fn ld_h_d(&mut self) {
+        self.registers.h = self.registers.d;
+
+        self.last_executed_instruction = "LD H,D".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+    * Loads from register A to register L.
     */
     pub fn ld_l_a(&mut self) {
         self.registers.l = self.registers.a;
 
         self.last_executed_instruction = "LD L,A".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+    * Loads from register E to register L.
+    */
+    pub fn ld_l_e(&mut self) {
+        self.registers.l = self.registers.e;
+
+        self.last_executed_instruction = "LD L,E".to_string();
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
@@ -1020,6 +1171,21 @@ impl CPU {
         self.last_instruction_ccycles = 12;
     }
 
+    /**
+     * Put SP + n effective address into HL.
+     */
+    pub fn ld_hl_sp_n(&mut self, memory: &Memory) {
+        let add = memory.read_8(self.registers.pc + 1);
+        self.registers.write_hl(self.registers.sp + add as u16);
+
+        self.last_executed_instruction = format!("LD HL,SP + {:X}", add).to_string();
+
+        // TODO: flags
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 12;
+    }
+
     /** 
      * Loads value nn to register SP. 
      */
@@ -1030,6 +1196,18 @@ impl CPU {
 
         self.pc_to_increment = 3;
         self.last_instruction_ccycles = 12;
+    }
+
+    /**
+     * Loads register HL to register SP.
+     */
+    pub fn ld_sp_hl(&mut self) {
+        self.registers.sp = self.registers.read_hl();
+
+        self.last_executed_instruction = "LD SP,HL".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
     }
 
     /** 
@@ -1642,6 +1820,26 @@ impl CPU {
         self.pc_to_increment = 0;
     }
 
+    /**
+     * Jumps to the indicated address only if the flag Z is NOT set. Otherwise, continues to the next instruction.
+     */
+    pub fn jp_nz_nn(&mut self, memory: &Memory) {
+        let possible_value = memory.read_16(self.registers.pc + 1);
+
+        self.last_executed_instruction = format!("JP NZ,{:X}", possible_value).to_string();
+
+        self.registers.pc += 3;
+
+        if !self.registers.is_flag_z() {
+            self.registers.pc = possible_value;
+            self.last_instruction_ccycles = 16;
+        } else {
+            self.last_instruction_ccycles = 12;
+        }
+
+        self.pc_to_increment = 0;
+    }
+
 
     // --- FUNC INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------
 
@@ -1754,6 +1952,23 @@ impl CPU {
             self.last_instruction_ccycles = 8;
         }
         
+        self.pc_to_increment = 0;
+    }
+
+    /**
+    * Pop two bytes from stack & jump to that address if flag C is set.
+    */
+    pub fn ret_c(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = "RET C".to_string();
+
+        if self.registers.is_flag_c() {
+            self.registers.pc = self.pop_dd(memory);
+            self.last_instruction_ccycles = 20;
+        } else {
+            self.registers.pc += 1;
+            self.last_instruction_ccycles = 8;
+        }
+
         self.pc_to_increment = 0;
     }
 
