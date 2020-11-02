@@ -1394,7 +1394,7 @@ impl CPU {
         let value: u8 = memory.read_8(new_value_hl);
         self.registers.a = value;
 
-        new_value_hl += self.alu.inc_nn(new_value_hl);
+        new_value_hl = self.alu.inc_nn(new_value_hl);
 
         self.registers.write_hl(new_value_hl);
 

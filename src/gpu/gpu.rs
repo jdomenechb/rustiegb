@@ -1,7 +1,6 @@
 use crate::memory::memory::Memory;
 use crate::gpu::color::Color;
 use piston_window::*;
-use crate::pause;
 use gfx_device_gl::{Factory, Resources, CommandBuffer};
 use ::image::{RgbaImage, Rgba};
 
@@ -156,13 +155,6 @@ impl GPU {
                         0b11 => Color::black(),
                         _ => panic!("Unrecognised color")
                     };
-
-                    let square = rectangle::rectangle_by_corners(
-                        screen_x as f64 * pixel_size.0,
-                        screen_y as f64 * pixel_size.1,
-                        (screen_x + 1) as f64 * pixel_size.0,
-                        (screen_y + 1) as f64 * pixel_size.1
-                    );
 
                     canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(color.to_rgba()));
                 }
