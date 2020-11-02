@@ -12,7 +12,8 @@ pub struct CPU {
     pc_to_increment: i8,
     last_instruction_ccycles: i8,
     debug: bool,
-    last_executed_instruction: String
+    last_executed_instruction: String,
+    ime: bool,
 }
 
 impl CPU {
@@ -28,7 +29,8 @@ impl CPU {
             pc_to_increment: -1,
             last_instruction_ccycles: -1,
             debug,
-            last_executed_instruction: String::new()
+            last_executed_instruction: String::new(),
+            ime: false,
         }
     }
 
@@ -1232,7 +1234,7 @@ impl CPU {
     pub fn ldh_a_n(&mut self, memory: &mut Memory) {
         let to_sum: u16 = memory.read_8(self.registers.pc + 1) as u16;
 
-        self.last_executed_instruction = format!("LDH ($FF00 + {:X}),A", to_sum).to_string();
+        self.last_executed_instruction = format!("LDH A, ($FF00 + {:X})", to_sum).to_string();
 
         let mem_addr: u16 = 0xFF00 + to_sum;
         self.registers.a = memory.read_8(mem_addr);
@@ -1388,8 +1390,13 @@ impl CPU {
     pub fn ldi_a_mhl(&mut self, memory: &Memory) {
         self.last_executed_instruction = "LDI A,(HL)".to_string();
 
-        let value: u8 = memory.read_8(self.registers.read_hl());
+        let mut new_value_hl = self.registers.read_hl();
+        let value: u8 = memory.read_8(new_value_hl);
         self.registers.a = value;
+
+        new_value_hl += self.alu.inc_nn(new_value_hl);
+
+        self.registers.write_hl(new_value_hl);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
@@ -1946,33 +1953,7 @@ impl CPU {
     }
 
 
-    // --- OTHER INSTRUCTIONS --------------------------------------------------------------------------------------------------------------
-
-    /**
-     * Disables interrupts
-     */
-    pub fn di(&mut self) {
-        self.last_executed_instruction = "DI".to_string();
-        
-        // TODO
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Enables interrupts
-     */
-    pub fn ei(&mut self) {
-        self.last_executed_instruction = "EI".to_string();
-
-        // TODO
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    // --- INTERNAL --------------------------------------------------------------------------
+    // --- INTERNAL --------------------------------------------------------------------------------
 
     fn push_dd(&mut self, memory : &mut Memory, value: u16) {
         memory.write_16(self.registers.sp - 2, value);
@@ -1993,5 +1974,46 @@ impl CPU {
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 16;
+    }
+
+    fn interrupt_dd(&mut self, memory: &mut Memory, new_address: u16) {
+        self.ime = false;
+        self.push_dd(memory, self.registers.pc);
+        self.registers.pc = new_address;
+    }
+
+
+    // --- INTERRUPTS ----------------------------------------------------------------------------------
+
+    pub fn are_interrupts_enabled(&self) -> bool {
+        self.ime
+    }
+
+    pub fn vblank_interrupt(&mut self, memory: &mut Memory) {
+        self.interrupt_dd(memory, 0x40)
+    }
+
+    /**
+     * Disables interrupts
+     */
+    fn di(&mut self) {
+        self.last_executed_instruction = "DI".to_string();
+
+        self.ime = false;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * Enables interrupts
+     */
+    fn ei(&mut self) {
+        self.last_executed_instruction = "EI".to_string();
+
+        self.ime = true;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
     }
 }

@@ -94,6 +94,12 @@ fn main() {
             while cpu.has_available_ccycles() {
                 cpu.step(&mut memory);
                 gpu.step(cpu.get_last_instruction_ccycles(), &mut memory);
+
+                if cpu.are_interrupts_enabled() {
+                    if memory.interrupt_enable().is_vblank() {
+                        cpu.vblank_interrupt(&mut memory);
+                    }
+                }
             }
         });
     }

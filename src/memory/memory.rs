@@ -648,4 +648,8 @@ impl Memory {
     pub fn erase_bootstrap_rom(&mut self) {
         self.bootstrap_rom = None;
     }
+
+    pub fn interrupt_enable(&self) -> &InterruptFlag {
+        &self.interrupt_enable
+    }
 }

@@ -35,4 +35,8 @@ impl InterruptFlag {
 
         value
     }
+
+    pub fn is_vblank(&self) -> bool {
+        self.vblank
+    }
 }
