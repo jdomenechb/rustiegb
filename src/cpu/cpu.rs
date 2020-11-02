@@ -94,6 +94,7 @@ impl CPU {
             0x25 => self.dec_h(),
             0x26 => self.ld_h_n(&memory),
             0x28 => self.jr_z_n(memory),
+            0x29 => self.add_hl_hl(),
             0x2A => self.ldi_a_mhl(memory),
             0x2C => self.inc_l(),
             0x2D => self.dec_l(),
@@ -110,6 +111,7 @@ impl CPU {
             0x3C => self.inc_a(),
             0x3D => self.dec_a(),
             0x3E => self.ld_a_n(memory),
+            0x3F => self.ccf(),
             0x46 => self.ld_b_mhl(memory),
             0x47 => self.ld_b_a(),
             0x49 => self.ld_c_c(),
@@ -123,6 +125,7 @@ impl CPU {
             0x66 => self.ld_h_mhl(memory),
             0x67 => self.ld_h_a(),
             0x6E => self.ld_l_mhl(memory),
+            0x6F => self.ld_l_a(),
             0x70 => self.ld_mhl_b(memory),
             0x71 => self.ld_mhl_c(memory),
             0x72 => self.ld_mhl_d(memory),
@@ -179,6 +182,7 @@ impl CPU {
             0xF1 => self.pop_af(memory),
             0xF3 => self.di(),
             0xF5 => self.push_af(memory),
+            0xF6 => self.or_n(memory),
             0xFA => self.ld_a_nn(memory),
             0xFB => self.ei(),
             0xFE => self.cp_n(memory),
@@ -538,6 +542,19 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    pub fn add_hl_hl(&mut self) {
+        let value1 = self.registers.read_hl();
+        let value2 = self.registers.read_hl();
+
+        self.last_executed_instruction = "ADD HL,HL".to_string();
+
+        let result = self.alu.add_nn(&mut self.registers, value1, value2);
+        self.registers.write_hl(result);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
     /**
      * Substract n from A.
      */
@@ -740,6 +757,23 @@ impl CPU {
     }
 
     /**
+     * OR of value with register A, result in A.
+     */
+    pub fn or_n(&mut self, memory: &Memory) {
+        let value1 : u8 = memory.read_8(self.registers.pc + 1);
+        let value2 : u8 = self.registers.a;
+
+        self.last_executed_instruction = format!("OR {:X}", value1).to_string();
+
+        let result: u8 = self.alu.or_n(&mut self.registers, value1, value2);
+
+        self.registers.a = result;
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /**
      * AND of register A with register A, result in A.
      */
     pub fn and_a(&mut self) {
@@ -818,6 +852,18 @@ impl CPU {
         self.registers.set_flag_n(false);
         self.registers.set_flag_h(false);
         self.registers.set_flag_c(true);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+    * Complement carry flag
+    */
+    pub fn ccf(&mut self) {
+        self.last_executed_instruction = "CCF".to_string();
+
+        self.registers.set_flag_c(!self.registers.is_flag_c());
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
@@ -931,6 +977,18 @@ impl CPU {
         self.registers.h = self.registers.a;
 
         self.last_executed_instruction = "LD H,A".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+    * Loads from register A to register L;
+    */
+    pub fn ld_l_a(&mut self) {
+        self.registers.l = self.registers.a;
+
+        self.last_executed_instruction = "LD L,A".to_string();
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
@@ -1830,6 +1888,7 @@ impl CPU {
             0x19 => self.rr_c(),
             0x1A => self.rr_d(),
             0x37 => self.swap_a(),
+            0x3F => self.srl_a(),
             0x7C => self.bit_7_h(),
             0x87 => self.res_0_a(),
             0x38 => self.srl_b(),
@@ -1914,6 +1973,28 @@ impl CPU {
         self.registers.d = msf | ((self.registers.d >> 1) & 0b01111111);
 
         let zero :bool = self.registers.d == 0;
+        self.registers.set_flag_z(zero);
+        self.registers.set_flag_c(carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /**
+     * Shifts bit 0 of register A to Carry, resets other flags, Z gets updated and MSF is preserved.
+     */
+    pub fn srl_a(&mut self)
+    {
+        self.last_executed_instruction = "SRL A".to_string();
+        let carry : bool = self.registers.a & 0b1 == 1;
+        let msf : u8 = self.registers.a & 0b10000000;
+
+        self.registers.a = msf | ((self.registers.a >> 1) & 0b01111111);
+
+        let zero :bool = self.registers.a == 0;
+
         self.registers.set_flag_z(zero);
         self.registers.set_flag_c(carry);
         self.registers.set_flag_h(false);
