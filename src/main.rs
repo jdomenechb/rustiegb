@@ -18,11 +18,6 @@ use piston_window::*;
 use clap::{App, Arg};
 use image::ImageBuffer;
 
-fn pause() {
-    let mut to_discard = String::new();
-    let _ = io::stdin().read_line(&mut to_discard);
-}
-
 fn main() {
     let app_name = "RustieGB";
 
