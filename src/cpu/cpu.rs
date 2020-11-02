@@ -56,6 +56,10 @@ impl CPU {
             memory.erase_bootstrap_rom();
         }
 
+        if self.registers.pc == 0xc003 {
+            let meh = 0;
+        }
+
         let instruction: u8 = memory.read_8(self.registers.pc);
 
         let current_pc = self.registers.pc;
@@ -587,10 +591,11 @@ impl CPU {
      * Substract n from A.
      */
     pub fn sub_n(&mut self, memory: &Memory) {
-        self.last_executed_instruction = "SUB n".to_string();
-
         let value = self.registers.a;
         let to_subtract :u8 = memory.read_8(self.registers.pc + 1);
+
+        self.last_executed_instruction = format!("SUB A, {:X}", to_subtract).to_string();
+
         let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
         self.registers.a = value;
 
