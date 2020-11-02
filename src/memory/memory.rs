@@ -15,6 +15,7 @@ pub struct Memory {
     bootstrap_rom: Option<ReadOnlyMemorySector>,
     rom: ReadOnlyMemorySector,
     video_ram: VideoRam8kMemorySector,
+    switchable_ram_bank: InternalRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
     oam_ram: OamMemorySector,
     // FF00
@@ -101,6 +102,7 @@ impl Memory {
             bootstrap_rom,
             rom: ReadOnlyMemorySector::new(data),
             video_ram: VideoRam8kMemorySector::new(),
+            switchable_ram_bank: InternalRam8kMemorySector::new(),
             internal_ram_8k: InternalRam8kMemorySector::new(),
             p1: 0,
             serial_transfer_data: 0,
@@ -151,6 +153,11 @@ impl Memory {
         // Video RAM
         if position >= 0x8000 && position < 0xA000 {
             return self.video_ram.read_8(position - 0x8000);
+        }
+
+        // 8k switchable RAM bank
+        if position >= 0xA000 && position < 0xC000 {
+            return self.switchable_ram_bank.read_8(position - 0xA000);
         }
 
         // Internal RAM 8k
@@ -333,11 +340,17 @@ impl Memory {
             return self.video_ram.read_16(position - 0x8000);
         }
 
+        // 8k switchable RAM bank
+        if position >= 0xA000 && position < 0xC000 {
+            return self.switchable_ram_bank.read_16(position - 0xA000);
+        }
+
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             return self.internal_ram_8k.read_16(position - 0xC000);
         }
 
+        // Echo of internal RAM
         if position >= 0xE000 && position < 0xFE00 {
             return self.internal_ram_8k.read_16(position - 0xE000);
         }
@@ -367,12 +380,19 @@ impl Memory {
             return;
         }
 
+        // 8k switchable RAM bank
+        if position >= 0xA000 && position < 0xC000 {
+            self.switchable_ram_bank.write_8(position - 0xA000, value);
+            return;
+        }
+
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             self.internal_ram_8k.write_8(position - 0xC000, value);
             return;
         }
 
+        // Echo of internal RAM
         if position >= 0xE000 && position < 0xFE00 {
             self.internal_ram_8k.write_8(position - 0xE000, value);
             return;
@@ -471,11 +491,13 @@ impl Memory {
             return;
         }
 
-        // NR42 // NR30
+        // NR30
         if position == 0xFF1A {
             self.nr30 = value;
             return;
         }
+
+        // NR42
         if position == 0xFF21 {
             self.nr42 = value;
             return;
@@ -599,10 +621,16 @@ impl Memory {
         }
 
         // Internal RAM 8k
+        if position >= 0xA000 && position < 0xC000 {
+            return self.switchable_ram_bank.write_16(position - 0xA000, value);
+        }
+
+        // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
             return self.internal_ram_8k.write_16(position - 0xC000, value);
         }
 
+        // Echo of internal RAM
         if position >= 0xE000 && position < 0xFE00 {
             return self.internal_ram_8k.write_16(position - 0xE000, value);
         }
