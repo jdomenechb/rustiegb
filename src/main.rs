@@ -23,6 +23,12 @@ fn main() {
 
     let matches = App::new(app_name)
         .arg(
+            Arg::with_name("ROMFILE")
+                .required(true)
+                .index(1)
+                .help("Path of the ROM file to use")
+        )
+        .arg(
             Arg::with_name("debug-cpu")
                 .long("debug-cpu")
                 .help("Prints CPU instructions on command line")
@@ -42,8 +48,7 @@ fn main() {
 
     // --- Setting up GB components
     let mut cpu = CPU::new(debug_cpu, bootstrap);
-    let mut memory = Memory::new("./cpu_instrs.gb", bootstrap);
-    //let mut memory = Memory::new("./t.gb", bootstrap);
+    let mut memory = Memory::new(matches.value_of("ROMFILE").unwrap(), bootstrap);
     let mut gpu = GPU::new();
 
     // --- Seting up window
