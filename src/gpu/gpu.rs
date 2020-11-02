@@ -98,8 +98,6 @@ impl GPU {
         window.draw_2d(event, |context, graphics, device| {
             texture_context.encoder.flush(device);
 
-            clear(Color::white().to_f_rgba(), graphics);
-
             let lcdc = &memory.lcdc;
 
             if !lcdc.lcd_control_operation() {
