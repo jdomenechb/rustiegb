@@ -1175,12 +1175,13 @@ impl CPU {
      * Put SP + n effective address into HL.
      */
     pub fn ld_hl_sp_n(&mut self, memory: &Memory) {
-        let add = memory.read_8(self.registers.pc + 1);
-        self.registers.write_hl(self.registers.sp + add as u16);
+        let add1 = self.registers.sp;
+        let add2 = memory.read_8(self.registers.pc + 1);
 
-        self.last_executed_instruction = format!("LD HL,SP + {:X}", add).to_string();
+        let new_value = self.alu.add_nn(&mut self.registers, add1, add2 as u16);
+        self.registers.write_hl(new_value);
 
-        // TODO: flags
+        self.last_executed_instruction = format!("LD HL,SP + {:X}", add2).to_string();
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 12;
