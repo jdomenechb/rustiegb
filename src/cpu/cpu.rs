@@ -102,6 +102,7 @@ impl CPU {
             0x30 => self.jr_nc_n(memory),
             0x31 => self.ld_sp_nn(memory),
             0x32 => self.ldd_mhl_a(memory),
+            0x34 => self.inc_mhl(memory),
             0x35 => self.dec_mhl(memory),
             0x36 => self.ld_mhl_n(memory),
             0x37 => self.scf(),
@@ -163,6 +164,7 @@ impl CPU {
             0xD1 => self.pop_de(memory),
             0xD5 => self.push_de(memory),
             0xD6 => self.sub_n(memory),
+            0xD9 => self.reti(memory),
             0xDF => self.rst_18(memory),
             0xE0 => self.ldh_n_a(memory),
             0xE1 => self.pop_hl(memory),
@@ -422,6 +424,18 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+
+    pub fn inc_h(&mut self) {
+        self.last_executed_instruction = "INC H".to_string();
+
+        let value :u8 = self.registers.h;
+        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
+        self.registers.h = value;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
     pub fn inc_l(&mut self) {
         self.last_executed_instruction = "INC L".to_string();
 
@@ -433,15 +447,16 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
-    pub fn inc_h(&mut self) {
-        self.last_executed_instruction = "INC H".to_string();
+    pub fn inc_mhl(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = "INC (HL)".to_string();
 
-        let value :u8 = self.registers.h;
+        let position = self.registers.read_hl();
+        let value :u8 = memory.read_8(position);
         let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
-        self.registers.h = value;
+        memory.write_8(position, value);
 
         self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
+        self.last_instruction_ccycles = 12;
     }
 
     pub fn adc_a_c(&mut self) {
@@ -1614,6 +1629,20 @@ impl CPU {
         self.last_executed_instruction = "RET".to_string();
 
         self.registers.pc = self.pop_dd(memory);
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 16;
+    }
+
+    /**
+     * Pop two bytes from stack & jump to that address, enabling interruptions.
+     */
+    pub fn reti(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = "RETI".to_string();
+
+        self.registers.pc = self.pop_dd(memory);
+
+        self.ime = true;
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 16;

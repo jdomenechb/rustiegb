@@ -65,6 +65,8 @@ pub struct Memory {
     scx: u8,
     // FF44
     pub ly: u8,
+    // FF46
+    dma: u8,
     // FF47 - FF49
     bgp: u8,
     obp1: u8,
@@ -128,6 +130,7 @@ impl Memory {
             scy: 0x00,
             scx: 0x00,
             ly: 0x00,
+            dma: 0x00,
             bgp: 0xFC,
             obp1: 0xFF,
             obp2: 0xFF,
@@ -278,6 +281,11 @@ impl Memory {
         // LY
         if position == 0xFF44 {
             return self.ly;
+        }
+
+        // DMA
+        if position == 0xFF46 {
+            return self.dma;
         }
 
         // BGP
@@ -554,6 +562,12 @@ impl Memory {
         // LY
         if position == 0xFF44 {
             self.ly = value;
+            return;
+        }
+
+        // DMA
+        if position == 0xFF46 {
+            self.dma = value;
             return;
         }
 
