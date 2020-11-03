@@ -32,7 +32,7 @@ impl GPU {
                     if memory.ly == 143 {
                         // Enter V-blank mode
                         memory.stat.mode = 1;
-                        // TODO
+                        memory.interrupt_flag().set_vblank(true);
                     } else {
                         // Enter Searching OAM-RAM mode
                         memory.stat.mode = 2;
