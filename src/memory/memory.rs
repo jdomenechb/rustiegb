@@ -11,6 +11,7 @@ use std::fs::File;
 use std::io::Read;
 use crate::memory::oam_memory_sector::OamMemorySector;
 use crate::memory::joypad::Joypad;
+use crate::memory::wave_pattern_ram::WavePatternRam;
 
 pub struct Memory {
     bootstrap_rom: Option<ReadOnlyMemorySector>,
@@ -41,12 +42,16 @@ pub struct Memory {
     nr13: u8,
     // FF14
     nr14: u8,
+    // FF16
+    nr21: u8,
     // FF17
     nr22: u8,
     // FF19
     nr24: u8,
     // FF1A
     nr30: u8,
+    // FF1C
+    nr32: u8,
     // FF21
     nr42: u8,
     // FF23
@@ -57,6 +62,8 @@ pub struct Memory {
     nr51: u8,
     // FF26
     nr52: u8,
+    // Wave pattern ram (FF30 - FF3F)
+    wave_pattern_ram: WavePatternRam,
     // FF40
     pub lcdc: LCDC,
     // FF41
@@ -118,14 +125,17 @@ impl Memory {
             nr12: 0xF3,
             nr13: 0x00,
             nr14: 0xBF,
+            nr21: 0x3F,
             nr22: 0x00,
             nr24: 0xBF,
             nr30: 0x7F,
+            nr32: 0x9f,
             nr42: 0x00,
             nr44: 0xBF,
             nr50: 0x77,
             nr51: 0xf3,
             nr52: 0xf1,
+            wave_pattern_ram: WavePatternRam::new(),
             lcdc: LCDC::new(),
             stat: STAT::new(),
             scy: 0x00,
@@ -174,6 +184,7 @@ impl Memory {
             return self.internal_ram_8k.read_8(position - 0xE000);
         }
 
+        // OAM Ram
         if position >= 0xFE00 && position < 0xFEA0 {
             return self.oam_ram.read_8(position - 0xFE00);
         }
@@ -219,6 +230,11 @@ impl Memory {
             return self.nr14;
         }
 
+        // NR21
+        if position == 0xFF16 {
+            return self.nr21;
+        }
+
         // NR22
         if position == 0xFF17 {
             return self.nr22;
@@ -232,6 +248,11 @@ impl Memory {
         // NR30
         if position == 0xFF1A {
             return self.nr30;
+        }
+
+        // NR33
+        if position == 0xFF1C {
+            return self.nr32;
         }
 
         // NR42
@@ -257,6 +278,11 @@ impl Memory {
         // NR52
         if position == 0xFF26 {
             return self.nr52;
+        }
+
+        // Wave pattern RAM
+        if position >= 0xFF30 && position < 0xFF40 {
+            return self.wave_pattern_ram.read_8(position - 0xFF30);
         }
 
         // LCDC
@@ -366,6 +392,11 @@ impl Memory {
 
         if position >= 0xFE00 && position < 0xFEA0 {
             return self.oam_ram.read_16(position - 0xFE00);
+        }
+
+        // Wave pattern RAM
+        if position >= 0xFF30 && position < 0xFF40 {
+            return self.wave_pattern_ram.read_16(position - 0xFF30)
         }
 
         // Internal RAM
@@ -482,6 +513,12 @@ impl Memory {
             return;
         }
 
+        // NR21
+        if position == 0xFF16 {
+            self.nr21 = value;
+            return;
+        }
+
         // NR22
         if position == 0xFF17 {
             self.nr22 = value;
@@ -500,9 +537,9 @@ impl Memory {
             return;
         }
 
-        // NR30
-        if position == 0xFF1A {
-            self.nr30 = value;
+        // NR32
+        if position == 0xFF1C {
+            self.nr32 = value;
             return;
         }
 
@@ -533,6 +570,11 @@ impl Memory {
         // NR52
         if position == 0xFF26 {
             self.nr52 = value;
+            return;
+        }
+
+        if position >= 0xFF30 && position < 0xFF40 {
+            self.wave_pattern_ram.write_8(position - 0xFF30, value);
             return;
         }
 
@@ -657,6 +699,10 @@ impl Memory {
         if position >= 0xFEA0 && position < 0xFF00 {
             println!("Attempt to write at an unused RAM position {:X}", position);
             return;
+        }
+
+        if position >= 0xFF30 && position < 0xFF40 {
+            return self.wave_pattern_ram.write_16(position - 0xFF30, value);
         }
 
         if position >= 0xFF4C && position < 0xFF80 {

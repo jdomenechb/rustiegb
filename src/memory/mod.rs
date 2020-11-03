@@ -9,3 +9,4 @@ pub mod lcdc;
 pub mod stat;
 pub mod oam_memory_sector;
 pub mod joypad;
+pub mod wave_pattern_ram;
