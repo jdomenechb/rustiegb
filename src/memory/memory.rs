@@ -10,6 +10,7 @@ use super::stat::STAT;
 use std::fs::File;
 use std::io::Read;
 use crate::memory::oam_memory_sector::OamMemorySector;
+use crate::memory::joypad::Joypad;
 
 pub struct Memory {
     bootstrap_rom: Option<ReadOnlyMemorySector>,
@@ -19,7 +20,7 @@ pub struct Memory {
     internal_ram_8k: InternalRam8kMemorySector,
     oam_ram: OamMemorySector,
     // FF00
-    p1: u8,
+    p1: Joypad,
     // FF01
     serial_transfer_data: u8,
     // FF02
@@ -106,7 +107,7 @@ impl Memory {
             video_ram: VideoRam8kMemorySector::new(),
             switchable_ram_bank: InternalRam8kMemorySector::new(),
             internal_ram_8k: InternalRam8kMemorySector::new(),
-            p1: 0,
+            p1: Joypad::new(),
             serial_transfer_data: 0,
             sio_control: 0,
             tma: 0,
@@ -179,7 +180,7 @@ impl Memory {
 
         // P1
         if position == 0xFF00 {
-            return self.p1;
+            return self.p1.to_u8();
         }
 
         // Serial transfer data
@@ -418,7 +419,7 @@ impl Memory {
 
         // P1
         if position == 0xFF00 {
-            self.p1 = value;
+            self.p1.from_u8(value);
             return;
         }
 

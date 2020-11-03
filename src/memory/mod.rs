@@ -8,3 +8,4 @@ pub mod interrupt_flag;
 pub mod lcdc;
 pub mod stat;
 pub mod oam_memory_sector;
+pub mod joypad;
