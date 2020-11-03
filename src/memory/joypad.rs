@@ -1,21 +1,21 @@
 pub struct Joypad {
     // P14 - P10
-    right: bool,
+    pub right: bool,
     // P14 - P11
-    left: bool,
+    pub left: bool,
     // P14 - P12
-    up: bool,
+    pub up: bool,
     // P14 - P13
-    down: bool,
+    pub down: bool,
 
     // P15 - P10
-    a: bool,
+    pub a: bool,
     // P15 - P11
-    b: bool,
+    pub b: bool,
     // P15 - P12
-    select: bool,
+    pub select: bool,
     // P15 - P13
-    start: bool,
+    pub start: bool,
 
     p14: bool,
     p15: bool,

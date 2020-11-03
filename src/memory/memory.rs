@@ -699,4 +699,8 @@ impl Memory {
     pub fn interrupt_flag(&mut self) -> &mut InterruptFlag {
         &mut self.interrupt_flag
     }
+
+    pub fn joypad(&mut self) -> &mut Joypad {
+        &mut self.p1
+    }
 }

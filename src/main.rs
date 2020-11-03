@@ -77,7 +77,27 @@ fn main() {
     ).unwrap();
 
     while let Some(event) = window.next() {
-        // TODO: Keys
+        if let Some(Button::Keyboard(key)) = event.press_args() {
+            println!("Pressed keyboard key '{:?}'", key.code());
+
+            match key.code() {
+                120 => memory.joypad().a = true,
+                122 => memory.joypad().b = true,
+                13 => memory.joypad().start = true,
+                _ => {}
+            }
+        };
+
+        if let Some(Button::Keyboard(key)) = event.release_args() {
+            println!("Released keyboard key '{:?}'", key);
+
+            match key.code() {
+                120 => memory.joypad().a = false,
+                122 => memory.joypad().b = false,
+                13 => memory.joypad().start = false,
+                _ => {}
+            }
+        };
 
         // Actions to do on render
         event.render(|render_args| {
