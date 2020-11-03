@@ -112,12 +112,17 @@ fn main() {
         // Actions to do on update
         event.update(|update_args| {
             while cpu.has_available_ccycles() {
-                cpu.step(&mut memory);
-                gpu.step(cpu.get_last_instruction_ccycles(), &mut memory);
+                if !cpu.is_halted() {
+                    cpu.step(&mut memory);
+                    gpu.step(cpu.get_last_instruction_ccycles(), &mut memory);
+                }
 
                 if cpu.are_interrupts_enabled() {
                     if memory.interrupt_enable().is_vblank() && memory.interrupt_flag().is_vblank() {
                         cpu.vblank_interrupt(&mut memory);
+                        cpu.unhalt();
+
+                        continue;
                     }
                 }
             }

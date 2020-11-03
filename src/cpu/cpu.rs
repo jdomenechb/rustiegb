@@ -14,6 +14,7 @@ pub struct CPU {
     debug: bool,
     last_executed_instruction: String,
     ime: bool,
+    halted: bool,
 }
 
 impl CPU {
@@ -31,6 +32,7 @@ impl CPU {
             debug,
             last_executed_instruction: String::new(),
             ime: false,
+            halted: false,
         }
     }
 
@@ -132,6 +134,7 @@ impl CPU {
             0x70 => self.ld_mhl_b(memory),
             0x71 => self.ld_mhl_c(memory),
             0x72 => self.ld_mhl_d(memory),
+            0x76 => self.halt(),
             0x77 => self.ld_mhl_a(memory),
             0x78 => self.ld_a_b(),
             0x79 => self.ld_a_c(),
@@ -2357,5 +2360,26 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
+    }
+
+    // --- HALT ------------------------------------------------------------------------------------
+    pub fn is_halted(&self) -> bool {
+        self.halted
+    }
+
+    pub fn unhalt(&mut self) {
+        self.halted = false;
+    }
+
+    fn halt(&mut self) {
+        if self.ime {
+            self.halted = true;
+
+            self.pc_to_increment = 1;
+            self.last_instruction_ccycles = 4;
+        } else {
+            self.pc_to_increment = 2;
+            self.last_instruction_ccycles = 4;
+        }
     }
 }
