@@ -116,4 +116,12 @@ impl CPURegisters {
     pub fn is_flag_c(&self) -> bool {
         return self.flags & 0b00010000 == 0b00010000;
     }
+
+    pub fn is_flag_n(&self) -> bool {
+        return self.flags & 0b01000000 == 0b01000000;
+    }
+
+    pub fn is_flag_h(&self) -> bool {
+        return self.flags & 0b00100000 == 0b00100000;
+    }
 }

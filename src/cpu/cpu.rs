@@ -96,6 +96,7 @@ impl CPU {
             0x24 => self.inc_h(),
             0x25 => self.dec_h(),
             0x26 => self.ld_h_n(&memory),
+            0x27 => self.daa(),
             0x28 => self.jr_z_n(memory),
             0x29 => self.add_hl_hl(),
             0x2A => self.ldi_a_mhl(memory),
@@ -2295,6 +2296,36 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    fn daa(&mut self) {
+        self.last_executed_instruction = "DAA".to_string();
+
+        if !self.registers.is_flag_n() {
+            // Addition
+            if self.registers.is_flag_c() || self.registers.a > 0x99 {
+                self.registers.a += 0x60;
+                self.registers.set_flag_c(true);
+            }
+
+            if self.registers.is_flag_h() || (self.registers.a & 0x0f) > 0x09 {
+                self.registers.a += 0x6;
+            }
+        } else {
+            if self.registers.is_flag_c() {
+                self.registers.a -= 0x60;
+            }
+
+            if self.registers.is_flag_h() {
+                self.registers.a -= 0x6;
+            }
+        }
+
+        self.registers.set_flag_z(self.registers.a == 0);
+        self.registers.set_flag_h(false);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
 
     // --- INTERNAL --------------------------------------------------------------------------------
 
@@ -2363,6 +2394,7 @@ impl CPU {
     }
 
     // --- HALT ------------------------------------------------------------------------------------
+
     pub fn is_halted(&self) -> bool {
         self.halted
     }
