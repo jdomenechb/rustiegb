@@ -68,6 +68,7 @@ impl CPU {
             0x04 => self.inc_b(),
             0x05 => self.dec_b(),
             0x06 => self.ld_b_n(&memory),
+            0x0A => self.ld_a_mbc(memory),
             0x0B => self.dec_bc(),
             0x0C => self.inc_c(),
             0x0D => self.dec_c(),
@@ -1291,6 +1292,18 @@ impl CPU {
         self.registers.h = memory.read_8(self.registers.read_hl());
 
         self.last_executed_instruction = "LD H,(HL)".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    /**
+     * Loads value (BC) to register A.
+     */
+    pub fn ld_a_mbc(&mut self, memory: &Memory) {
+        self.registers.a = memory.read_8(self.registers.read_bc());
+
+        self.last_executed_instruction = "LD A,(BC)".to_string();
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
