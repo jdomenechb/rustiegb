@@ -98,7 +98,6 @@ fn main() {
                 if cpu.are_interrupts_enabled() {
                     if memory.interrupt_enable().is_vblank() && memory.interrupt_flag().is_vblank() {
                         cpu.vblank_interrupt(&mut memory);
-                        memory.interrupt_flag().set_vblank(false);
                     }
                 }
             }

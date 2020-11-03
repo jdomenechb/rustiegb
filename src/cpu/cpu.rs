@@ -2317,6 +2317,8 @@ impl CPU {
     }
 
     pub fn vblank_interrupt(&mut self, memory: &mut Memory) {
+        memory.interrupt_flag().set_vblank(false);
+
         self.interrupt_dd(memory, 0x40)
     }
 
