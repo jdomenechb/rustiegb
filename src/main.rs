@@ -96,8 +96,9 @@ fn main() {
                 gpu.step(cpu.get_last_instruction_ccycles(), &mut memory);
 
                 if cpu.are_interrupts_enabled() {
-                    if memory.interrupt_enable().is_vblank() {
+                    if memory.interrupt_enable().is_vblank() && memory.interrupt_flag().is_vblank() {
                         cpu.vblank_interrupt(&mut memory);
+                        memory.interrupt_flag().set_vblank(false);
                     }
                 }
             }

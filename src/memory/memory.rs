@@ -694,4 +694,8 @@ impl Memory {
     pub fn interrupt_enable(&self) -> &InterruptFlag {
         &self.interrupt_enable
     }
+
+    pub fn interrupt_flag(&mut self) -> &mut InterruptFlag {
+        &mut self.interrupt_flag
+    }
 }

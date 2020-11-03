@@ -56,10 +56,6 @@ impl CPU {
             memory.erase_bootstrap_rom();
         }
 
-        if self.registers.pc == 0xc003 {
-            let meh = 0;
-        }
-
         let instruction: u8 = memory.read_8(self.registers.pc);
 
         let current_pc = self.registers.pc;
