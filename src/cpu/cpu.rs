@@ -168,8 +168,13 @@ impl CPU {
             0x89 => self.adc_a_c(),
             0x90 => self.sub_b(),
             0x91 => self.sub_c(),
-            0xA1 => self.and_c(),
-            0xA7 => self.and_a(),
+            0xA0 => self.and_r(ByteRegister::B),
+            0xA1 => self.and_r(ByteRegister::C),
+            0xA2 => self.and_r(ByteRegister::D),
+            0xA3 => self.and_r(ByteRegister::E),
+            0xA4 => self.and_r(ByteRegister::H),
+            0xA5 => self.and_r(ByteRegister::L),
+            0xA7 => self.and_r(ByteRegister::A),
             0xA8 => self.xor_r(ByteRegister::B),
             0xA9 => self.xor_r(ByteRegister::C),
             0xAA => self.xor_r(ByteRegister::D),
@@ -803,35 +808,15 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    /**
-     * AND of register A with register A, result in A.
-     */
-    pub fn and_a(&mut self) {
-        let value1 :u8 = self.registers.a;
-        let value2 :u8 = self.registers.a;
+    fn and_r(&mut self, register: ByteRegister) {
+        let value1 :u8 = self.registers.read_byte(&register);
+        let value2 :u8 = self.registers.read_byte(&ByteRegister::A);
 
-        self.last_executed_instruction = "AND A".to_string();
+        self.last_executed_instruction = format!("AND {}", register.to_string()).to_string();
 
         let result: u8 = self.alu.and_n(&mut self.registers, value1, value2);
 
-        self.registers.a = result;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * AND of register C with register A, result in A.
-     */
-    pub fn and_c(&mut self) {
-        let value1 :u8 = self.registers.c;
-        let value2 :u8 = self.registers.a;
-
-        self.last_executed_instruction = "AND C".to_string();
-
-        let result: u8 = self.alu.and_n(&mut self.registers, value1, value2);
-
-        self.registers.a = result;
+        self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
