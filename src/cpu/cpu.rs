@@ -157,10 +157,14 @@ impl CPU {
             0x7C => self.ld_a_h(),
             0x7D => self.ld_a_l(),
             0x7E => self.ld_a_mhl(memory),
-            0x81 => self.add_a_c(),
-            0x85 => self.add_a_l(),
+            0x80 => self.add_a_r(ByteRegister::B),
+            0x81 => self.add_a_r(ByteRegister::C),
+            0x82 => self.add_a_r(ByteRegister::D),
+            0x83 => self.add_a_r(ByteRegister::E),
+            0x84 => self.add_a_r(ByteRegister::H),
+            0x85 => self.add_a_r(ByteRegister::L),
             0x86 => self.add_a_mhl(memory),
-            0x87 => self.add_a_a(),
+            0x87 => self.add_a_r(ByteRegister::A),
             0x89 => self.adc_a_c(),
             0x90 => self.sub_b(),
             0x91 => self.sub_c(),
@@ -504,53 +508,27 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    pub fn add_a_a(&mut self) {
-        let value1 :u8 = self.registers.a;
-        let value2 :u8 = self.registers.a;
+    fn add_a_r(&mut self, register_v: ByteRegister) {
+        let value1 :u8 = self.registers.read_byte(&ByteRegister::A);
+        let value2 :u8 = self.registers.read_byte(&register_v);
 
-        self.last_executed_instruction = "ADD A,A".to_string();
+        self.last_executed_instruction = format!("ADD A,{}", register_v.to_string()).to_string();
 
         let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
-        self.registers.a = result;
+        self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
     }
 
-    pub fn add_a_c(&mut self) {
-        let value1 :u8 = self.registers.a;
-        let value2 :u8 = self.registers.c;
-
-        self.last_executed_instruction = "ADD A,C".to_string();
-
-        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
-        self.registers.a = result;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    pub fn add_a_l(&mut self) {
-        let value1 :u8 = self.registers.a;
-        let value2 :u8 = self.registers.l;
-
-        self.last_executed_instruction = "ADD A,L".to_string();
-
-        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
-        self.registers.a = result;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    pub fn add_a_n(&mut self, memory: &Memory) {
+    fn add_a_n(&mut self, memory: &Memory) {
         let value1 :u8 = memory.read_8(self.registers.pc + 1);
-        let value2 :u8 = self.registers.a;
+        let value2 :u8 = self.registers.read_byte(&ByteRegister::A);
 
         self.last_executed_instruction = format!("ADD A,{:X}", value1).to_string();
 
         let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
-        self.registers.a = result;
+        self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
@@ -558,12 +536,12 @@ impl CPU {
 
     pub fn add_a_mhl(&mut self, memory: &Memory) {
         let value1 :u8 = memory.read_8(self.registers.read_hl());
-        let value2 :u8 = self.registers.a;
+        let value2 :u8 = self.registers.read_byte(&ByteRegister::A);
 
         self.last_executed_instruction = "ADD A,(HL)".to_string();
 
         let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
-        self.registers.a = result;
+        self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
