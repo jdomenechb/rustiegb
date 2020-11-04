@@ -2093,7 +2093,7 @@ impl CPU {
         self.last_executed_instruction = "POP BC".to_string();
 
         let popped: u16 = self.pop_vv(memory);
-        self.registers.write_bc(popped);
+        self.registers.write_word(&WordRegister::BC, popped);
         
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;
@@ -2106,7 +2106,7 @@ impl CPU {
         self.last_executed_instruction = "POP DE".to_string();
 
         let popped: u16 = self.pop_vv(memory);
-        self.registers.write_de(popped);
+        self.registers.write_word(&WordRegister::DE, popped);
         
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;

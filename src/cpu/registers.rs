@@ -98,24 +98,10 @@ impl CPURegisters {
         return crate::math::two_u8_to_u16(self.b, self.c);
     }
 
-    pub fn write_bc(&mut self, value : u16) {
-        let parts: (u8, u8) = crate::math::u16_to_two_u8(value);
-        self.b = parts.0;
-        self.c = parts.1;
-    }
-
-    /**
-     * Reads combination of register D and register E.
-     */
     pub fn read_de(&self) -> u16 {
         return crate::math::two_u8_to_u16(self.d, self.e);
     }
 
-    pub fn write_de(&mut self, value : u16) {
-        let parts: (u8, u8) = crate::math::u16_to_two_u8(value);
-        self.d = parts.0;
-        self.e = parts.1;
-    }
 
     /**
      * Reads combination of register H and register L.
