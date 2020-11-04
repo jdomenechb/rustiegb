@@ -73,7 +73,7 @@ impl CPU {
             0x06 => self.ld_b_n(&memory),
             0x09 => self.add_hl_bc(),
             0x0A => self.ld_a_mbc(memory),
-            0x0B => self.dec_bc(),
+            0x0B => self.dec_rr(WordRegister::BC),
             0x0C => self.inc_c(),
             0x0D => self.dec_c(),
             0x0E => self.ld_c_n(memory),
@@ -87,6 +87,7 @@ impl CPU {
             0x18 => self.jr_n(memory),
             0x19 => self.add_hl_de(),
             0x1A => self.ld_a_mde(memory),
+            0x1B => self.dec_rr(WordRegister::DE),
             0x1C => self.inc_e(),
             0x1D => self.dec_e(),
             0x1E => self.ld_e_n(memory),
@@ -102,6 +103,7 @@ impl CPU {
             0x28 => self.jr_z_n(memory),
             0x29 => self.add_hl_hl(),
             0x2A => self.ldi_a_mhl(memory),
+            0x2B => self.dec_rr(WordRegister::HL),
             0x2C => self.inc_l(),
             0x2D => self.dec_l(),
             0x2E => self.ld_l_n(memory),
@@ -115,6 +117,7 @@ impl CPU {
             0x37 => self.scf(),
             0x38 => self.jr_c_n(memory),
             0x3A => self.ldd_a_mhl(memory),
+            0x3B => self.dec_rr(WordRegister::SP),
             0x3C => self.inc_a(),
             0x3D => self.dec_a(),
             0x3E => self.ld_a_n(memory),
@@ -362,11 +365,11 @@ impl CPU {
         self.last_instruction_ccycles = 12;
     }
 
-    pub fn dec_bc(&mut self) {
-        self.last_executed_instruction = "DEC BC".to_string();
+    fn dec_rr(&mut self, register: WordRegister) {
+        self.last_executed_instruction = format!("DEC {}", register.to_string().to_uppercase()).to_string();
 
-        let value = self.registers.read_bc();
-        self.registers.write_bc(self.alu.dec_nn(value));
+        let value = self.registers.read_word(&register);
+        self.registers.write_word(&register, self.alu.dec_nn(value));
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
@@ -2150,7 +2153,7 @@ impl CPU {
      */
     pub fn push_af(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "PUSH AF".to_string();
-        let reg: u16 = self.registers.read_word(WordRegister::AF);
+        let reg: u16 = self.registers.read_word(&WordRegister::AF);
         self.push_vv(memory, reg);
 
         self.pc_to_increment = 1;
@@ -2176,7 +2179,7 @@ impl CPU {
         self.last_executed_instruction = "POP AF".to_string();
 
         let popped: u16 = self.pop_vv(memory);
-        self.registers.write_word(WordRegister::AF, popped);
+        self.registers.write_word(&WordRegister::AF, popped);
         
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;

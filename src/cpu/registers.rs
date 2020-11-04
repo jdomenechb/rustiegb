@@ -57,7 +57,7 @@ impl CPURegisters {
         }
     }
 
-    pub fn read_word(&self, register: WordRegister) -> u16 {
+    pub fn read_word(&self, register: &WordRegister) -> u16 {
         match register {
             WordRegister::AF => two_u8_to_u16(self.a, self.f),
             WordRegister::BC => two_u8_to_u16(self.b, self.c),
@@ -81,7 +81,7 @@ impl CPURegisters {
         }
     }
 
-    pub fn write_word(&mut self, register: WordRegister, value: u16)  {
+    pub fn write_word(&mut self, register: &WordRegister, value: u16)  {
         let parts: (u8, u8) = u16_to_two_u8(value);
 
         match register {
