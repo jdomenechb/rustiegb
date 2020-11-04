@@ -1,6 +1,7 @@
 use super::registers::CPURegisters;
 use super::alu::ALU;
 use crate::memory::memory::Memory;
+use crate::cpu::registers::WordRegister;
 
 #[derive(Debug)]
 pub struct CPU {
@@ -2149,7 +2150,7 @@ impl CPU {
      */
     pub fn push_af(&mut self, memory : &mut Memory) {
         self.last_executed_instruction = "PUSH AF".to_string();
-        let reg: u16 = self.registers.read_af();
+        let reg: u16 = self.registers.read_word(WordRegister::AF);
         self.push_vv(memory, reg);
 
         self.pc_to_increment = 1;
@@ -2175,7 +2176,7 @@ impl CPU {
         self.last_executed_instruction = "POP AF".to_string();
 
         let popped: u16 = self.pop_vv(memory);
-        self.registers.write_af(popped);
+        self.registers.write_word(WordRegister::AF, popped);
         
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;
@@ -2403,6 +2404,16 @@ impl CPU {
         self.registers.set_flag_c(carry);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    fn swap_r(&mut self, value: u8, register_letter:  &str ) {
+        self.last_executed_instruction = "SWAP A".to_string();
+
+        let old_value = self.registers.a;
+        self.registers.a = self.alu.swap_n(&mut self.registers, old_value);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
