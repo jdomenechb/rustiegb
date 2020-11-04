@@ -71,6 +71,7 @@ impl CPU {
             0x04 => self.inc_b(),
             0x05 => self.dec_b(),
             0x06 => self.ld_b_n(&memory),
+            0x07 => self.rlca(),
             0x09 => self.add_hl_bc(),
             0x0A => self.ld_a_mbc(memory),
             0x0B => self.dec_rr(WordRegister::BC),
@@ -2300,8 +2301,7 @@ impl CPU {
     /**
      * Rotate left through carry register A.
      */
-    pub fn rla(&mut self)
-    {
+    fn rla(&mut self) {
         self.last_executed_instruction = "RLA".to_string();
         let new_carry: bool = self.registers.a & 0b10000000 == 0b10000000;
 
@@ -2313,6 +2313,29 @@ impl CPU {
         self.registers.set_flag_c(new_carry);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+     * Rotate left A. Bit 7 to carry.
+     */
+    fn rlca(&mut self) {
+        self.last_executed_instruction = "RLCA".to_string();
+
+        let mut value = self.registers.read_byte(&ByteRegister::A);
+        let new_carry: bool = value & 0b10000000 == 0b10000000;
+
+        value = value << 1;
+        value = value | (new_carry as u8);
+
+        self.registers.set_flag_z(value == 0);
+        self.registers.set_flag_c(new_carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.registers.write_byte(&ByteRegister::A, value);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
