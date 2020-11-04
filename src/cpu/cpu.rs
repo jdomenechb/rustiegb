@@ -65,7 +65,7 @@ impl CPU {
 
         match instruction {
             0x00 => self.nop(),
-            0x01 => self.ld_bc_nn(memory),
+            0x01 => self.ld_rr_nn(memory, WordRegister::BC),
             0x02 => self.ld_mbc_a(memory),
             0x03 => self.inc_rr(WordRegister::BC),
             0x04 => self.inc_b(),
@@ -77,7 +77,7 @@ impl CPU {
             0x0C => self.inc_c(),
             0x0D => self.dec_c(),
             0x0E => self.ld_c_n(memory),
-            0x11 => self.ld_de_nn(memory),
+            0x11 => self.ld_rr_nn(memory, WordRegister::DE),
             0x12 => self.ld_mde_a(memory),
             0x13 => self.inc_rr(WordRegister::DE),
             0x14 => self.inc_d(),
@@ -93,7 +93,7 @@ impl CPU {
             0x1E => self.ld_e_n(memory),
             0x1F => self.rra(),
             0x20 => self.jr_nz_n(memory),
-            0x21 => self.ld_hl_nn(memory),
+            0x21 => self.ld_rr_nn(memory, WordRegister::HL),
             0x22 => self.ldi_mhl_a(memory),
             0x23 => self.inc_rr(WordRegister::HL),
             0x24 => self.inc_h(),
@@ -109,7 +109,7 @@ impl CPU {
             0x2E => self.ld_l_n(memory),
             0x2F => self.cpl(),
             0x30 => self.jr_nc_n(memory),
-            0x31 => self.ld_sp_nn(memory),
+            0x31 => self.ld_rr_nn(memory, WordRegister::SP),
             0x32 => self.ldd_mhl_a(memory),
             0x33 => self.inc_rr(WordRegister::SP),
             0x34 => self.inc_mhl(memory),
@@ -1195,19 +1195,6 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    /** 
-     * Loads value nn to register HL. 
-     */
-    pub fn ld_hl_nn(&mut self, memory: &Memory) {
-        self.registers.l = memory.read_8(self.registers.pc + 1);
-        self.registers.h = memory.read_8(self.registers.pc + 2);
-
-        self.last_executed_instruction = format!("LD HL,{:X}", self.registers.read_hl()).to_string();
-
-        self.pc_to_increment = 3;
-        self.last_instruction_ccycles = 12;
-    }
-
     /**
      * Put SP + n effective address into HL.
      */
@@ -1221,18 +1208,6 @@ impl CPU {
         self.last_executed_instruction = format!("LD HL,SP + {:X}", add2).to_string();
 
         self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 12;
-    }
-
-    /** 
-     * Loads value nn to register SP. 
-     */
-    pub fn ld_sp_nn(&mut self, memory: &Memory) {
-        self.registers.sp = memory.read_16(self.registers.pc + 1);
-
-        self.last_executed_instruction = format!("LD SP,{:X}", self.registers.sp).to_string();
-
-        self.pc_to_increment = 3;
         self.last_instruction_ccycles = 12;
     }
 
@@ -1766,32 +1741,15 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    /** 
-     * Loads value nn to register BC. 
-     */
-    pub fn ld_bc_nn(&mut self, memory: &Memory) {
+    fn ld_rr_nn(&mut self, memory: &Memory, register: WordRegister) {
         let value: u16 = memory.read_16(self.registers.pc + 1);
-        self.registers.write_bc(value);
+        self.registers.write_word(&register, value);
 
-        self.last_executed_instruction = format!("LD BC,{:X}", self.registers.read_bc()).to_string();
+        self.last_executed_instruction = format!("LD {},{:X}", register.to_string(), self.registers.read_word(&register)).to_string();
 
         self.pc_to_increment = 3;
         self.last_instruction_ccycles = 12;
     }
-
-    /** 
-     * Loads value nn to register DE. 
-     */
-    pub fn ld_de_nn(&mut self, memory: &Memory) {
-        let value: u16 = memory.read_16(self.registers.pc + 1);
-        self.registers.write_de(value);
-
-        self.last_executed_instruction = format!("LD DE,{:X}", self.registers.read_de()).to_string();
-
-        self.pc_to_increment = 3;
-        self.last_instruction_ccycles = 12;
-    }
-
 
     // --- JUMP INSTRUCTIONS ----------------------------------------------------------------------------------------------------------------
 
