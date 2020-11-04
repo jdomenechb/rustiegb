@@ -165,7 +165,14 @@ impl CPU {
             0x85 => self.add_a_r(ByteRegister::L),
             0x86 => self.add_a_mhl(memory),
             0x87 => self.add_a_r(ByteRegister::A),
-            0x89 => self.adc_a_c(),
+            0x88 => self.adc_a_r(ByteRegister::B),
+            0x89 => self.adc_a_r(ByteRegister::C),
+            0x8A => self.adc_a_r(ByteRegister::D),
+            0x8B => self.adc_a_r(ByteRegister::E),
+            0x8C => self.adc_a_r(ByteRegister::H),
+            0x8D => self.adc_a_r(ByteRegister::L),
+            0x8E => self.adc_a_mhl(memory),
+            0x8F => self.adc_a_r(ByteRegister::A),
             0x90 => self.sub_b(),
             0x91 => self.sub_c(),
             0xA0 => self.and_r(ByteRegister::B),
@@ -479,10 +486,10 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
-    pub fn inc_mhl(&mut self, memory: &mut Memory) {
+    fn inc_mhl(&mut self, memory: &mut Memory) {
         self.last_executed_instruction = "INC (HL)".to_string();
 
-        let position = self.registers.read_hl();
+        let position = self.registers.read_word(&WordRegister::HL);
         let value :u8 = memory.read_8(position);
         let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
         memory.write_8(position, value);
@@ -491,20 +498,34 @@ impl CPU {
         self.last_instruction_ccycles = 12;
     }
 
-    pub fn adc_a_c(&mut self) {
-        let value1 :u8 = self.registers.a;
-        let value2 :u8 = self.registers.c + self.registers.is_flag_c() as u8;
+    fn adc_a_r(&mut self, register: ByteRegister) {
+        let value1 :u8 = self.registers.read_byte(&ByteRegister::A);
+        let value2 :u8 = self.registers.read_byte(&register) + self.registers.is_flag_c() as u8;
 
-        self.last_executed_instruction = "ADC A,C".to_string();
+        self.last_executed_instruction = format!("ADC A,{}", register.to_string()).to_string();
 
         let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
-        self.registers.a = result;
+        self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
     }
 
-    pub fn adc_a_n(&mut self, memory : &Memory) {
+    fn adc_a_mhl(&mut self, memory : &Memory) {
+        let value1 :u8 = self.registers.read_byte(&ByteRegister::A);
+        let mut value2 :u8 = memory.read_8(self.registers.read_word(&WordRegister::HL));
+        self.last_executed_instruction = "ADC A,(HL)".to_string();
+
+        value2 += self.registers.is_flag_c() as u8;
+
+        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+        self.registers.write_byte(&ByteRegister::A, result);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    fn adc_a_n(&mut self, memory : &Memory) {
         let value1 :u8 = self.registers.a;
         let mut value2 :u8 = memory.read_8(self.registers.pc + 1);
         self.last_executed_instruction = format!("ADC A,{:X}", value2).to_string();
