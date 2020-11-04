@@ -70,6 +70,7 @@ impl CPU {
             0x04 => self.inc_b(),
             0x05 => self.dec_b(),
             0x06 => self.ld_b_n(&memory),
+            0x09 => self.add_hl_bc(),
             0x0A => self.ld_a_mbc(memory),
             0x0B => self.dec_bc(),
             0x0C => self.inc_c(),
@@ -112,29 +113,35 @@ impl CPU {
             0x36 => self.ld_mhl_n(memory),
             0x37 => self.scf(),
             0x38 => self.jr_c_n(memory),
+            0x3A => self.ldd_a_mhl(memory),
             0x3C => self.inc_a(),
             0x3D => self.dec_a(),
             0x3E => self.ld_a_n(memory),
             0x3F => self.ccf(),
+            0x40 => self.ld_b_b(),
             0x46 => self.ld_b_mhl(memory),
             0x47 => self.ld_b_a(),
             0x49 => self.ld_c_c(),
             0x4E => self.ld_c_mhl(memory),
             0x4F => self.ld_c_a(),
+            0x54 => self.ld_d_h(),
             0x56 => self.ld_d_mhl(memory),
             0x57 => self.ld_d_a(),
+            0x5D => self.ld_e_l(),
             0x5E => self.ld_e_mhl(memory),
             0x5F => self.ld_e_a(),
             0x60 => self.ld_h_b(),
             0x62 => self.ld_h_d(),
             0x66 => self.ld_h_mhl(memory),
             0x67 => self.ld_h_a(),
+            0x69 => self.ld_l_c(),
             0x6B => self.ld_l_e(),
             0x6E => self.ld_l_mhl(memory),
             0x6F => self.ld_l_a(),
             0x70 => self.ld_mhl_b(memory),
             0x71 => self.ld_mhl_c(memory),
             0x72 => self.ld_mhl_d(memory),
+            0x73 => self.ld_mhl_e(memory),
             0x76 => self.halt(),
             0x77 => self.ld_mhl_a(memory),
             0x78 => self.ld_a_b(),
@@ -145,6 +152,7 @@ impl CPU {
             0x7D => self.ld_a_l(),
             0x7E => self.ld_a_mhl(memory),
             0x81 => self.add_a_c(),
+            0x85 => self.add_a_l(),
             0x86 => self.add_a_mhl(memory),
             0x87 => self.add_a_a(),
             0x89 => self.adc_a_c(),
@@ -536,6 +544,19 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    pub fn add_a_l(&mut self) {
+        let value1 :u8 = self.registers.a;
+        let value2 :u8 = self.registers.l;
+
+        self.last_executed_instruction = "ADD A,L".to_string();
+
+        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+        self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
     pub fn add_a_n(&mut self, memory: &Memory) {
         let value1 :u8 = memory.read_8(self.registers.pc + 1);
         let value2 :u8 = self.registers.a;
@@ -557,6 +578,19 @@ impl CPU {
 
         let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
         self.registers.a = result;
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    pub fn add_hl_bc(&mut self) {
+        let value1 = self.registers.read_hl();
+        let value2 = self.registers.read_bc();
+
+        self.last_executed_instruction = "ADD HL,BC".to_string();
+
+        let result = self.alu.add_nn(&mut self.registers, value1, value2);
+        self.registers.write_hl(result);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
@@ -1140,6 +1174,18 @@ impl CPU {
     }
 
     /**
+    * Loads from register C to register L.
+    */
+    pub fn ld_l_c(&mut self) {
+        self.registers.l = self.registers.c;
+
+        self.last_executed_instruction = "LD L,C".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
     * Loads from register E to register L.
     */
     pub fn ld_l_e(&mut self) {
@@ -1421,6 +1467,18 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    /**
+     * Loads register B to register B.
+     */
+    pub fn ld_b_b(&mut self) {
+        self.registers.b = self.registers.b;
+
+        self.last_executed_instruction = "LD B,B".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
     /** 
      * Loads register A to register C. 
      */
@@ -1445,6 +1503,18 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    /**
+     * Loads register H to register D.
+     */
+    pub fn ld_d_h(&mut self) {
+        self.registers.d = self.registers.h;
+
+        self.last_executed_instruction = "LD D,H".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
     /** 
      * Loads register A to register E. 
      */
@@ -1452,6 +1522,18 @@ impl CPU {
         self.registers.e = self.registers.a;
 
         self.last_executed_instruction = "LD E,A".to_string();
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    /**
+    * Loads register L to register E.
+    */
+    pub fn ld_e_l(&mut self) {
+        self.registers.e = self.registers.l;
+
+        self.last_executed_instruction = "LD E,L".to_string();
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
@@ -1643,6 +1725,18 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    /**
+     * Writes value from register E to memory address contained in HL.
+     */
+    pub fn ld_mhl_e(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = "LD (HL),E".to_string();
+
+        memory.write_8(self.registers.read_hl(), self.registers.e);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
     /** 
      * Writes 8bit value to memory address contained in HL. 
      */
@@ -1665,6 +1759,21 @@ impl CPU {
         self.registers.a = value;
 
         new_value_hl = self.alu.inc_nn(new_value_hl);
+
+        self.registers.write_hl(new_value_hl);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    pub fn ldd_a_mhl(&mut self, memory: &Memory) {
+        self.last_executed_instruction = "LDD A,(HL)".to_string();
+
+        let mut new_value_hl = self.registers.read_hl();
+        let value: u8 = memory.read_8(new_value_hl);
+        self.registers.a = value;
+
+        new_value_hl = self.alu.dec_nn(new_value_hl);
 
         self.registers.write_hl(new_value_hl);
 
@@ -2121,9 +2230,17 @@ impl CPU {
             0x11 => self.rl_c(),
             0x19 => self.rr_c(),
             0x1A => self.rr_d(),
+            0x27 => self.sla_a(),
             0x37 => self.swap_a(),
             0x3F => self.srl_a(),
+            0x50 => self.bit_2_b(),
+            0x58 => self.bit_3_b(),
+            0x60 => self.bit_4_b(),
+            0x68 => self.bit_5_b(),
             0x7C => self.bit_7_h(),
+            0x7E => self.bit_7_mhl(memory),
+            0x7F => self.bit_7_a(),
+            0x86 => self.res_0_mhl(memory),
             0x87 => self.res_0_a(),
             0x38 => self.srl_b(),
             _ => {
@@ -2261,19 +2378,53 @@ impl CPU {
     }
 
     /**
-    * Tests if bit 7 of H is Zero
-    */
-    pub fn bit_7_h(&mut self) {
-        self.last_executed_instruction = "BIT 7,H".to_string();
+     * Shift n left into Carry. LSB of n set to 0.
+     */
+    pub fn sla_a(&mut self)
+    {
+        self.last_executed_instruction = "SLA A".to_string();
 
-        let zero = self.registers.h & 0b10000000 != 0b10000000;
+        let carry : bool = self.registers.a & 0b10000000 == 0b10000000;
+
+        self.registers.a = self.registers.a << 1;
+
+        let zero :bool = self.registers.a == 0;
 
         self.registers.set_flag_z(zero);
+        self.registers.set_flag_c(carry);
+        self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
-        self.registers.set_flag_h(true);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
+    }
+
+    pub fn bit_2_b(&mut self) {
+        self.bit_d_r(2, self.registers.b, "b")
+    }
+
+    pub fn bit_3_b(&mut self) {
+        self.bit_d_r(3, self.registers.b, "b")
+    }
+
+    pub fn bit_4_b(&mut self) {
+        self.bit_d_r(4, self.registers.b, "b")
+    }
+
+    pub fn bit_5_b(&mut self) {
+        self.bit_d_r(5, self.registers.b, "b")
+    }
+
+    pub fn bit_7_a(&mut self) {
+        self.bit_d_r(7, self.registers.a, "a")
+    }
+
+    pub fn bit_7_h(&mut self) {
+        self.bit_d_r(7, self.registers.h, "h")
+    }
+
+    pub fn bit_7_mhl(&mut self, memory: &mut Memory) {
+        self.bit_d_mhl(memory, 7)
     }
 
     fn swap_a(&mut self) {
@@ -2294,6 +2445,17 @@ impl CPU {
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
+    }
+
+    fn res_0_mhl(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = "RES 0,(HL)".to_string();
+
+        let mut value = memory.read_8(self.registers.read_hl());
+        value &= 0b11111110;
+        memory.write_8(self.registers.read_hl(), value);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
     }
 
     fn daa(&mut self) {
@@ -2354,6 +2516,37 @@ impl CPU {
         self.ime = false;
         self.push_dd(memory, self.registers.pc);
         self.registers.pc = new_address;
+    }
+
+    fn bit_d_r(&mut self, bit: u8, register_value: u8, register_letter: &str) {
+        self.last_executed_instruction = format!("BIT {},{}", register_value, register_letter.to_uppercase()).to_string();
+
+        let mask = 1u8 << bit;
+
+        let zero = register_value & mask != mask;
+
+        self.registers.set_flag_z(zero);
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h(true);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    fn bit_d_mhl(&mut self, memory: &mut Memory, bit: u8) {
+        self.last_executed_instruction = format!("BIT {},(HL)", bit).to_string();
+
+        let mask = 1u8 << bit;
+        let value = memory.read_8(self.registers.read_hl());
+
+        let zero = value & mask != mask;
+
+        self.registers.set_flag_z(zero);
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h(true);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
     }
 
 

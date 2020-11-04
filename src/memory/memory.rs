@@ -46,14 +46,26 @@ pub struct Memory {
     nr21: u8,
     // FF17
     nr22: u8,
+    // FF18
+    nr23: u8,
     // FF19
     nr24: u8,
     // FF1A
     nr30: u8,
+    // FF1B
+    nr31: u8,
     // FF1C
     nr32: u8,
+    // FF1D
+    nr33: u8,
+    // FF1E
+    nr34: u8,
+    // FF20
+    nr41: u8,
     // FF21
     nr42: u8,
+    // FF22
+    nr43: u8,
     // FF23
     nr44: u8,
     // FF24
@@ -127,10 +139,16 @@ impl Memory {
             nr14: 0xBF,
             nr21: 0x3F,
             nr22: 0x00,
+            nr23: 0x00,
             nr24: 0xBF,
             nr30: 0x7F,
+            nr31: 0xFF,
             nr32: 0x9f,
+            nr33: 0x00,
+            nr34: 0xBF,
+            nr41: 0xFF,
             nr42: 0x00,
+            nr43: 0x00,
             nr44: 0xBF,
             nr50: 0x77,
             nr51: 0xf3,
@@ -240,6 +258,8 @@ impl Memory {
             return self.nr22;
         }
 
+        // NR23 is not readable
+
         // NR24
         if position == 0xFF19 {
             return self.nr24;
@@ -250,14 +270,36 @@ impl Memory {
             return self.nr30;
         }
 
-        // NR33
+        // NR31
+        if position == 0xFF1B {
+            return self.nr31;
+        }
+
+        // NR32
         if position == 0xFF1C {
             return self.nr32;
+        }
+
+        // NR33 is not readable
+
+        // NR34
+        if position == 0xFF1E {
+            return self.nr34;
+        }
+
+        // NR41
+        if position == 0xFF20 {
+            return self.nr41;
         }
 
         // NR42
         if position == 0xFF21 {
             return self.nr42;
+        }
+
+        // NR43
+        if position == 0xFF22 {
+            return self.nr43;
         }
 
         // NR44
@@ -525,6 +567,12 @@ impl Memory {
             return;
         }
 
+        // NR23
+        if position == 0xFF18 {
+            self.nr23 = value;
+            return;
+        }
+
         // NR24
         if position == 0xFF19 {
             self.nr24 = value;
@@ -537,15 +585,45 @@ impl Memory {
             return;
         }
 
+        // NR31
+        if position == 0xFF1B {
+            self.nr31 = value;
+            return;
+        }
+
         // NR32
         if position == 0xFF1C {
             self.nr32 = value;
             return;
         }
 
+        // NR33
+        if position == 0xFF1D {
+            self.nr33 = value;
+            return;
+        }
+
+        // NR34
+        if position == 0xFF1E {
+            self.nr34 = value;
+            return;
+        }
+
+        // NR41
+        if position == 0xFF20 {
+            self.nr41 = value;
+            return;
+        }
+
         // NR42
         if position == 0xFF21 {
             self.nr42 = value;
+            return;
+        }
+
+        // NR43
+        if position == 0xFF22 {
+            self.nr43 = value;
             return;
         }
 
