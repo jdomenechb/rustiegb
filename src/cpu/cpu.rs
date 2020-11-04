@@ -72,7 +72,7 @@ impl CPU {
             0x05 => self.dec_b(),
             0x06 => self.ld_b_n(&memory),
             0x07 => self.rlca(),
-            0x09 => self.add_hl_bc(),
+            0x09 => self.add_hl_rr(WordRegister::BC),
             0x0A => self.ld_a_mbc(memory),
             0x0B => self.dec_rr(WordRegister::BC),
             0x0C => self.inc_c(),
@@ -86,7 +86,7 @@ impl CPU {
             0x16 => self.ld_d_n(&memory),
             0x17 => self.rla(),
             0x18 => self.jr_n(memory),
-            0x19 => self.add_hl_de(),
+            0x19 => self.add_hl_rr(WordRegister::DE),
             0x1A => self.ld_a_mde(memory),
             0x1B => self.dec_rr(WordRegister::DE),
             0x1C => self.inc_e(),
@@ -102,7 +102,7 @@ impl CPU {
             0x26 => self.ld_h_n(&memory),
             0x27 => self.daa(),
             0x28 => self.jr_z_n(memory),
-            0x29 => self.add_hl_hl(),
+            0x29 => self.add_hl_rr(WordRegister::HL),
             0x2A => self.ldi_a_mhl(memory),
             0x2B => self.dec_rr(WordRegister::HL),
             0x2C => self.inc_l(),
@@ -118,6 +118,7 @@ impl CPU {
             0x36 => self.ld_mhl_n(memory),
             0x37 => self.scf(),
             0x38 => self.jr_c_n(memory),
+            0x39 => self.add_hl_rr(WordRegister::SP),
             0x3A => self.ldd_a_mhl(memory),
             0x3B => self.dec_rr(WordRegister::SP),
             0x3C => self.inc_a(),
@@ -565,7 +566,7 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    pub fn add_a_mhl(&mut self, memory: &Memory) {
+    fn add_a_mhl(&mut self, memory: &Memory) {
         let value1 :u8 = memory.read_8(self.registers.read_hl());
         let value2 :u8 = self.registers.read_byte(&ByteRegister::A);
 
@@ -578,40 +579,14 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    pub fn add_hl_bc(&mut self) {
-        let value1 = self.registers.read_hl();
-        let value2 = self.registers.read_bc();
+    fn add_hl_rr(&mut self, register: WordRegister) {
+        let value1 = self.registers.read_word(&WordRegister::HL);
+        let value2 = self.registers.read_word(&register);
 
-        self.last_executed_instruction = "ADD HL,BC".to_string();
-
-        let result = self.alu.add_nn(&mut self.registers, value1, value2);
-        self.registers.write_hl(result);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
-    pub fn add_hl_de(&mut self) {
-        let value1 = self.registers.read_hl();
-        let value2 = self.registers.read_de();
-
-        self.last_executed_instruction = "ADD HL,DE".to_string();
+        self.last_executed_instruction = format!("ADD HL,{}", register.to_string()).to_string();
 
         let result = self.alu.add_nn(&mut self.registers, value1, value2);
-        self.registers.write_hl(result);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
-    pub fn add_hl_hl(&mut self) {
-        let value1 = self.registers.read_hl();
-        let value2 = self.registers.read_hl();
-
-        self.last_executed_instruction = "ADD HL,HL".to_string();
-
-        let result = self.alu.add_nn(&mut self.registers, value1, value2);
-        self.registers.write_hl(result);
+        self.registers.write_word(&WordRegister::HL, result);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
