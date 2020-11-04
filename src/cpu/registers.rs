@@ -68,7 +68,7 @@ impl CPURegisters {
         }
     }
 
-    pub fn write_byte(&mut self, register: ByteRegister, value: u8) {
+    pub fn write_byte(&mut self, register: &ByteRegister, value: u8) {
         match register {
             ByteRegister::A => self.a = value,
             ByteRegister::B => self.b = value,

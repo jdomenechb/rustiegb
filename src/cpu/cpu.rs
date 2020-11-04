@@ -2174,7 +2174,13 @@ impl CPU {
             0x19 => self.rr_c(),
             0x1A => self.rr_d(),
             0x27 => self.sla_a(),
-            0x37 => self.swap_a(),
+            0x30 => self.swap_r(ByteRegister::B),
+            0x31 => self.swap_r(ByteRegister::C),
+            0x32 => self.swap_r(ByteRegister::D),
+            0x33 => self.swap_r(ByteRegister::E),
+            0x34 => self.swap_r(ByteRegister::H),
+            0x35 => self.swap_r(ByteRegister::L),
+            0x37 => self.swap_r(ByteRegister::A),
             0x3F => self.srl_a(),
             0x40 => self.bit_v_r(0, ByteRegister::B),
             0x41 => self.bit_v_r(0, ByteRegister::C),
@@ -2399,21 +2405,12 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    fn swap_r(&mut self, value: u8, register_letter:  &str ) {
-        self.last_executed_instruction = "SWAP A".to_string();
+    fn swap_r(&mut self, register: ByteRegister) {
+        self.last_executed_instruction = format!("SWAP {}", register.to_string()).to_string();
 
-        let old_value = self.registers.a;
-        self.registers.a = self.alu.swap_n(&mut self.registers, old_value);
-
-        self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 8;
-    }
-
-    fn swap_a(&mut self) {
-        self.last_executed_instruction = "SWAP A".to_string();
-
-        let old_value = self.registers.a;
-        self.registers.a = self.alu.swap_n(&mut self.registers, old_value);
+        let mut value = self.registers.read_byte(&register);
+        value = self.alu.swap_n(&mut self.registers, value);
+        self.registers.write_byte(&register, value);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
