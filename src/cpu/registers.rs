@@ -44,7 +44,7 @@ impl CPURegisters {
         };
     }
 
-    pub fn read_byte(&self, register: ByteRegister) -> u8 {
+    pub fn read_byte(&self, register: &ByteRegister) -> u8 {
         match register {
             ByteRegister::A => self.a,
             ByteRegister::B => self.b,
