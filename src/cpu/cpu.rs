@@ -67,7 +67,7 @@ impl CPU {
             0x00 => self.nop(),
             0x01 => self.ld_bc_nn(memory),
             0x02 => self.ld_mbc_a(memory),
-            0x03 => self.inc_bc(),
+            0x03 => self.inc_rr(WordRegister::BC),
             0x04 => self.inc_b(),
             0x05 => self.dec_b(),
             0x06 => self.ld_b_n(&memory),
@@ -79,7 +79,7 @@ impl CPU {
             0x0E => self.ld_c_n(memory),
             0x11 => self.ld_de_nn(memory),
             0x12 => self.ld_mde_a(memory),
-            0x13 => self.inc_de(),
+            0x13 => self.inc_rr(WordRegister::DE),
             0x14 => self.inc_d(),
             0x15 => self.dec_d(),
             0x16 => self.ld_d_n(&memory),
@@ -95,7 +95,7 @@ impl CPU {
             0x20 => self.jr_nz_n(memory),
             0x21 => self.ld_hl_nn(memory),
             0x22 => self.ldi_mhl_a(memory),
-            0x23 => self.inc_hl(),
+            0x23 => self.inc_rr(WordRegister::HL),
             0x24 => self.inc_h(),
             0x25 => self.dec_h(),
             0x26 => self.ld_h_n(&memory),
@@ -111,6 +111,7 @@ impl CPU {
             0x30 => self.jr_nc_n(memory),
             0x31 => self.ld_sp_nn(memory),
             0x32 => self.ldd_mhl_a(memory),
+            0x33 => self.inc_rr(WordRegister::SP),
             0x34 => self.inc_mhl(memory),
             0x35 => self.dec_mhl(memory),
             0x36 => self.ld_mhl_n(memory),
@@ -375,31 +376,11 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    pub fn inc_bc(&mut self) {
-        self.last_executed_instruction = "INC BC".to_string();
+    fn inc_rr(&mut self, register: WordRegister) {
+        self.last_executed_instruction = format!("INC {}", register.to_string().to_uppercase()).to_string();
 
-        let value = self.registers.read_bc();
-        self.registers.write_bc(self.alu.inc_nn(value));
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
-    pub fn inc_de(&mut self) {
-        self.last_executed_instruction = "INC DE".to_string();
-
-        let value = self.registers.read_de();
-        self.registers.write_de(self.alu.inc_nn(value));
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
-    pub fn inc_hl(&mut self) {
-        self.last_executed_instruction = "INC HL".to_string();
-
-        let value = self.registers.read_hl();
-        self.registers.write_hl(self.alu.inc_nn(value));
+        let value = self.registers.read_word(&register);
+        self.registers.write_word(&register, self.alu.inc_nn(value));
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
