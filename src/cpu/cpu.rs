@@ -170,9 +170,14 @@ impl CPU {
             0x91 => self.sub_c(),
             0xA1 => self.and_c(),
             0xA7 => self.and_a(),
-            0xA9 => self.xor_c(),
+            0xA8 => self.xor_r(ByteRegister::B),
+            0xA9 => self.xor_r(ByteRegister::C),
+            0xAA => self.xor_r(ByteRegister::D),
+            0xAB => self.xor_r(ByteRegister::E),
+            0xAC => self.xor_r(ByteRegister::H),
+            0xAD => self.xor_r(ByteRegister::L),
             0xAE => self.xor_mhl(memory),
-            0xAF => self.xor_a(),
+            0xAF => self.xor_r(ByteRegister::A),
             0xB0 => self.or_b(),
             0xB1 => self.or_c(),
             0xB6 => self.or_mhl(memory),
@@ -657,59 +662,37 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
-    /**
-     * XORs register A with register A. Saves result in A. Sets flag Z if result is 0, resets N, H and C. 
-     */
-    pub fn xor_a(&mut self) {
-        self.last_executed_instruction = "XOR A".to_string();
+    fn xor_r(&mut self, register: ByteRegister) {
+        self.last_executed_instruction = format!("XOR {}", register.to_string()).to_string();
 
-        self.registers.a = self.registers.a ^ self.registers.a;
+        let value1 = self.registers.read_byte(&register);
+        let mut result = self.registers.read_byte(&ByteRegister::A);
 
-        let zero :bool = self.registers.a == 0;
-        self.registers.set_flag_z(zero);
+        result = value1 ^ result;
 
+        self.registers.set_flag_z(result == 0);
         self.registers.set_flag_c(false);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+
+        self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
     }
 
-    /**
-     * XORs register C with register A. Saves result in A. Sets flag Z if result is 0, resets N, H and C. 
-     */
-    pub fn xor_c(&mut self) {
-        self.last_executed_instruction = "XOR C".to_string();
-
-        self.registers.a = self.registers.c ^ self.registers.a;
-
-        let zero :bool = self.registers.a == 0;
-        self.registers.set_flag_z(zero);
-
-        self.registers.set_flag_c(false);
-        self.registers.set_flag_h(false);
-        self.registers.set_flag_n(false);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * XORs value 8 bits with register A. Saves result in A. Sets flag Z if result is 0, resets N, H and C. 
-     */
-    pub fn xor_n(&mut self, memory: &Memory) {
+    fn xor_n(&mut self, memory: &Memory) {
         let value: u8 = memory.read_8(self.registers.pc + 1);
         self.last_executed_instruction = format!("XOR {:X}", value).to_string();
 
-        self.registers.a = value ^ self.registers.a;
+        let result = value ^ self.registers.read_byte(&ByteRegister::A);
 
-        let zero :bool = self.registers.a == 0;
-        self.registers.set_flag_z(zero);
-
+        self.registers.set_flag_z(result == 0);
         self.registers.set_flag_c(false);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+
+        self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
@@ -718,18 +701,18 @@ impl CPU {
     /**
      * XORs value in memory address HL with register A. Saves result in A. Sets flag Z if result is 0, resets N, H and C. 
      */
-    pub fn xor_mhl(&mut self, memory: &Memory) {
+    fn xor_mhl(&mut self, memory: &Memory) {
         self.last_executed_instruction = "XOR (HL)".to_string();
 
-        let value = memory.read_8(self.registers.read_hl());
-        self.registers.a = value ^ self.registers.a;
+        let mut value = memory.read_8(self.registers.read_word(&WordRegister::HL));
+        value = value ^ self.registers.read_byte(&ByteRegister::A);
 
-        let zero :bool = self.registers.a == 0;
-        self.registers.set_flag_z(zero);
-
+        self.registers.set_flag_z(value == 0);
         self.registers.set_flag_c(false);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+
+        self.registers.write_byte(&ByteRegister::A, value);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
