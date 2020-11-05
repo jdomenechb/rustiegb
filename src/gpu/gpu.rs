@@ -88,6 +88,7 @@ impl GPU {
     ) {
         const TILE_SIZE_BYTES : u8 = 16;
         const BACKGROUND_MAP_TILE_SIZE_X: u16 = 32;
+        const BACKGROUND_MAP_TILE_SIZE_Y: u16 = 32;
         const PIXELS_PER_TILE: u16 = 8;
 
         let pixel_size: (f64, f64) = (
@@ -123,7 +124,7 @@ impl GPU {
                     let screen_x_with_offset = screen_x + scx as u16;
 
                     let bg_tile_map_location = bg_tile_map_start_location
-                        + (screen_y_with_offset / PIXELS_PER_TILE) * BACKGROUND_MAP_TILE_SIZE_X
+                        + (((screen_y_with_offset / PIXELS_PER_TILE) * BACKGROUND_MAP_TILE_SIZE_X) % (BACKGROUND_MAP_TILE_SIZE_X * BACKGROUND_MAP_TILE_SIZE_Y))
                         + (screen_x_with_offset / PIXELS_PER_TILE);
 
                     let bg_data_location = bg_data_start_location
