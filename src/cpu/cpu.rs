@@ -125,39 +125,77 @@ impl CPU {
             0x3D => self.dec_a(),
             0x3E => self.ld_a_n(memory),
             0x3F => self.ccf(),
-            0x40 => self.ld_b_b(),
+
+            0x40 => self.ld_r_r(ByteRegister::B, ByteRegister::B),
+            0x41 => self.ld_r_r(ByteRegister::B, ByteRegister::C),
+            0x42 => self.ld_r_r(ByteRegister::B, ByteRegister::D),
+            0x43 => self.ld_r_r(ByteRegister::B, ByteRegister::E),
+            0x44 => self.ld_r_r(ByteRegister::B, ByteRegister::H),
+            0x45 => self.ld_r_r(ByteRegister::B, ByteRegister::L),
             0x46 => self.ld_b_mhl(memory),
-            0x47 => self.ld_b_a(),
-            0x49 => self.ld_c_c(),
+            0x47 => self.ld_r_r(ByteRegister::B, ByteRegister::A),
+
+            0x48 => self.ld_r_r(ByteRegister::C, ByteRegister::B),
+            0x49 => self.ld_r_r(ByteRegister::C, ByteRegister::C),
+            0x4A => self.ld_r_r(ByteRegister::C, ByteRegister::D),
+            0x4B => self.ld_r_r(ByteRegister::C, ByteRegister::E),
+            0x4C => self.ld_r_r(ByteRegister::C, ByteRegister::H),
+            0x4D => self.ld_r_r(ByteRegister::C, ByteRegister::L),
             0x4E => self.ld_c_mhl(memory),
-            0x4F => self.ld_c_a(),
-            0x54 => self.ld_d_h(),
+            0x4F => self.ld_r_r(ByteRegister::C, ByteRegister::A),
+
+            0x50 => self.ld_r_r(ByteRegister::D, ByteRegister::B),
+            0x51 => self.ld_r_r(ByteRegister::D, ByteRegister::C),
+            0x52 => self.ld_r_r(ByteRegister::D, ByteRegister::D),
+            0x53 => self.ld_r_r(ByteRegister::D, ByteRegister::E),
+            0x54 => self.ld_r_r(ByteRegister::D, ByteRegister::H),
+            0x55 => self.ld_r_r(ByteRegister::D, ByteRegister::L),
             0x56 => self.ld_d_mhl(memory),
-            0x57 => self.ld_d_a(),
-            0x5D => self.ld_e_l(),
+            0x57 => self.ld_r_r(ByteRegister::D, ByteRegister::A),
+
+            0x58 => self.ld_r_r(ByteRegister::E, ByteRegister::B),
+            0x59 => self.ld_r_r(ByteRegister::E, ByteRegister::C),
+            0x5A => self.ld_r_r(ByteRegister::E, ByteRegister::D),
+            0x5B => self.ld_r_r(ByteRegister::E, ByteRegister::E),
+            0x5C => self.ld_r_r(ByteRegister::E, ByteRegister::H),
+            0x5D => self.ld_r_r(ByteRegister::E, ByteRegister::L),
             0x5E => self.ld_e_mhl(memory),
-            0x5F => self.ld_e_a(),
-            0x60 => self.ld_h_b(),
-            0x62 => self.ld_h_d(),
+            0x5F => self.ld_r_r(ByteRegister::E, ByteRegister::A),
+
+            0x60 => self.ld_r_r(ByteRegister::H, ByteRegister::B),
+            0x61 => self.ld_r_r(ByteRegister::H, ByteRegister::C),
+            0x62 => self.ld_r_r(ByteRegister::H, ByteRegister::D),
+            0x63 => self.ld_r_r(ByteRegister::H, ByteRegister::E),
+            0x64 => self.ld_r_r(ByteRegister::H, ByteRegister::H),
+            0x65 => self.ld_r_r(ByteRegister::H, ByteRegister::L),
             0x66 => self.ld_h_mhl(memory),
-            0x67 => self.ld_h_a(),
-            0x69 => self.ld_l_c(),
-            0x6B => self.ld_l_e(),
+            0x67 => self.ld_r_r(ByteRegister::H, ByteRegister::A),
+
+            0x68 => self.ld_r_r(ByteRegister::L, ByteRegister::B),
+            0x69 => self.ld_r_r(ByteRegister::L, ByteRegister::C),
+            0x6A => self.ld_r_r(ByteRegister::L, ByteRegister::D),
+            0x6B => self.ld_r_r(ByteRegister::L, ByteRegister::E),
+            0x6C => self.ld_r_r(ByteRegister::L, ByteRegister::H),
+            0x6D => self.ld_r_r(ByteRegister::L, ByteRegister::L),
             0x6E => self.ld_l_mhl(memory),
-            0x6F => self.ld_l_a(),
+            0x6F => self.ld_r_r(ByteRegister::L, ByteRegister::A),
+
             0x70 => self.ld_mhl_b(memory),
             0x71 => self.ld_mhl_c(memory),
             0x72 => self.ld_mhl_d(memory),
             0x73 => self.ld_mhl_e(memory),
             0x76 => self.halt(),
             0x77 => self.ld_mhl_a(memory),
-            0x78 => self.ld_a_b(),
-            0x79 => self.ld_a_c(),
-            0x7A => self.ld_a_d(),
-            0x7B => self.ld_a_e(),
-            0x7C => self.ld_a_h(),
-            0x7D => self.ld_a_l(),
+
+            0x78 => self.ld_r_r(ByteRegister::A, ByteRegister::B),
+            0x79 => self.ld_r_r(ByteRegister::A, ByteRegister::C),
+            0x7A => self.ld_r_r(ByteRegister::A, ByteRegister::D),
+            0x7B => self.ld_r_r(ByteRegister::A, ByteRegister::E),
+            0x7C => self.ld_r_r(ByteRegister::A, ByteRegister::H),
+            0x7D => self.ld_r_r(ByteRegister::A, ByteRegister::L),
             0x7E => self.ld_a_mhl(memory),
+            0x7F => self.ld_r_r(ByteRegister::A, ByteRegister::A),
+
             0x80 => self.add_a_r(ByteRegister::B),
             0x81 => self.add_a_r(ByteRegister::C),
             0x82 => self.add_a_r(ByteRegister::D),
@@ -1028,6 +1066,19 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+
+    /**
+     * Loads value n to register E.
+     */
+    pub fn ld_e_n(&mut self, memory: &Memory) {
+        self.registers.e = memory.read_8(self.registers.pc + 1);
+
+        self.last_executed_instruction = format!("LD E,{:X}", self.registers.e).to_string();
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
     /** 
      * Loads value n to register H. 
      */
@@ -1040,102 +1091,14 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    pub fn ld_r_r(&mut self, register_to: ByteRegister, register_from: ByteRegister) {
+        let value = self.registers.read_byte(&register_from);
+        self.registers.write_byte(&register_to, value);
 
-    /** 
-     * Loads register C to register C. 
-     */
-    pub fn ld_c_c(&mut self) {
-        self.registers.c = self.registers.c;
-
-        self.last_executed_instruction = "LD C,C".to_string();
+        self.last_executed_instruction = format!("LD {},{}", register_to.to_string(), register_from.to_string()).to_string();
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Loads from register A to register H.
-     */
-    pub fn ld_h_a(&mut self) {
-        self.registers.h = self.registers.a;
-
-        self.last_executed_instruction = "LD H,A".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Loads from register B to register H.
-     */
-    pub fn ld_h_b(&mut self) {
-        self.registers.h = self.registers.b;
-
-        self.last_executed_instruction = "LD H,B".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Loads from register D to register H.
-     */
-    pub fn ld_h_d(&mut self) {
-        self.registers.h = self.registers.d;
-
-        self.last_executed_instruction = "LD H,D".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-    * Loads from register A to register L.
-    */
-    pub fn ld_l_a(&mut self) {
-        self.registers.l = self.registers.a;
-
-        self.last_executed_instruction = "LD L,A".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-    * Loads from register C to register L.
-    */
-    pub fn ld_l_c(&mut self) {
-        self.registers.l = self.registers.c;
-
-        self.last_executed_instruction = "LD L,C".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-    * Loads from register E to register L.
-    */
-    pub fn ld_l_e(&mut self) {
-        self.registers.l = self.registers.e;
-
-        self.last_executed_instruction = "LD L,E".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-     
-
-    /** 
-     * Loads value n to register E. 
-     */
-    pub fn ld_e_n(&mut self, memory: &Memory) {
-        self.registers.e = memory.read_8(self.registers.pc + 1);
-
-        self.last_executed_instruction = format!("LD E,{:X}", self.registers.e).to_string();
-
-        self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 8;
     }
 
     /**
@@ -1284,162 +1247,6 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
-    }
-
-    /** 
-     * Loads register B to register A. 
-     */
-    pub fn ld_a_b(&mut self) {
-        self.registers.a = self.registers.b;
-
-        self.last_executed_instruction = "LD A,B".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Loads register C to register A. 
-     */
-    pub fn ld_a_c(&mut self) {
-        self.registers.a = self.registers.c;
-
-        self.last_executed_instruction = "LD A,C".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Loads register D to register A 
-     */
-    pub fn ld_a_d(&mut self) {
-        self.registers.a = self.registers.d;
-
-        self.last_executed_instruction = "LD A,D".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Loads register E to register A 
-     */
-    pub fn ld_a_e(&mut self) {
-        self.registers.a = self.registers.e;
-
-        self.last_executed_instruction = "LD A,E".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Loads register H to register A. 
-     */
-    pub fn ld_a_h(&mut self) {
-        self.registers.a = self.registers.h;
-
-        self.last_executed_instruction = "LD A,H".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Loads register L to register A. 
-     */
-    pub fn ld_a_l(&mut self) {
-        self.registers.a = self.registers.l;
-
-        self.last_executed_instruction = "LD A,L".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Loads register A to register B. 
-     */
-    pub fn ld_b_a(&mut self) {
-        self.registers.b = self.registers.a;
-
-        self.last_executed_instruction = "LD B,A".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Loads register B to register B.
-     */
-    pub fn ld_b_b(&mut self) {
-        self.registers.b = self.registers.b;
-
-        self.last_executed_instruction = "LD B,B".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Loads register A to register C. 
-     */
-    pub fn ld_c_a(&mut self) {
-        self.registers.c = self.registers.a;
-
-        self.last_executed_instruction = "LD C,A".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Loads register A to register D. 
-     */
-    pub fn ld_d_a(&mut self) {
-        self.registers.d = self.registers.a;
-
-        self.last_executed_instruction = "LD D,A".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Loads register H to register D.
-     */
-    pub fn ld_d_h(&mut self) {
-        self.registers.d = self.registers.h;
-
-        self.last_executed_instruction = "LD D,H".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Loads register A to register E. 
-     */
-    pub fn ld_e_a(&mut self) {
-        self.registers.e = self.registers.a;
-
-        self.last_executed_instruction = "LD E,A".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-    * Loads register L to register E.
-    */
-    pub fn ld_e_l(&mut self) {
-        self.registers.e = self.registers.l;
-
-        self.last_executed_instruction = "LD E,L".to_string();
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
     }
 
     /**
