@@ -71,8 +71,9 @@ impl CPU {
             0x03 => self.inc_rr(WordRegister::BC),
             0x04 => self.inc_b(),
             0x05 => self.dec_b(),
-            0x06 => self.ld_b_n(&memory),
+            0x06 => self.ld_b_n(memory),
             0x07 => self.rlca(),
+            0x08 => self.ld_mnn_sp(memory),
             0x09 => self.add_hl_rr(WordRegister::BC),
             0x0A => self.ld_a_mbc(memory),
             0x0B => self.dec_rr(WordRegister::BC),
@@ -1103,7 +1104,7 @@ impl CPU {
         let add2 = memory.read_8(self.registers.pc + 1);
 
         let new_value = self.alu.add_nn(&mut self.registers, add1, add2 as u16);
-        self.registers.write_hl(new_value);
+        self.registers.write_word(&WordRegister::HL, new_value);
 
         self.last_executed_instruction = format!("LD HL,SP + {:X}", add2).to_string();
 
@@ -1336,8 +1337,8 @@ impl CPU {
         memory.write_8(self.registers.read_word(&WordRegister::HL), self.registers.a);
 
         let value :u16 = self.registers.read_word(&WordRegister::HL);
-        self.registers.write_hl(self.alu.dec_nn(value));
-    
+        self.registers.write_word(&WordRegister::HL, self.alu.dec_nn(value));
+
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
     }
@@ -1493,6 +1494,18 @@ impl CPU {
 
         self.pc_to_increment = 3;
         self.last_instruction_ccycles = 12;
+    }
+
+    fn ld_mnn_sp(&mut self, memory: &mut Memory) {
+        let mem_addr = memory.read_16(self.registers.read_word(&WordRegister::PC) + 1);
+
+        self.last_executed_instruction = format!("LD ({:X}),SP", mem_addr).to_string();
+
+        let value = self.registers.read_word(&WordRegister::SP);
+        memory.write_16(mem_addr, value);
+
+        self.pc_to_increment = 3;
+        self.last_instruction_ccycles = 20;
     }
 
     // --- JUMP INSTRUCTIONS ----------------------------------------------------------------------------------------------------------------
