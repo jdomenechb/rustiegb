@@ -92,21 +92,6 @@ impl CPURegisters {
         }
     }
 
-    pub fn read_bc(&self) -> u16 {
-        self.read_word(&WordRegister::BC)
-    }
-
-    pub fn read_de(&self) -> u16 {
-        self.read_word(&WordRegister::DE)
-    }
-
-    pub fn read_hl(&self) -> u16 {
-        self.read_word(&WordRegister::HL)
-    }
-
-    pub fn write_hl(&mut self, value : u16) {
-        self.write_word(&WordRegister::HL, value)
-    }
 
     // --- FLAGS ---
     fn set_flag(&mut self, position: u8, value :bool) {
