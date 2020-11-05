@@ -1836,8 +1836,13 @@ impl CPU {
 
         match op {
             0x11 => self.rl_c(),
-            0x19 => self.rr_c(),
-            0x1A => self.rr_d(),
+            0x18 => self.rr_r(ByteRegister::B),
+            0x19 => self.rr_r(ByteRegister::C),
+            0x1A => self.rr_r(ByteRegister::D),
+            0x1B => self.rr_r(ByteRegister::E),
+            0x1C => self.rr_r(ByteRegister::H),
+            0x1D => self.rr_r(ByteRegister::L),
+            0x1F => self.rr_r(ByteRegister::A),
             0x27 => self.sla_a(),
             0x30 => self.swap_r(ByteRegister::B),
             0x31 => self.swap_r(ByteRegister::C),
@@ -1921,22 +1926,23 @@ impl CPU {
         }
     }
 
-    /**
-     * Rotate right through carry register C.
-     */
-    pub fn rr_c(&mut self)
+    pub fn rr_r(&mut self, register: ByteRegister)
     {
-        self.last_executed_instruction = "RR C".to_string();
-        let carry : bool = self.registers.c & 0b1 == 1;
+        self.last_executed_instruction = format!("RR {}", register.to_string()).to_string();
+
+        let mut value = self.registers.read_byte(&register);
+
+        let carry : bool = value & 0b1 == 1;
         let msf : u8 = if self.registers.is_flag_c() {0b10000000} else {0};
 
-        self.registers.c = msf | ((self.registers.c >> 1) & 0b01111111);
+        value = msf | ((value >> 1) & 0b01111111);
 
-        let zero :bool = self.registers.c == 0;
-        self.registers.set_flag_z(zero);
+        self.registers.set_flag_z(value == 0);
         self.registers.set_flag_c(carry);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+
+        self.registers.write_byte(&register, value);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
@@ -2003,27 +2009,6 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * Rotate right through carry register D.
-     */
-    pub fn rr_d(&mut self)
-    {
-        self.last_executed_instruction = "RR D".to_string();
-        let carry : bool = self.registers.d & 0b1 == 1;
-        let msf : u8 = if self.registers.is_flag_c() {0b10000000} else {0};
-
-        self.registers.d = msf | ((self.registers.d >> 1) & 0b01111111);
-
-        let zero :bool = self.registers.d == 0;
-        self.registers.set_flag_z(zero);
-        self.registers.set_flag_c(carry);
-        self.registers.set_flag_h(false);
-        self.registers.set_flag_n(false);
-
-        self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 8;
     }
 
     /**
