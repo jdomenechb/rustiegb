@@ -120,8 +120,8 @@ impl GPU {
             for screen_y in 0..(GPU::PIXEL_HEIGHT as u16) {
                 for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
                     // Background
-                    let screen_y_with_offset = screen_y + scy as u16;
-                    let screen_x_with_offset = screen_x + scx as u16;
+                    let screen_y_with_offset = scy as u16 + screen_y;
+                    let screen_x_with_offset = scx as u16 + screen_x;
 
                     let bg_tile_map_location = bg_tile_map_start_location
                         + (((screen_y_with_offset / PIXELS_PER_TILE) * BACKGROUND_MAP_TILE_SIZE_X) % (BACKGROUND_MAP_TILE_SIZE_X * BACKGROUND_MAP_TILE_SIZE_Y))

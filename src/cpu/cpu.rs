@@ -295,16 +295,12 @@ impl CPU {
         }
 
         self.available_cycles -= self.last_instruction_ccycles as i32;
-        //println!("Cycles left: {}", self.available_cycles);
 
         self.registers.pc += self.pc_to_increment as u16;
     }
 
     // --- INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------------
 
-    /**
-     * NOP instruction.
-     */
     pub fn nop(&mut self) {
         self.last_executed_instruction = "NOP".to_string();
 
@@ -315,9 +311,6 @@ impl CPU {
 
     // --- ARITHMETIC INSTRUCTIONS ----------------------------------------------------------------------------------------------------------
 
-    /**
-     * Decrease register A.
-     */
     pub fn dec_a(&mut self) {
         self.last_executed_instruction = "DEC A".to_string();
 
