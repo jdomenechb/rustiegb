@@ -75,7 +75,7 @@ impl CPURegisters {
             ByteRegister::C => self.c = value,
             ByteRegister::D => self.d = value,
             ByteRegister::E => self.e = value,
-            ByteRegister::F => self.f = value,
+            ByteRegister::F => self.f = value & 0xF0,
             ByteRegister::H => self.h = value,
             ByteRegister::L => self.l = value,
         }
@@ -85,7 +85,7 @@ impl CPURegisters {
         let parts: (u8, u8) = u16_to_two_u8(value);
 
         match register {
-            WordRegister::AF => { self.a = parts.0; self.f = parts.1 },
+            WordRegister::AF => { self.a = parts.0; self.f = parts.1 & 0xF0 },
             WordRegister::BC => { self.b = parts.0; self.c = parts.1 },
             WordRegister::DE => { self.d = parts.0; self.e = parts.1 },
             WordRegister::HL => { self.h = parts.0; self.l = parts.1 },
@@ -95,25 +95,19 @@ impl CPURegisters {
     }
 
     pub fn read_bc(&self) -> u16 {
-        return crate::math::two_u8_to_u16(self.b, self.c);
+        self.read_word(&WordRegister::BC)
     }
 
     pub fn read_de(&self) -> u16 {
-        return crate::math::two_u8_to_u16(self.d, self.e);
+        self.read_word(&WordRegister::DE)
     }
 
-
-    /**
-     * Reads combination of register H and register L.
-     */
     pub fn read_hl(&self) -> u16 {
-        return crate::math::two_u8_to_u16(self.h, self.l);
+        self.read_word(&WordRegister::HL)
     }
 
     pub fn write_hl(&mut self, value : u16) {
-        let parts: (u8, u8) = crate::math::u16_to_two_u8(value);
-        self.h = parts.0;
-        self.l = parts.1;
+        self.write_word(&WordRegister::HL, value)
     }
 
     // --- FLAGS ---

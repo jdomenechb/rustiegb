@@ -242,11 +242,11 @@ impl CPU {
             0xBE => self.cp_mhl(memory),
             0xBF => self.cp_a(),
             0xC0 => self.ret_nz(memory),
-            0xC1 => self.pop_bc(memory),
+            0xC1 => self.pop_rr(memory, WordRegister::BC),
             0xC2 => self.jp_nz_nn(memory),
             0xC3 => self.jp_nn(memory),
             0xC4 => self.call_nz_nn(memory),
-            0xC5 => self.push_bc(memory),
+            0xC5 => self.push_rr(memory, WordRegister::BC),
             0xC6 => self.add_a_n(memory),
             0xC8 => self.ret_z(memory),
             0xC9 => self.ret(memory),
@@ -255,25 +255,25 @@ impl CPU {
             0xCD => self.call(memory),
             0xCE => self.adc_a_n(memory),
             0xD0 => self.ret_nc(memory),
-            0xD1 => self.pop_de(memory),
-            0xD5 => self.push_de(memory),
+            0xD1 => self.pop_rr(memory, WordRegister::DE),
+            0xD5 => self.push_rr(memory, WordRegister::DE),
             0xD6 => self.sub_n(memory),
             0xD8 => self.ret_c(memory),
             0xD9 => self.reti(memory),
             0xDF => self.rst_18(memory),
             0xE0 => self.ldh_n_a(memory),
-            0xE1 => self.pop_hl(memory),
+            0xE1 => self.pop_rr(memory, WordRegister::HL),
             0xE2 => self.ld_mc_a(memory),
-            0xE5 => self.push_hl(memory),
+            0xE5 => self.push_rr(memory, WordRegister::HL),
             0xE6 => self.and_n(memory),
             0xE9 => self.jp_mhl(),
             0xEA => self.ld_nn_a(memory),
             0xEE => self.xor_n(memory),
             0xEF => self.rst_28(memory),
             0xF0 => self.ldh_a_n(memory),
-            0xF1 => self.pop_af(memory),
+            0xF1 => self.pop_rr(memory, WordRegister::AF),
             0xF3 => self.di(),
-            0xF5 => self.push_af(memory),
+            0xF5 => self.push_rr(memory, WordRegister::AF),
             0xF6 => self.or_n(memory),
             0xF8 => self.ld_hl_sp_n(memory),
             0xF9 => self.ld_sp_hl(),
@@ -1813,105 +1813,26 @@ impl CPU {
 
     // --- STACK INSTRUCTIONS --------------------------------------------------------------------------------------------------------------
 
-    /**
-     * Push HL into stack.
-     */
-    pub fn push_hl(&mut self, memory : &mut Memory) {
-        self.last_executed_instruction = "PUSH HL".to_string();
-        let reg: u16 = self.registers.read_hl();
+    fn push_rr(&mut self, memory: &mut Memory, register: WordRegister) {
+        self.last_executed_instruction = format!("PUSH {}", register.to_string()).to_string();
+
+        let reg: u16 = self.registers.read_word(&register);
         self.push_vv(memory, reg);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 16;
     }
 
-    /**
-     * Push BC into stack.
-     */
-    pub fn push_bc(&mut self, memory : &mut Memory) {
-        self.last_executed_instruction = "PUSH BC".to_string();
-        let reg: u16 = self.registers.read_bc();
-        self.push_vv(memory, reg);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 16;
-    }
-
-    /**
-     * Push AF into stack.
-     */
-    pub fn push_af(&mut self, memory : &mut Memory) {
-        self.last_executed_instruction = "PUSH AF".to_string();
-        let reg: u16 = self.registers.read_word(&WordRegister::AF);
-        self.push_vv(memory, reg);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 16;
-    }
-
-    /**
-     * Push DE into stack.
-     */
-    pub fn push_de(&mut self, memory : &mut Memory) {
-        self.last_executed_instruction = "PUSH DE".to_string();
-        let reg: u16 = self.registers.read_de();
-        self.push_vv(memory, reg);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 16;
-    }
-
-    /**
-     * Pops stack to AF.
-     */
-    pub fn pop_af(&mut self, memory : &mut Memory) {
-        self.last_executed_instruction = "POP AF".to_string();
+    fn pop_rr(&mut self, memory : &mut Memory, register: WordRegister) {
+        self.last_executed_instruction = format!("POP {}", register.to_string()).to_string();
 
         let popped: u16 = self.pop_vv(memory);
-        self.registers.write_word(&WordRegister::AF, popped);
-        
+        self.registers.write_word(&register, popped);
+
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;
     }
 
-    /**
-     * Pops stack to AF.
-     */
-    pub fn pop_bc(&mut self, memory : &mut Memory) {
-        self.last_executed_instruction = "POP BC".to_string();
-
-        let popped: u16 = self.pop_vv(memory);
-        self.registers.write_word(&WordRegister::BC, popped);
-        
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 12;
-    }
-
-    /**
-     * Pops stack to DE.
-     */
-    pub fn pop_de(&mut self, memory : &mut Memory) {
-        self.last_executed_instruction = "POP DE".to_string();
-
-        let popped: u16 = self.pop_vv(memory);
-        self.registers.write_word(&WordRegister::DE, popped);
-        
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 12;
-    }
-
-    /**
-     * Pops stack to HL.
-     */
-    pub fn pop_hl(&mut self, memory : &mut Memory) {
-        self.last_executed_instruction = "POP HL".to_string();
-
-        let popped: u16 = self.pop_vv(memory);
-        self.registers.write_hl(popped);
-        
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 12;
-    }
 
     // --- PREFIX CB -----------------------------------------------------------------------------------------------------------------------
 
