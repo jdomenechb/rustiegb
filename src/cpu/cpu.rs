@@ -2,6 +2,7 @@ use super::registers::CPURegisters;
 use super::alu::ALU;
 use crate::memory::memory::Memory;
 use crate::cpu::registers::{WordRegister, ByteRegister};
+use std::num::Wrapping;
 
 #[derive(Debug)]
 pub struct CPU {
@@ -2126,28 +2127,32 @@ impl CPU {
     fn daa(&mut self) {
         self.last_executed_instruction = "DAA".to_string();
 
+        let mut register_a = Wrapping(self.registers.read_byte(&ByteRegister::A));
+
         if !self.registers.is_flag_n() {
             // Addition
-            if self.registers.is_flag_c() || self.registers.a > 0x99 {
-                self.registers.a += 0x60;
+            if self.registers.is_flag_c() || register_a.0 > 0x99 {
+                register_a += Wrapping(0x60);
                 self.registers.set_flag_c(true);
             }
 
-            if self.registers.is_flag_h() || (self.registers.a & 0x0f) > 0x09 {
-                self.registers.a += 0x6;
+            if self.registers.is_flag_h() || (register_a.0 & 0x0f) > 0x09 {
+                register_a += Wrapping(0x6);
             }
         } else {
             if self.registers.is_flag_c() {
-                self.registers.a -= 0x60;
+                register_a -= Wrapping(0x60);
             }
 
             if self.registers.is_flag_h() {
-                self.registers.a -= 0x6;
+                register_a -= Wrapping(0x6);
             }
         }
 
-        self.registers.set_flag_z(self.registers.a == 0);
+        self.registers.set_flag_z(register_a.0 == 0);
         self.registers.set_flag_h(false);
+
+        self.registers.write_byte(&ByteRegister::A, register_a.0);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;

@@ -24,7 +24,6 @@ pub struct CPURegisters {
     pub l: u8,
     pub sp: u16,
     pub pc: u16,
-    pub flags: u8
 }
 
 impl CPURegisters {
@@ -40,7 +39,6 @@ impl CPURegisters {
             l: 0x4d,
             pc: if bootstrap { 0x0001 } else { 0x0100 },
             sp: 0xFFFE,
-            flags: 0x0,
         };
     }
 
@@ -115,9 +113,9 @@ impl CPURegisters {
         let mask :u8 = 1 << position; 
 
         if value  {
-            self.flags |= mask;
+            self.f |= mask;
         } else {
-            self.flags &= !mask; 
+            self.f &= !mask;
         }
     }
 
@@ -138,18 +136,18 @@ impl CPURegisters {
     }
 
     pub fn is_flag_z(&self) -> bool {
-        return self.flags & 0b10000000 == 0b10000000;
+        return self.f & 0b10000000 == 0b10000000;
     }
 
     pub fn is_flag_c(&self) -> bool {
-        return self.flags & 0b00010000 == 0b00010000;
+        return self.f & 0b00010000 == 0b00010000;
     }
 
     pub fn is_flag_n(&self) -> bool {
-        return self.flags & 0b01000000 == 0b01000000;
+        return self.f & 0b01000000 == 0b01000000;
     }
 
     pub fn is_flag_h(&self) -> bool {
-        return self.flags & 0b00100000 == 0b00100000;
+        return self.f & 0b00100000 == 0b00100000;
     }
 }
