@@ -233,10 +233,16 @@ impl CPU {
             0xAD => self.xor_r(ByteRegister::L),
             0xAE => self.xor_mhl(memory),
             0xAF => self.xor_r(ByteRegister::A),
-            0xB0 => self.or_b(),
-            0xB1 => self.or_c(),
+
+            0xB0 => self.or_r(ByteRegister::B),
+            0xB1 => self.or_r(ByteRegister::C),
+            0xB2 => self.or_r(ByteRegister::D),
+            0xB3 => self.or_r(ByteRegister::E),
+            0xB4 => self.or_r(ByteRegister::H),
+            0xB5 => self.or_r(ByteRegister::L),
             0xB6 => self.or_mhl(memory),
-            0xB7 => self.or_a(),
+            0xB7 => self.or_r(ByteRegister::A),
+
             0xB8 => self.cp_b(),
             0xB9 => self.cp_c(),
             0xBA => self.cp_d(),
@@ -788,52 +794,15 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    /** 
-     * OR of A with register A, result in A.
-     */
-    pub fn or_a(&mut self) {
-        self.last_executed_instruction = "OR A".to_string();
+    fn or_r(&mut self, register: ByteRegister) {
+        self.last_executed_instruction = format!("OR {}", register.to_string()).to_string();
 
-        let value1 : u8 = self.registers.a;
-        let value2 : u8 = self.registers.a;
-
-        let result: u8 = self.alu.or_n(&mut self.registers, value1, value2); 
-
-        self.registers.a = result;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * OR of B with register A, result in A.
-     */
-    pub fn or_b(&mut self) {
-        self.last_executed_instruction = "OR B".to_string();
-
-        let value1 : u8 = self.registers.b;
-        let value2 : u8 = self.registers.a;
+        let value1 : u8 = self.registers.read_byte(&register);
+        let value2 : u8 = self.registers.read_byte(&ByteRegister::A);
 
         let result: u8 = self.alu.or_n(&mut self.registers, value1, value2);
 
-        self.registers.a = result;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /** 
-     * OR of C with register A, result in A.
-     */
-    pub fn or_c(&mut self) {
-        self.last_executed_instruction = "OR C".to_string();
-
-        let value1 : u8 = self.registers.c;
-        let value2 : u8 = self.registers.a;
-
-        let result: u8 = self.alu.or_n(&mut self.registers, value1, value2); 
-
-        self.registers.a = result;
+        self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
