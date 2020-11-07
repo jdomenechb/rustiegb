@@ -578,7 +578,7 @@ impl CPU {
         let mut value2 :u8 = memory.read_8(self.registers.read_word(&WordRegister::HL));
         self.last_executed_instruction = "ADC A,(HL)".to_string();
 
-        value2 += self.registers.is_flag_c() as u8;
+        value2 = value2.overflowing_add(self.registers.is_flag_c() as u8).0;
 
         let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
         self.registers.write_byte(&ByteRegister::A, result);
