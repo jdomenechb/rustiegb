@@ -258,33 +258,44 @@ impl CPU {
             0xC4 => self.call_nz_nn(memory),
             0xC5 => self.push_rr(memory, WordRegister::BC),
             0xC6 => self.add_a_n(memory),
+            0xC7 => self.rst_v_w_out(memory,0),
+
             0xC8 => self.ret_z(memory),
             0xC9 => self.ret(memory),
             0xCA => self.jp_z_nn(memory),
             0xCB => self.prefix_cb(memory),
+            0xCC => self.call_z_nn(memory),
             0xCD => self.call(memory),
             0xCE => self.adc_a_n(memory),
+            0xCF => self.rst_v_w_out(memory, 0x08),
 
             0xD0 => self.ret_nc(memory),
             0xD1 => self.pop_rr(memory, WordRegister::DE),
             0xD2 => self.jp_nc_nn(memory),
+            0xD4 => self.call_nc_nn(memory),
             0xD5 => self.push_rr(memory, WordRegister::DE),
             0xD6 => self.sub_n(memory),
+            0xD7 => self.rst_v_w_out(memory,0x10),
+
             0xD8 => self.ret_c(memory),
             0xD9 => self.reti(memory),
+            0xDA => self.jp_c_nn(memory),
+            0xDC => self.call_c_nn(memory),
             0xDE => self.sbc_a_n(memory),
-            0xDF => self.rst_18(memory),
+            0xDF => self.rst_v_w_out(memory, 0x18),
 
             0xE0 => self.ldh_n_a(memory),
             0xE1 => self.pop_rr(memory, WordRegister::HL),
             0xE2 => self.ld_mc_a(memory),
             0xE5 => self.push_rr(memory, WordRegister::HL),
             0xE6 => self.and_n(memory),
+            0xE7 => self.rst_v_w_out(memory,0x20),
+
             0xE8 => self.add_sp_n(memory),
             0xE9 => self.jp_mhl(),
             0xEA => self.ld_nn_a(memory),
             0xEE => self.xor_n(memory),
-            0xEF => self.rst_28(memory),
+            0xEF => self.rst_v_w_out(memory, 0x28),
 
             0xF0 => self.ldh_a_n(memory),
             0xF1 => self.pop_rr(memory, WordRegister::AF),
@@ -292,12 +303,14 @@ impl CPU {
             0xF3 => self.di(),
             0xF5 => self.push_rr(memory, WordRegister::AF),
             0xF6 => self.or_n(memory),
+            0xF7 => self.rst_v_w_out(memory,0x30),
+
             0xF8 => self.ld_hl_sp_n(memory),
             0xF9 => self.ld_sp_hl(),
             0xFA => self.ld_a_nn(memory),
             0xFB => self.ei(),
             0xFE => self.cp_n(memory),
-            0xFF => self.rst_38(memory),
+            0xFF => self.rst_v_w_out(memory, 0x38),
             _ => {
                 println!("Instruction not implemented: {:X}", instruction);
                 panic!("{:#X?}", self);
@@ -1572,6 +1585,23 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    fn jp_c_nn(&mut self, memory: &Memory) {
+        let possible_value = memory.read_16(self.registers.pc + 1);
+
+        self.last_executed_instruction = format!("JP C,{:X}", possible_value).to_string();
+
+        self.registers.pc += 3;
+
+        if self.registers.is_flag_c() {
+            self.registers.pc = possible_value;
+            self.last_instruction_ccycles = 16;
+        } else {
+            self.last_instruction_ccycles = 12;
+        }
+
+        self.pc_to_increment = 0;
+    }
+
      fn jp_nc_nn(&mut self, memory: &Memory) {
         let possible_value = memory.read_16(self.registers.pc + 1);
 
@@ -1647,6 +1677,26 @@ impl CPU {
         self.last_instruction_ccycles = 24;
     }
 
+    /**
+     * If flag Z is set, push address of next instruction onto stack and then jump to address nn.
+     */
+    pub fn call_z_nn(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = format!("CALL Z,{:X}", self.registers.pc).to_string();
+
+        if !self.registers.is_flag_z() {
+            self.pc_to_increment = 3;
+            self.last_instruction_ccycles = 12;
+        }
+
+        let next_pc :u16 = self.registers.pc + 3;
+        self.push_vv(memory, next_pc);
+
+        self.registers.pc = memory.read_16(self.registers.pc + 1);
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 24;
+    }
+
     /** 
      * If flag Z is reset, push address of next instruction onto stack and then jump to address nn.
      */
@@ -1663,6 +1713,46 @@ impl CPU {
         
         self.registers.pc = memory.read_16(self.registers.pc + 1);
         
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 24;
+    }
+
+    /**
+     * If flag Z is set, push address of next instruction onto stack and then jump to address nn.
+     */
+    pub fn call_c_nn(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = format!("CALL C,{:X}", self.registers.pc).to_string();
+
+        if !self.registers.is_flag_c() {
+            self.pc_to_increment = 3;
+            self.last_instruction_ccycles = 12;
+        }
+
+        let next_pc :u16 = self.registers.pc + 3;
+        self.push_vv(memory, next_pc);
+
+        self.registers.pc = memory.read_16(self.registers.pc + 1);
+
+        self.pc_to_increment = 0;
+        self.last_instruction_ccycles = 24;
+    }
+
+    /**
+     * If flag C is reset, push address of next instruction onto stack and then jump to address nn.
+     */
+    pub fn call_nc_nn(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = format!("CALL NC,{:X}", self.registers.pc).to_string();
+
+        if self.registers.is_flag_c() {
+            self.pc_to_increment = 3;
+            self.last_instruction_ccycles = 12;
+        }
+
+        let next_pc :u16 = self.registers.pc + 3;
+        self.push_vv(memory, next_pc);
+
+        self.registers.pc = memory.read_16(self.registers.pc + 1);
+
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 24;
     }
@@ -1763,19 +1853,9 @@ impl CPU {
 
     // --- RESTART INSTRUCTIONS ------------------------------------------------------------------------------------------------------------
 
-    pub fn rst_18(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "RST $18".to_string();
-        self.rst_v(memory, 0x18)
-    }
-
-    pub fn rst_38(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "RST $38".to_string();
-        self.rst_v(memory, 0x38);
-    }
-
-    fn rst_28(&mut self, memory : &mut Memory) {
-        self.last_executed_instruction = "RST $28".to_string();
-        self.rst_v(memory, 0x28);
+    fn rst_v_w_out(&mut self, memory: &mut Memory, value: u8) {
+        self.last_executed_instruction = format!("RST ${:X}", value).to_string();
+        self.rst_v(memory, value)
     }
 
 
