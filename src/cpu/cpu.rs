@@ -117,7 +117,7 @@ impl CPU {
             0x33 => self.inc_rr(WordRegister::SP),
             0x34 => self.inc_mhl(memory),
             0x35 => self.dec_mhl(memory),
-            0x36 => self.ld_mrr_r(memory, WordRegister::HL, ByteRegister::A),
+            0x36 => self.ld_mhl_n(memory),
             0x37 => self.scf(),
             0x38 => self.jr_c_n(memory),
             0x39 => self.add_hl_rr(WordRegister::SP),
