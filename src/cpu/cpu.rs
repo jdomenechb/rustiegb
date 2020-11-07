@@ -258,14 +258,17 @@ impl CPU {
             0xCB => self.prefix_cb(memory),
             0xCD => self.call(memory),
             0xCE => self.adc_a_n(memory),
+
             0xD0 => self.ret_nc(memory),
             0xD1 => self.pop_rr(memory, WordRegister::DE),
+            0xD2 => self.jp_nc_nn(memory),
             0xD5 => self.push_rr(memory, WordRegister::DE),
             0xD6 => self.sub_n(memory),
             0xD8 => self.ret_c(memory),
             0xD9 => self.reti(memory),
             0xDE => self.sbc_a_n(memory),
             0xDF => self.rst_18(memory),
+
             0xE0 => self.ldh_n_a(memory),
             0xE1 => self.pop_rr(memory, WordRegister::HL),
             0xE2 => self.ld_mc_a(memory),
@@ -276,8 +279,10 @@ impl CPU {
             0xEA => self.ld_nn_a(memory),
             0xEE => self.xor_n(memory),
             0xEF => self.rst_28(memory),
+
             0xF0 => self.ldh_a_n(memory),
             0xF1 => self.pop_rr(memory, WordRegister::AF),
+            0xF2 => self.ld_a_mc(memory),
             0xF3 => self.di(),
             0xF5 => self.push_rr(memory, WordRegister::AF),
             0xF6 => self.or_n(memory),
@@ -1316,6 +1321,19 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    /**
+     * Writes value from memory address $FF00 + C to register A.
+     */
+    pub fn ld_a_mc(&mut self, memory: &mut Memory) {
+        self.last_executed_instruction = "LD A, ($FF00 + C)".to_string();
+
+        let mem_addr: u16 = 0xFF00 + self.registers.c as u16;
+        self.registers.a = memory.read_8(mem_addr);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
     /** 
      * Writes value from memory address $FF00 + n to register A. 
      */
@@ -1583,6 +1601,23 @@ impl CPU {
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 4;
+    }
+
+     fn jp_nc_nn(&mut self, memory: &Memory) {
+        let possible_value = memory.read_16(self.registers.pc + 1);
+
+        self.last_executed_instruction = format!("JP NC,{:X}", possible_value).to_string();
+
+        self.registers.pc += 3;
+
+        if self.registers.is_flag_c() {
+            self.registers.pc = possible_value;
+            self.last_instruction_ccycles = 16;
+        } else {
+            self.last_instruction_ccycles = 12;
+        }
+
+        self.pc_to_increment = 0;
     }
 
     /**
