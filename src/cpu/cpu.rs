@@ -67,7 +67,7 @@ impl CPU {
         match instruction {
             0x00 => self.nop(),
             0x01 => self.ld_rr_nn(memory, WordRegister::BC),
-            0x02 => self.ld_mbc_a(memory),
+            0x02 => self.ld_mrr_r(memory, WordRegister::BC, ByteRegister::A),
             0x03 => self.inc_rr(WordRegister::BC),
             0x04 => self.inc_b(),
             0x05 => self.dec_b(),
@@ -81,7 +81,7 @@ impl CPU {
             0x0D => self.dec_c(),
             0x0E => self.ld_c_n(memory),
             0x11 => self.ld_rr_nn(memory, WordRegister::DE),
-            0x12 => self.ld_mde_a(memory),
+            0x12 => self.ld_mrr_r(memory, WordRegister::DE, ByteRegister::A),
             0x13 => self.inc_rr(WordRegister::DE),
             0x14 => self.inc_d(),
             0x15 => self.dec_d(),
@@ -117,7 +117,7 @@ impl CPU {
             0x33 => self.inc_rr(WordRegister::SP),
             0x34 => self.inc_mhl(memory),
             0x35 => self.dec_mhl(memory),
-            0x36 => self.ld_mhl_n(memory),
+            0x36 => self.ld_mrr_r(memory, WordRegister::HL, ByteRegister::A),
             0x37 => self.scf(),
             0x38 => self.jr_c_n(memory),
             0x39 => self.add_hl_rr(WordRegister::SP),
@@ -182,12 +182,14 @@ impl CPU {
             0x6E => self.ld_l_mhl(memory),
             0x6F => self.ld_r_r(ByteRegister::L, ByteRegister::A),
 
-            0x70 => self.ld_mhl_b(memory),
-            0x71 => self.ld_mhl_c(memory),
-            0x72 => self.ld_mhl_d(memory),
-            0x73 => self.ld_mhl_e(memory),
+            0x70 => self.ld_mrr_r(memory, WordRegister::HL, ByteRegister::B),
+            0x71 => self.ld_mrr_r(memory, WordRegister::HL, ByteRegister::C),
+            0x72 => self.ld_mrr_r(memory, WordRegister::HL, ByteRegister::D),
+            0x73 => self.ld_mrr_r(memory, WordRegister::HL, ByteRegister::E),
+            0x74 => self.ld_mrr_r(memory, WordRegister::HL, ByteRegister::H),
+            0x75 => self.ld_mrr_r(memory, WordRegister::HL, ByteRegister::L),
             0x76 => self.halt(),
-            0x77 => self.ld_mhl_a(memory),
+            0x77 => self.ld_mrr_r(memory, WordRegister::HL, ByteRegister::A),
 
             0x78 => self.ld_r_r(ByteRegister::A, ByteRegister::B),
             0x79 => self.ld_r_r(ByteRegister::A, ByteRegister::C),
@@ -262,6 +264,7 @@ impl CPU {
             0xD6 => self.sub_n(memory),
             0xD8 => self.ret_c(memory),
             0xD9 => self.reti(memory),
+            0xDE => self.sbc_a_n(memory),
             0xDF => self.rst_18(memory),
             0xE0 => self.ldh_n_a(memory),
             0xE1 => self.pop_rr(memory, WordRegister::HL),
@@ -683,6 +686,20 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
+    }
+
+    pub fn sbc_a_n(&mut self, memory: &Memory) {
+        let value1 = self.registers.read_byte(&ByteRegister::A);
+        let value2 = memory.read_8(self.registers.read_word(&WordRegister::PC));
+
+        self.last_executed_instruction = format!("SBC A,{}", value2).to_string();
+
+        let result = self.alu.sbc_n(&mut self.registers, value1, value2);
+
+        self.registers.write_byte(&ByteRegister::A, result);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
     }
 
 
@@ -1372,89 +1389,15 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
-    /** 
-     * Writes value from register A to memory address contained in BC. 
-     */
-    pub fn ld_mbc_a(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "LD (BC),A".to_string();
+    fn ld_mrr_r(&mut self, memory: &mut Memory, register_to: WordRegister, register_from: ByteRegister) {
+        self.last_executed_instruction = format!("LD ({}),{}", register_to.to_string(), register_from.to_string()).to_string();
 
-        memory.write_8(self.registers.read_word(&WordRegister::BC), self.registers.a);
-    
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
-    /**
-     * Writes value from register A to memory address contained in DE.
-     */
-    pub fn ld_mde_a(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "LD (DE),A".to_string();
-
-        memory.write_8(self.registers.read_word(&WordRegister::DE), self.registers.a);
+        memory.write_8(self.registers.read_word(&register_to), self.registers.read_byte(&register_from));
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
     }
 
-    /** 
-     * Writes value from register A to memory address contained in HL. 
-     */
-    pub fn ld_mhl_a(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "LD (HL),A".to_string();
-
-        memory.write_8(self.registers.read_word(&WordRegister::HL), self.registers.a);
-    
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
-    /** 
-     * Writes value from register B to memory address contained in HL. 
-     */
-    pub fn ld_mhl_b(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "LD (HL),B".to_string();
-
-        memory.write_8(self.registers.read_word(&WordRegister::HL), self.registers.b);
-    
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
-    /** 
-     * Writes value from register C to memory address contained in HL. 
-     */
-    pub fn ld_mhl_c(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "LD (HL),C".to_string();
-
-        memory.write_8(self.registers.read_word(&WordRegister::HL), self.registers.c);
-    
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
-    /** 
-     * Writes value from register D to memory address contained in HL. 
-     */
-    pub fn ld_mhl_d(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "LD (HL),D".to_string();
-
-        memory.write_8(self.registers.read_word(&WordRegister::HL), self.registers.d);
-    
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
-
-    /**
-     * Writes value from register E to memory address contained in HL.
-     */
-    pub fn ld_mhl_e(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "LD (HL),E".to_string();
-
-        memory.write_8(self.registers.read_word(&WordRegister::HL), self.registers.e);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 8;
-    }
 
     /** 
      * Writes 8bit value to memory address contained in HL. 

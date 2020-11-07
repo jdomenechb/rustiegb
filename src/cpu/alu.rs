@@ -45,6 +45,10 @@ impl ALU {
         return value;
     }
 
+    pub fn sbc_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
+        self.sub_n(registers, a, b - 1)
+    }
+
     pub fn or_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
         let result :u8 = a | b;
         let zero :bool = result == 0;
