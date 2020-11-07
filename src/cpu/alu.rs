@@ -31,7 +31,7 @@ impl ALU {
         let half_carry : bool = b > a & 0x0f;
         registers.set_flag_h(half_carry);
 
-        let carry: bool = (b as u8) > (a as u8);
+        let carry: bool = b > a;
         registers.set_flag_c(carry);
 
         let value = Wrapping(a);
@@ -44,7 +44,6 @@ impl ALU {
 
         return value;
     }
-
 
     pub fn or_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
         let result :u8 = a | b;
@@ -114,6 +113,34 @@ impl ALU {
         let to_add = Wrapping(b);
 
         let value = (value + to_add).0;
+
+        let zero :bool = value == 0;
+        registers.set_flag_z(zero);
+
+        return value;
+    }
+
+    pub fn add_nn_signed(&self, registers: &mut CPURegisters, a: u16, b: i16) -> u16 {
+        if b >= 0 {
+            self.add_nn(registers, a, b as u16)
+        } else {
+            self.sub_nn(registers, a, (b * -1) as u16)
+        }
+    }
+
+    pub fn sub_nn(&self, registers: &mut CPURegisters, a: u16, b: u16) -> u16 {
+        registers.set_flag_n(true);
+
+        let half_carry : bool = b > a & 0x0f;
+        registers.set_flag_h(half_carry);
+
+        let carry: bool = b > a;
+        registers.set_flag_c(carry);
+
+        let value = Wrapping(a);
+        let to_subtract = Wrapping(b);
+
+        let value = (value - to_subtract).0;
 
         let zero :bool = value == 0;
         registers.set_flag_z(zero);

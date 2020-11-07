@@ -268,6 +268,7 @@ impl CPU {
             0xE2 => self.ld_mc_a(memory),
             0xE5 => self.push_rr(memory, WordRegister::HL),
             0xE6 => self.and_n(memory),
+            0xE8 => self.add_sp_n(memory),
             0xE9 => self.jp_mhl(),
             0xEA => self.ld_nn_a(memory),
             0xEE => self.xor_n(memory),
@@ -623,6 +624,19 @@ impl CPU {
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
+    }
+
+    fn add_sp_n(&mut self, memory: &Memory) {
+        let value1 = self.registers.read_word(&WordRegister::SP);
+        let value2 = memory.read_8_signed(self.registers.read_word(&WordRegister::PC) + 1);
+
+        self.last_executed_instruction = format!("ADD SP,{}", value2).to_string();
+
+        let result = self.alu.add_nn_signed(&mut self.registers, value1, value2 as i16);
+        self.registers.write_word(&WordRegister::SP, result);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
     }
 
     /**
@@ -1101,9 +1115,9 @@ impl CPU {
      */
     pub fn ld_hl_sp_n(&mut self, memory: &Memory) {
         let add1 = self.registers.sp;
-        let add2 = memory.read_8(self.registers.pc + 1);
+        let add2 = memory.read_8_signed(self.registers.pc + 1);
 
-        let new_value = self.alu.add_nn(&mut self.registers, add1, add2 as u16);
+        let new_value = self.alu.add_nn_signed(&mut self.registers, add1, add2 as i16);
         self.registers.write_word(&WordRegister::HL, new_value);
 
         self.last_executed_instruction = format!("LD HL,SP + {:X}", add2).to_string();
