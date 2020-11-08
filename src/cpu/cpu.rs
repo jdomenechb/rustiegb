@@ -69,48 +69,54 @@ impl CPU {
             0x01 => self.ld_rr_nn(memory, WordRegister::BC),
             0x02 => self.ld_mrr_r(memory, WordRegister::BC, ByteRegister::A),
             0x03 => self.inc_rr(WordRegister::BC),
-            0x04 => self.inc_b(),
-            0x05 => self.dec_b(),
+            0x04 => self.inc_r(ByteRegister::B),
+            0x05 => self.dec_r(ByteRegister::B),
             0x06 => self.ld_b_n(memory),
             0x07 => self.rlca(),
+
             0x08 => self.ld_mnn_sp(memory),
             0x09 => self.add_hl_rr(WordRegister::BC),
             0x0A => self.ld_a_mbc(memory),
             0x0B => self.dec_rr(WordRegister::BC),
-            0x0C => self.inc_c(),
-            0x0D => self.dec_c(),
+            0x0C => self.inc_r(ByteRegister::C),
+            0x0D => self.dec_r(ByteRegister::C),
             0x0E => self.ld_c_n(memory),
+
             0x11 => self.ld_rr_nn(memory, WordRegister::DE),
             0x12 => self.ld_mrr_r(memory, WordRegister::DE, ByteRegister::A),
             0x13 => self.inc_rr(WordRegister::DE),
-            0x14 => self.inc_d(),
-            0x15 => self.dec_d(),
+            0x14 => self.inc_r(ByteRegister::D),
+            0x15 => self.dec_r(ByteRegister::D),
             0x16 => self.ld_d_n(&memory),
             0x17 => self.rla(),
+
             0x18 => self.jr_n(memory),
             0x19 => self.add_hl_rr(WordRegister::DE),
             0x1A => self.ld_a_mde(memory),
             0x1B => self.dec_rr(WordRegister::DE),
-            0x1C => self.inc_e(),
-            0x1D => self.dec_e(),
+            0x1C => self.inc_r(ByteRegister::E),
+            0x1D => self.dec_r(ByteRegister::E),
             0x1E => self.ld_e_n(memory),
             0x1F => self.rra(),
+
             0x20 => self.jr_nz_n(memory),
             0x21 => self.ld_rr_nn(memory, WordRegister::HL),
             0x22 => self.ldi_mhl_a(memory),
             0x23 => self.inc_rr(WordRegister::HL),
-            0x24 => self.inc_h(),
-            0x25 => self.dec_h(),
+            0x24 => self.inc_r(ByteRegister::H),
+            0x25 => self.dec_r(ByteRegister::H),
             0x26 => self.ld_h_n(&memory),
             0x27 => self.daa(),
+
             0x28 => self.jr_z_n(memory),
             0x29 => self.add_hl_rr(WordRegister::HL),
             0x2A => self.ldi_a_mhl(memory),
             0x2B => self.dec_rr(WordRegister::HL),
-            0x2C => self.inc_l(),
-            0x2D => self.dec_l(),
+            0x2C => self.inc_r(ByteRegister::L),
+            0x2D => self.dec_r(ByteRegister::L),
             0x2E => self.ld_l_n(memory),
             0x2F => self.cpl(),
+
             0x30 => self.jr_nc_n(memory),
             0x31 => self.ld_rr_nn(memory, WordRegister::SP),
             0x32 => self.ldd_mhl_a(memory),
@@ -119,12 +125,13 @@ impl CPU {
             0x35 => self.dec_mhl(memory),
             0x36 => self.ld_mhl_n(memory),
             0x37 => self.scf(),
+
             0x38 => self.jr_c_n(memory),
             0x39 => self.add_hl_rr(WordRegister::SP),
             0x3A => self.ldd_a_mhl(memory),
             0x3B => self.dec_rr(WordRegister::SP),
-            0x3C => self.inc_a(),
-            0x3D => self.dec_a(),
+            0x3C => self.inc_r(ByteRegister::A),
+            0x3D => self.dec_r(ByteRegister::A),
             0x3E => self.ld_a_n(memory),
             0x3F => self.ccf(),
 
@@ -208,6 +215,7 @@ impl CPU {
             0x85 => self.add_a_r(ByteRegister::L),
             0x86 => self.add_a_mhl(memory),
             0x87 => self.add_a_r(ByteRegister::A),
+
             0x88 => self.adc_a_r(ByteRegister::B),
             0x89 => self.adc_a_r(ByteRegister::C),
             0x8A => self.adc_a_r(ByteRegister::D),
@@ -216,8 +224,16 @@ impl CPU {
             0x8D => self.adc_a_r(ByteRegister::L),
             0x8E => self.adc_a_mhl(memory),
             0x8F => self.adc_a_r(ByteRegister::A),
-            0x90 => self.sub_b(),
-            0x91 => self.sub_c(),
+
+            0x90 => self.sub_r(ByteRegister::B),
+            0x91 => self.sub_r(ByteRegister::C),
+            0x92 => self.sub_r(ByteRegister::D),
+            0x93 => self.sub_r(ByteRegister::E),
+            0x94 => self.sub_r(ByteRegister::H),
+            0x95 => self.sub_r(ByteRegister::L),
+
+            0x97 => self.sub_r(ByteRegister::A),
+
             0xA0 => self.and_r(ByteRegister::B),
             0xA1 => self.and_r(ByteRegister::C),
             0xA2 => self.and_r(ByteRegister::D),
@@ -225,6 +241,7 @@ impl CPU {
             0xA4 => self.and_r(ByteRegister::H),
             0xA5 => self.and_r(ByteRegister::L),
             0xA7 => self.and_r(ByteRegister::A),
+
             0xA8 => self.xor_r(ByteRegister::B),
             0xA9 => self.xor_r(ByteRegister::C),
             0xAA => self.xor_r(ByteRegister::D),
@@ -251,6 +268,7 @@ impl CPU {
             0xBD => self.cp_l(),
             0xBE => self.cp_mhl(memory),
             0xBF => self.cp_a(),
+
             0xC0 => self.ret_nz(memory),
             0xC1 => self.pop_rr(memory, WordRegister::BC),
             0xC2 => self.jp_nz_nn(memory),
@@ -341,96 +359,12 @@ impl CPU {
 
     // --- ARITHMETIC INSTRUCTIONS ----------------------------------------------------------------------------------------------------------
 
-    pub fn dec_a(&mut self) {
-        self.last_executed_instruction = "DEC A".to_string();
+    fn dec_r(&mut self, register: ByteRegister) {
+        self.last_executed_instruction = format!("DEC {}", register.to_string()).to_string();
 
-        let value = self.registers.a;
+        let value = self.registers.read_byte(&register);
         let value = self.alu.sub_n(&mut self.registers, value, 1);
-        self.registers.a = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Decrease register B.
-     */
-    pub fn dec_b(&mut self) {
-        self.last_executed_instruction = "DEC B".to_string();
-
-        let value = self.registers.b;
-        let value = self.alu.sub_n(&mut self.registers, value, 1);
-        self.registers.b = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Decrease register C.
-     */
-    pub fn dec_c(&mut self) {
-        self.last_executed_instruction = "DEC C".to_string();
-
-        let value = self.registers.c;
-        let value = self.alu.sub_n(&mut self.registers, value, 1);
-        self.registers.c = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Decrease register D.
-     */
-    pub fn dec_d(&mut self) {
-        self.last_executed_instruction = "DEC D".to_string();
-
-        let value = self.registers.d;
-        let value = self.alu.sub_n(&mut self.registers, value, 1);
-        self.registers.d = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-    * Decrease register E.
-    */
-    pub fn dec_e(&mut self) {
-        self.last_executed_instruction = "DEC E".to_string();
-
-        let value = self.registers.e;
-        let value = self.alu.sub_n(&mut self.registers, value, 1);
-        self.registers.e = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Decrease register H.
-     */
-    pub fn dec_h(&mut self) {
-        self.last_executed_instruction = "DEC H".to_string();
-
-        let value = self.registers.h;
-        let value = self.alu.sub_n(&mut self.registers, value, 1);
-        self.registers.h = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    /**
-     * Decrease register L.
-     */
-    pub fn dec_l(&mut self) {
-        self.last_executed_instruction = "DEC L".to_string();
-
-        let value = self.registers.l;
-        let value = self.alu.sub_n(&mut self.registers, value, 1);
-        self.registers.l = value;
+        self.registers.write_byte(&register,  value);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
@@ -470,79 +404,12 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    pub fn inc_a(&mut self) {
-        self.last_executed_instruction = "INC A".to_string();
+    fn inc_r(&mut self, register: ByteRegister) {
+        self.last_executed_instruction = format!("INC {}", register.to_string()).to_string();
 
-        let value :u8 = self.registers.a;
+        let value :u8 = self.registers.read_byte(&register);
         let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
-        self.registers.a = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    pub fn inc_d(&mut self) {
-        self.last_executed_instruction = "INC D".to_string();
-
-        let value :u8 = self.registers.d;
-        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
-        self.registers.d = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    pub fn inc_e(&mut self) {
-        self.last_executed_instruction = "INC E".to_string();
-
-        let value :u8 = self.registers.e;
-        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
-        self.registers.e = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    pub fn inc_b(&mut self) {
-        self.last_executed_instruction = "INC B".to_string();
-
-        let value :u8 = self.registers.b;
-        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
-        self.registers.b = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    pub fn inc_c(&mut self) {
-        self.last_executed_instruction = "INC C".to_string();
-
-        let value :u8 = self.registers.c;
-        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
-        self.registers.c = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-
-    pub fn inc_h(&mut self) {
-        self.last_executed_instruction = "INC H".to_string();
-
-        let value :u8 = self.registers.h;
-        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
-        self.registers.h = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    pub fn inc_l(&mut self) {
-        self.last_executed_instruction = "INC L".to_string();
-
-        let value :u8 = self.registers.l;
-        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
-        self.registers.l = value;
+        self.registers.write_byte(&register, value);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
@@ -682,35 +549,18 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    /**
-     * Substract B from A.
-     */
-    pub fn sub_b(&mut self) {
-        self.last_executed_instruction = "SUB B".to_string();
+    fn sub_r(&mut self, register: ByteRegister) {
+        self.last_executed_instruction = format!("SUB {}", register.to_string()).to_string();
 
-        let value = self.registers.a;
-        let to_subtract :u8 = self.registers.b;
+        let value = self.registers.read_byte(&ByteRegister::A);
+        let to_subtract :u8 = self.registers.read_byte(&register);
         let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
-        self.registers.a = value;
+        self.registers.write_byte(&ByteRegister::A, value);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
     }
 
-    /**
-     * Substract C from A.
-     */
-    pub fn sub_c(&mut self) {
-        self.last_executed_instruction = "SUB C".to_string();
-
-        let value = self.registers.a;
-        let to_subtract :u8 = self.registers.c;
-        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
-        self.registers.a = value;
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
 
     pub fn sbc_a_n(&mut self, memory: &Memory) {
         let value1 = self.registers.read_byte(&ByteRegister::A);
