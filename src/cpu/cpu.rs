@@ -580,22 +580,25 @@ impl CPU {
     /**
      * Rotates A right through carry flag.
      */
-    pub fn rra(&mut self) {
+    fn rra(&mut self) {
         self.last_executed_instruction = "RRA".to_string();
         let carry = self.registers.is_flag_c();
 
-        let new_carry = self.registers.a & 0x1 == 1;
-        let mut new_a = self.registers.a >> 1;
+        let value = self.registers.read_byte(&ByteRegister::A);
 
-        self.registers.set_flag_c(new_carry);
+        let new_carry = value & 0x1 == 1;
+        let mut new_a = value >> 1;
 
         if carry {
             new_a |= 0b10000000; 
         } else {
-            new_a &= !0b10000000;
+            new_a &= 0b01111111;
         }
 
-        self.registers.a = new_a;
+        self.registers.write_byte(&ByteRegister::A, new_a);
+
+        self.registers.write_byte(&ByteRegister::F, 0);
+        self.registers.set_flag_c(new_carry);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;

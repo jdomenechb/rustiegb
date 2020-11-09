@@ -118,9 +118,6 @@ impl ALU {
 
         let value = (value + to_add).0;
 
-        let zero :bool = value == 0;
-        registers.set_flag_z(zero);
-
         return value;
     }
 

@@ -7,7 +7,7 @@ pub enum ByteRegister {
     A, B, C, D, E, F, H, L
 }
 
-#[derive(strum_macros::ToString)]
+#[derive(strum_macros::ToString, Copy, Clone)]
 pub enum WordRegister {
     AF, BC, DE, HL, PC, SP
 }
