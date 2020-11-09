@@ -82,17 +82,13 @@ impl ALU {
         return value;
     }
 
-    pub fn sbc_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
-        self.sub_n(registers, a, b - 1)
-    }
-
     pub fn or_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
         let result :u8 = a | b;
         let zero :bool = result == 0;
 
-        registers.set_flag_h(false);
-        registers.set_flag_n(false);
         registers.set_flag_z(zero);
+        registers.set_flag_n(false);
+        registers.set_flag_h(false);
         registers.set_flag_c(false);
 
         return result;
@@ -102,25 +98,23 @@ impl ALU {
         let result :u8 = a & b;
         let zero :bool = result == 0;
 
-        registers.set_flag_h(false);
-        registers.set_flag_n(false);
         registers.set_flag_z(zero);
+        registers.set_flag_n(false);
+        registers.set_flag_h(true);
         registers.set_flag_c(false);
 
         return result;
     }
 
     pub fn cp_n(&self, registers: &mut CPURegisters, a: u8, b: u8) {
+        registers.set_flag_z( a == b);
         registers.set_flag_n(true);
-
-        let zero :bool  = a == b;
-        registers.set_flag_z(zero);
-
-        let carry: bool = a < b;
-        registers.set_flag_c(carry);
 
         let half_carry : bool = b > a & 0x0f;
         registers.set_flag_h(half_carry);
+
+        let carry: bool = a < b;
+        registers.set_flag_c(carry);
     }
 
     pub fn swap_n(&self, registers: &mut CPURegisters, value: u8) -> u8 {
@@ -159,11 +153,18 @@ impl ALU {
     }
 
     pub fn add_nn_signed(&self, registers: &mut CPURegisters, a: u16, b: i16) -> u16 {
+        let result;
+
         if b >= 0 {
-            self.add_nn(registers, a, b as u16)
+            result = self.add_nn(registers, a, b as u16)
         } else {
-            self.sub_nn(registers, a, (b * -1) as u16)
+            result = self.sub_nn(registers, a, (b * -1) as u16)
         }
+
+        registers.set_flag_z(false);
+        registers.set_flag_z(false);
+
+        result
     }
 
     pub fn sub_nn(&self, registers: &mut CPURegisters, a: u16, b: u16) -> u16 {

@@ -231,8 +231,17 @@ impl CPU {
             0x93 => self.sub_r(ByteRegister::E),
             0x94 => self.sub_r(ByteRegister::H),
             0x95 => self.sub_r(ByteRegister::L),
-
+            0x96 => self.sub_mhl(memory),
             0x97 => self.sub_r(ByteRegister::A),
+
+            0x98 => self.sbc_r(ByteRegister::B),
+            0x99 => self.sbc_r(ByteRegister::C),
+            0x9A => self.sbc_r(ByteRegister::D),
+            0x9B => self.sbc_r(ByteRegister::E),
+            0x9C => self.sbc_r(ByteRegister::H),
+            0x9D => self.sbc_r(ByteRegister::L),
+            0x9E => self.sbc_mhl(memory),
+            0x9F => self.sbc_r(ByteRegister::A),
 
             0xA0 => self.and_r(ByteRegister::B),
             0xA1 => self.and_r(ByteRegister::C),
@@ -240,6 +249,7 @@ impl CPU {
             0xA3 => self.and_r(ByteRegister::E),
             0xA4 => self.and_r(ByteRegister::H),
             0xA5 => self.and_r(ByteRegister::L),
+            0xA6 => self.and_mhl(memory),
             0xA7 => self.and_r(ByteRegister::A),
 
             0xA8 => self.xor_r(ByteRegister::B),
@@ -260,14 +270,14 @@ impl CPU {
             0xB6 => self.or_mhl(memory),
             0xB7 => self.or_r(ByteRegister::A),
 
-            0xB8 => self.cp_b(),
-            0xB9 => self.cp_c(),
-            0xBA => self.cp_d(),
-            0xBB => self.cp_e(),
-            0xBC => self.cp_h(),
-            0xBD => self.cp_l(),
+            0xB8 => self.cp_r(ByteRegister::B),
+            0xB9 => self.cp_r(ByteRegister::C),
+            0xBA => self.cp_r(ByteRegister::D),
+            0xBB => self.cp_r(ByteRegister::E),
+            0xBC => self.cp_r(ByteRegister::H),
+            0xBD => self.cp_r(ByteRegister::L),
             0xBE => self.cp_mhl(memory),
-            0xBF => self.cp_a(),
+            0xBF => self.cp_r(ByteRegister::A),
 
             0xC0 => self.ret_nz(memory),
             0xC1 => self.pop_rr(memory, WordRegister::BC),
@@ -345,6 +355,269 @@ impl CPU {
         self.available_cycles -= self.last_instruction_ccycles as i32;
 
         self.registers.pc += self.pc_to_increment as u16;
+    }
+
+    pub fn prefix_cb(&mut self, memory : &mut Memory)
+    {
+        let op: u8 = memory.read_8(self.registers.pc + 1);
+
+        match op {
+            0x11 => self.rl_c(),
+            0x18 => self.rr_r(ByteRegister::B),
+
+            0x19 => self.rr_r(ByteRegister::C),
+            0x1A => self.rr_r(ByteRegister::D),
+            0x1B => self.rr_r(ByteRegister::E),
+            0x1C => self.rr_r(ByteRegister::H),
+            0x1D => self.rr_r(ByteRegister::L),
+            0x1F => self.rr_r(ByteRegister::A),
+
+            0x20 => self.sla_r(ByteRegister::B),
+            0x21 => self.sla_r(ByteRegister::C),
+            0x22 => self.sla_r(ByteRegister::D),
+            0x23 => self.sla_r(ByteRegister::E),
+            0x24 => self.sla_r(ByteRegister::H),
+            0x25 => self.sla_r(ByteRegister::L),
+            0x27 => self.sla_r(ByteRegister::A),
+
+            0x30 => self.swap_r(ByteRegister::B),
+            0x31 => self.swap_r(ByteRegister::C),
+            0x32 => self.swap_r(ByteRegister::D),
+            0x33 => self.swap_r(ByteRegister::E),
+            0x34 => self.swap_r(ByteRegister::H),
+            0x35 => self.swap_r(ByteRegister::L),
+            0x37 => self.swap_r(ByteRegister::A),
+
+            0x38 => self.srl_r(ByteRegister::B),
+            0x39 => self.srl_r(ByteRegister::C),
+            0x3A => self.srl_r(ByteRegister::D),
+            0x3B => self.srl_r(ByteRegister::E),
+            0x3C => self.srl_r(ByteRegister::H),
+            0x3D => self.srl_r(ByteRegister::L),
+
+            0x3F => self.srl_r(ByteRegister::A),
+
+            0x40 => self.bit_v_r(0, ByteRegister::B),
+            0x41 => self.bit_v_r(0, ByteRegister::C),
+            0x42 => self.bit_v_r(0, ByteRegister::D),
+            0x43 => self.bit_v_r(0, ByteRegister::E),
+            0x44 => self.bit_v_r(0, ByteRegister::H),
+            0x45 => self.bit_v_r(0, ByteRegister::L),
+            0x46 => self.bit_v_mhl(memory, 0),
+            0x47 => self.bit_v_r(0, ByteRegister::A),
+
+            0x48 => self.bit_v_r(1, ByteRegister::B),
+            0x49 => self.bit_v_r(1, ByteRegister::C),
+            0x4A => self.bit_v_r(1, ByteRegister::D),
+            0x4B => self.bit_v_r(1, ByteRegister::E),
+            0x4C => self.bit_v_r(1, ByteRegister::H),
+            0x4D => self.bit_v_r(1, ByteRegister::L),
+            0x4E => self.bit_v_mhl(memory, 1),
+            0x4F => self.bit_v_r(1, ByteRegister::A),
+
+            0x50 => self.bit_v_r(2, ByteRegister::B),
+            0x51 => self.bit_v_r(2, ByteRegister::C),
+            0x52 => self.bit_v_r(2, ByteRegister::D),
+            0x53 => self.bit_v_r(2, ByteRegister::E),
+            0x54 => self.bit_v_r(2, ByteRegister::H),
+            0x55 => self.bit_v_r(2, ByteRegister::L),
+            0x56 => self.bit_v_mhl(memory, 2),
+            0x57 => self.bit_v_r(2, ByteRegister::A),
+
+            0x58 => self.bit_v_r(3, ByteRegister::B),
+            0x59 => self.bit_v_r(3, ByteRegister::C),
+            0x5A => self.bit_v_r(3, ByteRegister::D),
+            0x5B => self.bit_v_r(3, ByteRegister::E),
+            0x5C => self.bit_v_r(3, ByteRegister::H),
+            0x5D => self.bit_v_r(3, ByteRegister::L),
+            0x5E => self.bit_v_mhl(memory, 3),
+            0x5F => self.bit_v_r(3, ByteRegister::A),
+
+            0x60 => self.bit_v_r(4, ByteRegister::B),
+            0x61 => self.bit_v_r(4, ByteRegister::C),
+            0x62 => self.bit_v_r(4, ByteRegister::D),
+            0x63 => self.bit_v_r(4, ByteRegister::E),
+            0x64 => self.bit_v_r(4, ByteRegister::H),
+            0x65 => self.bit_v_r(4, ByteRegister::L),
+            0x66 => self.bit_v_mhl(memory, 4),
+            0x67 => self.bit_v_r(4, ByteRegister::A),
+
+            0x68 => self.bit_v_r(5, ByteRegister::B),
+            0x69 => self.bit_v_r(5, ByteRegister::C),
+            0x6A => self.bit_v_r(5, ByteRegister::D),
+            0x6B => self.bit_v_r(5, ByteRegister::E),
+            0x6C => self.bit_v_r(5, ByteRegister::H),
+            0x6D => self.bit_v_r(5, ByteRegister::L),
+            0x6E => self.bit_v_mhl(memory, 5),
+            0x6F => self.bit_v_r(5, ByteRegister::A),
+
+            0x70 => self.bit_v_r(6, ByteRegister::B),
+            0x71 => self.bit_v_r(6, ByteRegister::C),
+            0x72 => self.bit_v_r(6, ByteRegister::D),
+            0x73 => self.bit_v_r(6, ByteRegister::E),
+            0x74 => self.bit_v_r(6, ByteRegister::H),
+            0x75 => self.bit_v_r(6, ByteRegister::L),
+            0x76 => self.bit_v_mhl(memory, 6),
+            0x77 => self.bit_v_r(6, ByteRegister::A),
+
+            0x78 => self.bit_v_r(7, ByteRegister::B),
+            0x79 => self.bit_v_r(7, ByteRegister::C),
+            0x7A => self.bit_v_r(7, ByteRegister::D),
+            0x7B => self.bit_v_r(7, ByteRegister::E),
+            0x7C => self.bit_v_r(7, ByteRegister::H),
+            0x7D => self.bit_v_r(7, ByteRegister::L),
+            0x7E => self.bit_v_mhl(memory, 7),
+            0x7F => self.bit_v_r(7, ByteRegister::A),
+
+            0x80 => self.res_v_r(0, ByteRegister::B),
+            0x81 => self.res_v_r(0, ByteRegister::C),
+            0x82 => self.res_v_r(0, ByteRegister::D),
+            0x83 => self.res_v_r(0, ByteRegister::E),
+            0x84 => self.res_v_r(0, ByteRegister::H),
+            0x85 => self.res_v_r(0, ByteRegister::L),
+            0x86 => self.res_v_mhl(memory, 0),
+            0x87 => self.res_v_r(0, ByteRegister::A),
+
+            0x88 => self.res_v_r(1, ByteRegister::B),
+            0x89 => self.res_v_r(1, ByteRegister::C),
+            0x8A => self.res_v_r(1, ByteRegister::D),
+            0x8B => self.res_v_r(1, ByteRegister::E),
+            0x8C => self.res_v_r(1, ByteRegister::H),
+            0x8D => self.res_v_r(1, ByteRegister::L),
+            0x8E => self.res_v_mhl(memory, 1),
+            0x8F => self.res_v_r(1, ByteRegister::A),
+
+            0x90 => self.res_v_r(2, ByteRegister::B),
+            0x91 => self.res_v_r(2, ByteRegister::C),
+            0x92 => self.res_v_r(2, ByteRegister::D),
+            0x93 => self.res_v_r(2, ByteRegister::E),
+            0x94 => self.res_v_r(2, ByteRegister::H),
+            0x95 => self.res_v_r(2, ByteRegister::L),
+            0x96 => self.res_v_mhl(memory, 2),
+            0x97 => self.res_v_r(2, ByteRegister::A),
+
+            0x98 => self.res_v_r(3, ByteRegister::B),
+            0x99 => self.res_v_r(3, ByteRegister::C),
+            0x9A => self.res_v_r(3, ByteRegister::D),
+            0x9B => self.res_v_r(3, ByteRegister::E),
+            0x9C => self.res_v_r(3, ByteRegister::H),
+            0x9D => self.res_v_r(3, ByteRegister::L),
+            0x9E => self.res_v_mhl(memory, 3),
+            0x9F => self.res_v_r(3, ByteRegister::A),
+
+            0xA0 => self.res_v_r(4, ByteRegister::B),
+            0xA1 => self.res_v_r(4, ByteRegister::C),
+            0xA2 => self.res_v_r(4, ByteRegister::D),
+            0xA3 => self.res_v_r(4, ByteRegister::E),
+            0xA4 => self.res_v_r(4, ByteRegister::H),
+            0xA5 => self.res_v_r(4, ByteRegister::L),
+            0xA6 => self.res_v_mhl(memory, 4),
+            0xA7 => self.res_v_r(4, ByteRegister::A),
+
+            0xA8 => self.res_v_r(5, ByteRegister::B),
+            0xA9 => self.res_v_r(5, ByteRegister::C),
+            0xAA => self.res_v_r(5, ByteRegister::D),
+            0xAB => self.res_v_r(5, ByteRegister::E),
+            0xAC => self.res_v_r(5, ByteRegister::H),
+            0xAD => self.res_v_r(5, ByteRegister::L),
+            0xAE => self.res_v_mhl(memory, 5),
+            0xAF => self.res_v_r(5, ByteRegister::A),
+
+            0xB0 => self.res_v_r(6, ByteRegister::B),
+            0xB1 => self.res_v_r(6, ByteRegister::C),
+            0xB2 => self.res_v_r(6, ByteRegister::D),
+            0xB3 => self.res_v_r(6, ByteRegister::E),
+            0xB4 => self.res_v_r(6, ByteRegister::H),
+            0xB5 => self.res_v_r(6, ByteRegister::L),
+            0xB6 => self.res_v_mhl(memory, 6),
+            0xB7 => self.res_v_r(6, ByteRegister::A),
+
+            0xB8 => self.res_v_r(7, ByteRegister::B),
+            0xB9 => self.res_v_r(7, ByteRegister::C),
+            0xBA => self.res_v_r(7, ByteRegister::D),
+            0xBB => self.res_v_r(7, ByteRegister::E),
+            0xBC => self.res_v_r(7, ByteRegister::H),
+            0xBD => self.res_v_r(7, ByteRegister::L),
+            0xBE => self.res_v_mhl(memory, 7),
+            0xBF => self.res_v_r(7, ByteRegister::A),
+
+            0xC0 => self.set_v_r(0, ByteRegister::B),
+            0xC1 => self.set_v_r(0, ByteRegister::C),
+            0xC2 => self.set_v_r(0, ByteRegister::D),
+            0xC3 => self.set_v_r(0, ByteRegister::E),
+            0xC4 => self.set_v_r(0, ByteRegister::H),
+            0xC5 => self.set_v_r(0, ByteRegister::L),
+            0xC6 => self.set_v_mhl(memory, 0),
+            0xC7 => self.set_v_r(0, ByteRegister::A),
+
+            0xC8 => self.set_v_r(1, ByteRegister::B),
+            0xC9 => self.set_v_r(1, ByteRegister::C),
+            0xCA => self.set_v_r(1, ByteRegister::D),
+            0xCB => self.set_v_r(1, ByteRegister::E),
+            0xCC => self.set_v_r(1, ByteRegister::H),
+            0xCD => self.set_v_r(1, ByteRegister::L),
+            0xCE => self.set_v_mhl(memory, 1),
+            0xCF => self.set_v_r(1, ByteRegister::A),
+
+            0xD0 => self.set_v_r(2, ByteRegister::B),
+            0xD1 => self.set_v_r(2, ByteRegister::C),
+            0xD2 => self.set_v_r(2, ByteRegister::D),
+            0xD3 => self.set_v_r(2, ByteRegister::E),
+            0xD4 => self.set_v_r(2, ByteRegister::H),
+            0xD5 => self.set_v_r(2, ByteRegister::L),
+            0xD6 => self.set_v_mhl(memory, 2),
+            0xD7 => self.set_v_r(2, ByteRegister::A),
+
+            0xD8 => self.set_v_r(3, ByteRegister::B),
+            0xD9 => self.set_v_r(3, ByteRegister::C),
+            0xDA => self.set_v_r(3, ByteRegister::D),
+            0xDB => self.set_v_r(3, ByteRegister::E),
+            0xDC => self.set_v_r(3, ByteRegister::H),
+            0xDD => self.set_v_r(3, ByteRegister::L),
+            0xDE => self.set_v_mhl(memory, 3),
+            0xDF => self.set_v_r(3, ByteRegister::A),
+
+            0xE0 => self.set_v_r(4, ByteRegister::B),
+            0xE1 => self.set_v_r(4, ByteRegister::C),
+            0xE2 => self.set_v_r(4, ByteRegister::D),
+            0xE3 => self.set_v_r(4, ByteRegister::E),
+            0xE4 => self.set_v_r(4, ByteRegister::H),
+            0xE5 => self.set_v_r(4, ByteRegister::L),
+            0xE6 => self.set_v_mhl(memory, 4),
+            0xE7 => self.set_v_r(4, ByteRegister::A),
+
+            0xE8 => self.set_v_r(5, ByteRegister::B),
+            0xE9 => self.set_v_r(5, ByteRegister::C),
+            0xEA => self.set_v_r(5, ByteRegister::D),
+            0xEB => self.set_v_r(5, ByteRegister::E),
+            0xEC => self.set_v_r(5, ByteRegister::H),
+            0xED => self.set_v_r(5, ByteRegister::L),
+            0xEE => self.set_v_mhl(memory, 5),
+            0xEF => self.set_v_r(5, ByteRegister::A),
+
+            0xF0 => self.set_v_r(6, ByteRegister::B),
+            0xF1 => self.set_v_r(6, ByteRegister::C),
+            0xF2 => self.set_v_r(6, ByteRegister::D),
+            0xF3 => self.set_v_r(6, ByteRegister::E),
+            0xF4 => self.set_v_r(6, ByteRegister::H),
+            0xF5 => self.set_v_r(6, ByteRegister::L),
+            0xF6 => self.set_v_mhl(memory, 6),
+            0xF7 => self.set_v_r(6, ByteRegister::A),
+
+            0xF8 => self.set_v_r(7, ByteRegister::B),
+            0xF9 => self.set_v_r(7, ByteRegister::C),
+            0xFA => self.set_v_r(7, ByteRegister::D),
+            0xFB => self.set_v_r(7, ByteRegister::E),
+            0xFC => self.set_v_r(7, ByteRegister::H),
+            0xFD => self.set_v_r(7, ByteRegister::L),
+            0xFE => self.set_v_mhl(memory, 7),
+            0xFF => self.set_v_r(7, ByteRegister::A),
+
+            _ => {
+                println!("CB Instruction not implemented: {:X}", op);
+                panic!("{:#X?}", self);
+            }
+        }
     }
 
     // --- INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------------
@@ -429,11 +702,18 @@ impl CPU {
 
     fn adc_a_r(&mut self, register: ByteRegister) {
         let value1 :u8 = self.registers.read_byte(&ByteRegister::A);
-        let value2 :u8 = self.registers.read_byte(&register) + self.registers.is_flag_c() as u8;
+        let value2 :u8 = self.registers.read_byte(&register);
+
+        let had_carry = self.registers.is_flag_c();
 
         self.last_executed_instruction = format!("ADC A,{}", register.to_string()).to_string();
 
-        let result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+        let mut result :u8 = self.alu.add_n(&mut self.registers, value1, value2);
+
+        if had_carry {
+            result = self.alu.add_n(&mut self.registers, result, 1);
+        }
+
         self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
@@ -443,6 +723,7 @@ impl CPU {
     fn adc_a_mhl(&mut self, memory : &Memory) {
         let value1 :u8 = self.registers.read_byte(&ByteRegister::A);
         let mut value2 :u8 = memory.read_8(self.registers.read_word(&WordRegister::HL));
+
         self.last_executed_instruction = "ADC A,(HL)".to_string();
 
         value2 = value2.overflowing_add(self.registers.is_flag_c() as u8).0;
@@ -536,7 +817,7 @@ impl CPU {
     /**
      * Substract n from A.
      */
-    pub fn sub_n(&mut self, memory: &Memory) {
+    fn sub_n(&mut self, memory: &Memory) {
         let value = self.registers.a;
         let to_subtract :u8 = memory.read_8(self.registers.pc + 1);
 
@@ -561,13 +842,51 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
+    fn sub_mhl(&mut self, memory: &Memory) {
+        self.last_executed_instruction = "SUB (HL)".to_string();
+
+        let value = self.registers.read_byte(&ByteRegister::A);
+        let to_subtract :u8 = memory.read_8(self.registers.read_word(&WordRegister::HL));
+        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        self.registers.write_byte(&ByteRegister::A, value);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+    fn sbc_r(&mut self, register: ByteRegister) {
+        self.last_executed_instruction = format!("SBC A,{}", register.to_string()).to_string();
+
+        let value = self.registers.read_byte(&ByteRegister::A);
+        let to_subtract :u8 = self.registers.read_byte(&register).overflowing_add(1).0;
+        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        self.registers.write_byte(&ByteRegister::A, value);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn sbc_mhl(&mut self, memory: &Memory) {
+        self.last_executed_instruction = "SBC A,(HL)".to_string();
+
+        let value = self.registers.read_byte(&ByteRegister::A);
+        let to_subtract :u8 = memory.read_8(self.registers.read_word(&WordRegister::HL)).overflowing_add(1).0;
+        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        self.registers.write_byte(&ByteRegister::A, value);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
     pub fn sbc_a_n(&mut self, memory: &Memory) {
         let value1 = self.registers.read_byte(&ByteRegister::A);
-        let value2 = memory.read_8(self.registers.read_word(&WordRegister::PC));
+        let mut value2 = memory.read_8(self.registers.read_word(&WordRegister::PC) + 1);
 
         self.last_executed_instruction = format!("SBC A,{}", value2).to_string();
 
-        let result = self.alu.sbc_n(&mut self.registers, value1, value2);
+        value2 = value2.overflowing_add(self.registers.is_flag_c() as u8).0;
+
+        let result = self.alu.sub_n(&mut self.registers, value1, value2);
 
         self.registers.write_byte(&ByteRegister::A, result);
 
@@ -612,9 +931,9 @@ impl CPU {
         result = value1 ^ result;
 
         self.registers.set_flag_z(result == 0);
-        self.registers.set_flag_c(false);
-        self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_c(false);
 
         self.registers.write_byte(&ByteRegister::A, result);
 
@@ -629,9 +948,9 @@ impl CPU {
         let result = value ^ self.registers.read_byte(&ByteRegister::A);
 
         self.registers.set_flag_z(result == 0);
-        self.registers.set_flag_c(false);
-        self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_c(false);
 
         self.registers.write_byte(&ByteRegister::A, result);
 
@@ -649,9 +968,9 @@ impl CPU {
         value = value ^ self.registers.read_byte(&ByteRegister::A);
 
         self.registers.set_flag_z(value == 0);
-        self.registers.set_flag_c(false);
-        self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_c(false);
 
         self.registers.write_byte(&ByteRegister::A, value);
 
@@ -721,10 +1040,22 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
-    /** 
-     * AND of n with register A, result in A.
-     */
-    pub fn and_n(&mut self, memory: &Memory) {
+    fn and_mhl(&mut self, memory: &Memory) {
+        let value1 :u8 = memory.read_8(self.registers.read_word(&WordRegister::HL));
+        let value2 :u8 = self.registers.read_byte(&ByteRegister::A);
+
+        self.last_executed_instruction = format!("AND {:X}", value1).to_string();
+
+        let result: u8 = self.alu.and_n(&mut self.registers, value1, value2);
+
+        self.registers.write_byte(&ByteRegister::A, result);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 8;
+    }
+
+
+    fn and_n(&mut self, memory: &Memory) {
         let value1 :u8 = memory.read_8(self.registers.pc + 1);
         let value2 :u8 = self.registers.a;
 
@@ -746,7 +1077,6 @@ impl CPU {
 
         self.registers.set_flag_n(true);
         self.registers.set_flag_h(true);
-
 
         self.registers.a = !self.registers.a;
 
@@ -777,6 +1107,8 @@ impl CPU {
     pub fn ccf(&mut self) {
         self.last_executed_instruction = "CCF".to_string();
 
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h(false);
         self.registers.set_flag_c(!self.registers.is_flag_c());
 
         self.pc_to_increment = 1;
@@ -785,83 +1117,11 @@ impl CPU {
 
     // --- COMPARE INSTRUCTIONS -------------------------------------------------------------------------------------------------------------
 
-    fn cp_a(&mut self) {
-        let n :u8 = self.registers.a;
-        let a :u8 = self.registers.a;
+    fn cp_r(&mut self, register: ByteRegister) {
+        let n :u8 = self.registers.read_byte(&register);
+        let a :u8 = self.registers.read_byte(&ByteRegister::A);
 
-        self.last_executed_instruction = "CP A".to_string();
-
-        self.alu.cp_n(&mut self.registers, a, n);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    fn cp_b(&mut self) {
-        let n :u8 = self.registers.b;
-        let a :u8 = self.registers.a;
-
-        self.last_executed_instruction = "CP B".to_string();
-
-        self.alu.cp_n(&mut self.registers, a, n);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    fn cp_c(&mut self) {
-        let n :u8 = self.registers.c;
-        let a :u8 = self.registers.a;
-
-        self.last_executed_instruction = "CP C".to_string();
-
-        self.alu.cp_n(&mut self.registers, a, n);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    fn cp_d(&mut self) {
-        let n :u8 = self.registers.d;
-        let a :u8 = self.registers.a;
-
-        self.last_executed_instruction = "CP D".to_string();
-
-        self.alu.cp_n(&mut self.registers, a, n);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    fn cp_e(&mut self) {
-        let n :u8 = self.registers.e;
-        let a :u8 = self.registers.a;
-
-        self.last_executed_instruction = "CP E".to_string();
-
-        self.alu.cp_n(&mut self.registers, a, n);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    fn cp_h(&mut self) {
-        let n :u8 = self.registers.h;
-        let a :u8 = self.registers.a;
-
-        self.last_executed_instruction = "CP H".to_string();
-
-        self.alu.cp_n(&mut self.registers, a, n);
-
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
-    }
-
-    fn cp_l(&mut self) {
-        let n :u8 = self.registers.l;
-        let a :u8 = self.registers.a;
-
-        self.last_executed_instruction = "CP L".to_string();
+        self.last_executed_instruction = format!("CP {}", register.to_string()).to_string();
 
         self.alu.cp_n(&mut self.registers, a, n);
 
@@ -1680,105 +1940,6 @@ impl CPU {
         self.last_instruction_ccycles = 12;
     }
 
-
-    // --- PREFIX CB -----------------------------------------------------------------------------------------------------------------------
-
-    pub fn prefix_cb(&mut self, memory : &mut Memory)
-    {
-        let op: u8 = memory.read_8(self.registers.pc + 1);
-
-        match op {
-            0x11 => self.rl_c(),
-            0x18 => self.rr_r(ByteRegister::B),
-            0x19 => self.rr_r(ByteRegister::C),
-            0x1A => self.rr_r(ByteRegister::D),
-            0x1B => self.rr_r(ByteRegister::E),
-            0x1C => self.rr_r(ByteRegister::H),
-            0x1D => self.rr_r(ByteRegister::L),
-            0x1F => self.rr_r(ByteRegister::A),
-            0x27 => self.sla_a(),
-            0x30 => self.swap_r(ByteRegister::B),
-            0x31 => self.swap_r(ByteRegister::C),
-            0x32 => self.swap_r(ByteRegister::D),
-            0x33 => self.swap_r(ByteRegister::E),
-            0x34 => self.swap_r(ByteRegister::H),
-            0x35 => self.swap_r(ByteRegister::L),
-            0x37 => self.swap_r(ByteRegister::A),
-            0x3F => self.srl_a(),
-            0x40 => self.bit_v_r(0, ByteRegister::B),
-            0x41 => self.bit_v_r(0, ByteRegister::C),
-            0x42 => self.bit_v_r(0, ByteRegister::D),
-            0x43 => self.bit_v_r(0, ByteRegister::E),
-            0x44 => self.bit_v_r(0, ByteRegister::H),
-            0x45 => self.bit_v_r(0, ByteRegister::L),
-            0x46 => self.bit_v_mhl(memory, 0),
-            0x47 => self.bit_v_r(0, ByteRegister::A),
-            0x48 => self.bit_v_r(1, ByteRegister::B),
-            0x49 => self.bit_v_r(1, ByteRegister::C),
-            0x4A => self.bit_v_r(1, ByteRegister::D),
-            0x4B => self.bit_v_r(1, ByteRegister::E),
-            0x4C => self.bit_v_r(1, ByteRegister::H),
-            0x4D => self.bit_v_r(1, ByteRegister::L),
-            0x4E => self.bit_v_mhl(memory, 1),
-            0x4F => self.bit_v_r(1, ByteRegister::A),
-            0x50 => self.bit_v_r(2, ByteRegister::B),
-            0x51 => self.bit_v_r(2, ByteRegister::C),
-            0x52 => self.bit_v_r(2, ByteRegister::D),
-            0x53 => self.bit_v_r(2, ByteRegister::E),
-            0x54 => self.bit_v_r(2, ByteRegister::H),
-            0x55 => self.bit_v_r(2, ByteRegister::L),
-            0x56 => self.bit_v_mhl(memory, 2),
-            0x57 => self.bit_v_r(2, ByteRegister::A),
-            0x58 => self.bit_v_r(3, ByteRegister::B),
-            0x59 => self.bit_v_r(3, ByteRegister::C),
-            0x5A => self.bit_v_r(3, ByteRegister::D),
-            0x5B => self.bit_v_r(3, ByteRegister::E),
-            0x5C => self.bit_v_r(3, ByteRegister::H),
-            0x5D => self.bit_v_r(3, ByteRegister::L),
-            0x5E => self.bit_v_mhl(memory, 3),
-            0x5F => self.bit_v_r(3, ByteRegister::A),
-            0x60 => self.bit_v_r(4, ByteRegister::B),
-            0x61 => self.bit_v_r(4, ByteRegister::C),
-            0x62 => self.bit_v_r(4, ByteRegister::D),
-            0x63 => self.bit_v_r(4, ByteRegister::E),
-            0x64 => self.bit_v_r(4, ByteRegister::H),
-            0x65 => self.bit_v_r(4, ByteRegister::L),
-            0x66 => self.bit_v_mhl(memory, 4),
-            0x67 => self.bit_v_r(4, ByteRegister::A),
-            0x68 => self.bit_v_r(5, ByteRegister::B),
-            0x69 => self.bit_v_r(5, ByteRegister::C),
-            0x6A => self.bit_v_r(5, ByteRegister::D),
-            0x6B => self.bit_v_r(5, ByteRegister::E),
-            0x6C => self.bit_v_r(5, ByteRegister::H),
-            0x6D => self.bit_v_r(5, ByteRegister::L),
-            0x6E => self.bit_v_mhl(memory, 5),
-            0x6F => self.bit_v_r(5, ByteRegister::A),
-            0x70 => self.bit_v_r(6, ByteRegister::B),
-            0x71 => self.bit_v_r(6, ByteRegister::C),
-            0x72 => self.bit_v_r(6, ByteRegister::D),
-            0x73 => self.bit_v_r(6, ByteRegister::E),
-            0x74 => self.bit_v_r(6, ByteRegister::H),
-            0x75 => self.bit_v_r(6, ByteRegister::L),
-            0x76 => self.bit_v_mhl(memory, 6),
-            0x77 => self.bit_v_r(6, ByteRegister::A),
-            0x78 => self.bit_v_r(7, ByteRegister::B),
-            0x79 => self.bit_v_r(7, ByteRegister::C),
-            0x7A => self.bit_v_r(7, ByteRegister::D),
-            0x7B => self.bit_v_r(7, ByteRegister::E),
-            0x7C => self.bit_v_r(7, ByteRegister::H),
-            0x7D => self.bit_v_r(7, ByteRegister::L),
-            0x7E => self.bit_v_mhl(memory, 7),
-            0x7F => self.bit_v_r(7, ByteRegister::A),
-            0x86 => self.res_0_mhl(memory),
-            0x87 => self.res_0_a(),
-            0x38 => self.srl_b(),
-            _ => {
-                println!("CB Instruction not implemented: {:X}", op);
-                panic!("{:#X?}", self);
-            }
-        }
-    }
-
     pub fn rr_r(&mut self, register: ByteRegister)
     {
         self.last_executed_instruction = format!("RR {}", register.to_string()).to_string();
@@ -1831,8 +1992,7 @@ impl CPU {
         self.registers.a = self.registers.a << 1;
         self.registers.a = self.registers.a | (0b00000001 & (self.registers.is_flag_c() as u8));
 
-        let zero :bool = self.registers.a == 0;
-        self.registers.set_flag_z(zero);
+        self.registers.set_flag_z(false);
         self.registers.set_flag_c(new_carry);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
@@ -1853,7 +2013,7 @@ impl CPU {
         value = value << 1;
         value = value | (new_carry as u8);
 
-        self.registers.set_flag_z(value == 0);
+        self.registers.set_flag_z(false);
         self.registers.set_flag_c(new_carry);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
@@ -1864,20 +2024,19 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
-    /**
-     * Shifts bit 0 of register A to Carry, resets other flags, Z gets updated and MSF is preserved.
-     */
-    pub fn srl_a(&mut self)
+    fn srl_r(&mut self, register: ByteRegister)
     {
-        self.last_executed_instruction = "SRL A".to_string();
-        let carry : bool = self.registers.a & 0b1 == 1;
-        let msf : u8 = self.registers.a & 0b10000000;
+        self.last_executed_instruction = format!("SRL {}", register.to_string()).to_string();
 
-        self.registers.a = msf | ((self.registers.a >> 1) & 0b01111111);
+        let value = self.registers.read_byte(&register);
 
-        let zero :bool = self.registers.a == 0;
+        let carry : bool = value & 0b1 == 1;
+        let msf : u8 = value & 0b10000000;
 
-        self.registers.set_flag_z(zero);
+        let result = msf | ((value >> 1) & 0b01111111);
+        self.registers.write_byte(&register, result);
+
+        self.registers.set_flag_z(result == 0);
         self.registers.set_flag_c(carry);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
@@ -1886,45 +2045,22 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    /** 
-     * Shifts bit 0 of register B to Carry, resets other flags, Z gets updated and MSF is preserved.
-     */
-    pub fn srl_b(&mut self)
+    fn sla_r(&mut self, register: ByteRegister)
     {
-        self.last_executed_instruction = "SRL B".to_string();
-        let carry : bool = self.registers.b & 0b1 == 1;
-        let msf : u8 = self.registers.b & 0b10000000;
+        self.last_executed_instruction = format!("SLA {}", register.to_string()).to_string();
 
-        self.registers.b = msf | ((self.registers.b >> 1) & 0b01111111);
+        let mut value = self.registers.read_byte(&register);
 
-        let zero :bool = self.registers.b == 0;
+        let carry : bool = value & 0b10000000 == 0b10000000;
 
-        self.registers.set_flag_z(zero);
-        self.registers.set_flag_c(carry);
-        self.registers.set_flag_h(false);
+        value = value << 1;
+
+        self.registers.write_byte(&register, value);
+
+        self.registers.set_flag_z(value == 0);
         self.registers.set_flag_n(false);
-
-        self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 8;
-    }
-
-    /**
-     * Shift n left into Carry. LSB of n set to 0.
-     */
-    pub fn sla_a(&mut self)
-    {
-        self.last_executed_instruction = "SLA A".to_string();
-
-        let carry : bool = self.registers.a & 0b10000000 == 0b10000000;
-
-        self.registers.a = self.registers.a << 1;
-
-        let zero :bool = self.registers.a == 0;
-
-        self.registers.set_flag_z(zero);
-        self.registers.set_flag_c(carry);
         self.registers.set_flag_h(false);
-        self.registers.set_flag_n(false);
+        self.registers.set_flag_c(carry);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
@@ -1941,21 +2077,46 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    fn res_0_a(&mut self) {
-        self.last_executed_instruction = "RES 0,A".to_string();
+    fn res_v_r(&mut self, bit: u8, register: ByteRegister) {
+        self.last_executed_instruction = format!("RES {},{}", bit, register.to_string()).to_string();
 
-        let value = self.registers.a & 0b11111110;
-        self.registers.a = value;
+        let mask = !(0x1 << bit);
+
+        let mut value = self.registers.read_byte(&register) & mask;
+        self.registers.write_byte(&register, value);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
     }
 
-    fn res_0_mhl(&mut self, memory: &mut Memory) {
-        self.last_executed_instruction = "RES 0,(HL)".to_string();
+    fn res_v_mhl(&mut self, memory: &mut Memory, bit: u8) {
+        self.last_executed_instruction = format!("RES {},(HL)", bit).to_string();
 
         let mut value = memory.read_8(self.registers.read_word(&WordRegister::HL));
-        value &= 0b11111110;
+        value &= !(0x1 << bit);
+        memory.write_8(self.registers.read_word(&WordRegister::HL), value);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
+    }
+
+    fn set_v_r(&mut self, bit: u8, register: ByteRegister) {
+        self.last_executed_instruction = format!("SET {},{}", bit, register.to_string()).to_string();
+
+        let mask = 0x1 << bit;
+
+        let mut value = self.registers.read_byte(&register) | mask;
+        self.registers.write_byte(&register, value);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    fn set_v_mhl(&mut self, memory: &mut Memory, bit: u8) {
+        self.last_executed_instruction = format!("SET {},(HL)", bit).to_string();
+
+        let mut value = memory.read_8(self.registers.read_word(&WordRegister::HL));
+        value |= 0x1 << bit;
         memory.write_8(self.registers.read_word(&WordRegister::HL), value);
 
         self.pc_to_increment = 2;
