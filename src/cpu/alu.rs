@@ -25,6 +25,25 @@ impl ALU {
         return value;
     }
 
+    pub fn inc_n(&self, registers: &mut CPURegisters, a: u8) -> u8 {
+        let b = 1;
+
+        registers.set_flag_n(false);
+
+        let half_carry : bool = ((a & 0xf) + (b & 0xf)) & 0x10 == 0x10;
+        registers.set_flag_h(half_carry);
+
+        let value = Wrapping(a);
+        let to_add = Wrapping(b);
+
+        let value :u8 = (value + to_add).0;
+
+        let zero :bool = value == 0;
+        registers.set_flag_z(zero);
+
+        return value;
+    }
+
     pub fn sub_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
         registers.set_flag_n(true);
 
@@ -33,6 +52,24 @@ impl ALU {
 
         let carry: bool = b > a;
         registers.set_flag_c(carry);
+
+        let value = Wrapping(a);
+        let to_subtract = Wrapping(b);
+
+        let value = (value - to_subtract).0;
+
+        let zero :bool = value == 0;
+        registers.set_flag_z(zero);
+
+        return value;
+    }
+
+    pub fn dec_n(&self, registers: &mut CPURegisters, a: u8,) -> u8 {
+        let b = 1;
+        registers.set_flag_n(true);
+
+        let half_carry : bool = b > a & 0x0f;
+        registers.set_flag_h(half_carry);
 
         let value = Wrapping(a);
         let to_subtract = Wrapping(b);

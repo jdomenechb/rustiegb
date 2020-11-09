@@ -71,7 +71,7 @@ impl CPU {
             0x03 => self.inc_rr(WordRegister::BC),
             0x04 => self.inc_r(ByteRegister::B),
             0x05 => self.dec_r(ByteRegister::B),
-            0x06 => self.ld_b_n(memory),
+            0x06 => self.ld_r_n(memory, ByteRegister::B),
             0x07 => self.rlca(),
 
             0x08 => self.ld_mnn_sp(memory),
@@ -80,14 +80,14 @@ impl CPU {
             0x0B => self.dec_rr(WordRegister::BC),
             0x0C => self.inc_r(ByteRegister::C),
             0x0D => self.dec_r(ByteRegister::C),
-            0x0E => self.ld_c_n(memory),
+            0x0E => self.ld_r_n(memory, ByteRegister::C),
 
             0x11 => self.ld_rr_nn(memory, WordRegister::DE),
             0x12 => self.ld_mrr_r(memory, WordRegister::DE, ByteRegister::A),
             0x13 => self.inc_rr(WordRegister::DE),
             0x14 => self.inc_r(ByteRegister::D),
             0x15 => self.dec_r(ByteRegister::D),
-            0x16 => self.ld_d_n(&memory),
+            0x16 => self.ld_r_n(&memory, ByteRegister::D),
             0x17 => self.rla(),
 
             0x18 => self.jr_n(memory),
@@ -96,7 +96,7 @@ impl CPU {
             0x1B => self.dec_rr(WordRegister::DE),
             0x1C => self.inc_r(ByteRegister::E),
             0x1D => self.dec_r(ByteRegister::E),
-            0x1E => self.ld_e_n(memory),
+            0x1E => self.ld_r_n(memory, ByteRegister::E),
             0x1F => self.rra(),
 
             0x20 => self.jr_nz_n(memory),
@@ -105,7 +105,7 @@ impl CPU {
             0x23 => self.inc_rr(WordRegister::HL),
             0x24 => self.inc_r(ByteRegister::H),
             0x25 => self.dec_r(ByteRegister::H),
-            0x26 => self.ld_h_n(&memory),
+            0x26 => self.ld_r_n(&memory, ByteRegister::H),
             0x27 => self.daa(),
 
             0x28 => self.jr_z_n(memory),
@@ -114,7 +114,7 @@ impl CPU {
             0x2B => self.dec_rr(WordRegister::HL),
             0x2C => self.inc_r(ByteRegister::L),
             0x2D => self.dec_r(ByteRegister::L),
-            0x2E => self.ld_l_n(memory),
+            0x2E => self.ld_r_n(memory, ByteRegister::L),
             0x2F => self.cpl(),
 
             0x30 => self.jr_nc_n(memory),
@@ -363,7 +363,7 @@ impl CPU {
         self.last_executed_instruction = format!("DEC {}", register.to_string()).to_string();
 
         let value = self.registers.read_byte(&register);
-        let value = self.alu.sub_n(&mut self.registers, value, 1);
+        let value = self.alu.dec_n(&mut self.registers, value);
         self.registers.write_byte(&register,  value);
 
         self.pc_to_increment = 1;
@@ -377,7 +377,7 @@ impl CPU {
         self.last_executed_instruction = "DEC (HL)".to_string();
 
         let value = memory.read_8(self.registers.read_word(&WordRegister::HL));
-        let value = self.alu.sub_n(&mut self.registers, value, 1);
+        let value = self.alu.dec_n(&mut self.registers, value);
         memory.write_8(self.registers.read_word(&WordRegister::HL), value);
 
         self.pc_to_increment = 1;
@@ -408,7 +408,7 @@ impl CPU {
         self.last_executed_instruction = format!("INC {}", register.to_string()).to_string();
 
         let value :u8 = self.registers.read_byte(&register);
-        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
+        let value :u8 = self.alu.inc_n(&mut self.registers, value);
         self.registers.write_byte(&register, value);
 
         self.pc_to_increment = 1;
@@ -420,7 +420,7 @@ impl CPU {
 
         let position = self.registers.read_word(&WordRegister::HL);
         let value :u8 = memory.read_8(position);
-        let value :u8 = self.alu.add_n(&mut self.registers, value, 1);
+        let value :u8 = self.alu.inc_n(&mut self.registers, value);
         memory.write_8(position, value);
 
         self.pc_to_increment = 1;
@@ -560,7 +560,6 @@ impl CPU {
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
     }
-
 
     pub fn sbc_a_n(&mut self, memory: &Memory) {
         let value1 = self.registers.read_byte(&ByteRegister::A);
@@ -894,70 +893,17 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    // --- WRITE INSTRUCTIONS ---------------------------------------------------------------------------------------------------------------
+    fn ld_r_n(&mut self, memory: &Memory, register: ByteRegister) {
+        let value = memory.read_8(self.registers.read_word(&WordRegister::PC) + 1);
+        self.registers.write_byte(&register, value);
 
-    /** 
-     * Loads value n to register B. 
-     */
-    pub fn ld_b_n(&mut self, memory: &Memory) {
-        self.registers.b = memory.read_8(self.registers.pc + 1);
-
-        self.last_executed_instruction = format!("LD B,{:X}", self.registers.b).to_string();
+        self.last_executed_instruction = format!("LD {},{:X}", register.to_string(), value).to_string();
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
     }
 
-    /** 
-     * Loads value n to register C. 
-     */
-    pub fn ld_c_n(&mut self, memory: &Memory) {
-        self.registers.c = memory.read_8(self.registers.pc + 1);
-
-        self.last_executed_instruction = format!("LD C,{:X}", self.registers.c).to_string();
-
-        self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 8;
-    }
-
-    /**
-     * Loads value n to register D.
-     */
-    pub fn ld_d_n(&mut self, memory: &Memory) {
-        self.registers.d = memory.read_8(self.registers.pc + 1);
-
-        self.last_executed_instruction = format!("LD D,{:X}", self.registers.d).to_string();
-
-        self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 8;
-    }
-
-
-    /**
-     * Loads value n to register E.
-     */
-    pub fn ld_e_n(&mut self, memory: &Memory) {
-        self.registers.e = memory.read_8(self.registers.pc + 1);
-
-        self.last_executed_instruction = format!("LD E,{:X}", self.registers.e).to_string();
-
-        self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 8;
-    }
-
-    /** 
-     * Loads value n to register H. 
-     */
-    pub fn ld_h_n(&mut self, memory: &Memory) {
-        self.registers.h = memory.read_8(self.registers.pc + 1);
-
-        self.last_executed_instruction = format!("LD H,{:X}", self.registers.c).to_string();
-
-        self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 8;
-    }
-
-    pub fn ld_r_r(&mut self, register_to: ByteRegister, register_from: ByteRegister) {
+    fn ld_r_r(&mut self, register_to: ByteRegister, register_from: ByteRegister) {
         let value = self.registers.read_byte(&register_from);
         self.registers.write_byte(&register_to, value);
 
@@ -2168,6 +2114,129 @@ impl CPU {
         } else {
             self.pc_to_increment = 2;
             self.last_instruction_ccycles = 4;
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::cpu::registers::{WordRegister, ByteRegister};
+    use crate::cpu::cpu::CPU;
+
+    #[test]
+    fn test_inc_rr() {
+        let registers = [WordRegister::BC, WordRegister::DE, WordRegister::HL, WordRegister::SP];
+        let mut cpu = CPU::new(false, false);
+
+        for register in registers.iter() {
+            // 0x0000 to 0x0001
+            cpu.registers.write_word(register, 0x0000);
+            let old_f = cpu.registers.read_byte(&ByteRegister::F);
+
+            cpu.inc_rr(*register);
+            assert_eq!(cpu.registers.read_word(register), 0x0001);
+            assert_eq!(old_f, cpu.registers.read_byte(&ByteRegister::F));
+
+            // 0xFFFF to 0x0000
+            cpu.registers.write_word(register, 0xFFFF);
+            let old_f = cpu.registers.read_byte(&ByteRegister::F);
+
+            cpu.inc_rr(*register);
+            assert_eq!(cpu.registers.read_word(register), 0x0000);
+            assert_eq!(old_f, cpu.registers.read_byte(&ByteRegister::F));
+        }
+    }
+
+    #[test]
+    fn test_dec_rr() {
+        let registers = [WordRegister::BC, WordRegister::DE, WordRegister::HL, WordRegister::SP];
+        let mut cpu = CPU::new(false, false);
+
+        for register in registers.iter() {
+            // 0x0001 to 0x0000
+            cpu.registers.write_word(register, 0x0001);
+            let old_f = cpu.registers.read_byte(&ByteRegister::F);
+
+            cpu.dec_rr(*register);
+            assert_eq!(cpu.registers.read_word(register), 0x0000);
+            assert_eq!(old_f, cpu.registers.read_byte(&ByteRegister::F));
+
+            // 0x0000 to 0xFFFF
+            cpu.registers.write_word(register, 0x0000);
+            let old_f = cpu.registers.read_byte(&ByteRegister::F);
+
+            cpu.dec_rr(*register);
+            assert_eq!(cpu.registers.read_word(register), 0xFFFF);
+            assert_eq!(old_f, cpu.registers.read_byte(&ByteRegister::F));
+        }
+    }
+
+    fn test_add_hl_rr() {
+        let registers = [WordRegister::BC, WordRegister::DE, WordRegister::HL, WordRegister::SP];
+        let mut cpu = CPU::new(false, false);
+
+        for register in registers.iter() {
+            cpu.registers.write_word(&WordRegister::HL, 0xFFFF);
+            cpu.registers.write_word(register, 0x0001);
+            cpu.registers.write_byte(&ByteRegister::F, 0xFF);
+
+            let old_flag_z = cpu.registers.is_flag_z();
+
+            cpu.add_hl_rr(*register);
+
+            assert_eq!(cpu.registers.read_word(&WordRegister::HL), 0x0000);
+            assert_eq!(old_flag_z, cpu.registers.is_flag_z());
+            assert_eq!(false, cpu.registers.is_flag_n());
+            assert_eq!(true, cpu.registers.is_flag_h());
+            assert_eq!(true, cpu.registers.is_flag_c());
+
+            /////////
+
+            cpu.registers.write_word(&WordRegister::HL, 0x0000);
+            cpu.registers.write_word(register, 0x0001);
+            cpu.registers.write_byte(&ByteRegister::F, 0xFF);
+
+            let old_flag_z = cpu.registers.is_flag_z();
+
+            cpu.add_hl_rr(*register);
+
+            assert_eq!(cpu.registers.read_word(&WordRegister::HL), 0x0001);
+            assert_eq!(old_flag_z, cpu.registers.is_flag_z());
+            assert_eq!(false, cpu.registers.is_flag_n());
+            assert_eq!(false, cpu.registers.is_flag_h());
+            assert_eq!(false, cpu.registers.is_flag_c());
+
+            /////////
+
+            cpu.registers.write_word(&WordRegister::HL, 0x0FFF);
+            cpu.registers.write_word(register, 0x0001);
+            cpu.registers.write_byte(&ByteRegister::F, 0xFF);
+
+            let old_flag_z = cpu.registers.is_flag_z();
+
+            cpu.add_hl_rr(*register);
+
+            assert_eq!(cpu.registers.read_word(&WordRegister::HL), 0x1000);
+            assert_eq!(old_flag_z, cpu.registers.is_flag_z());
+            assert_eq!(false, cpu.registers.is_flag_n());
+            assert_eq!(true, cpu.registers.is_flag_h());
+            assert_eq!(false, cpu.registers.is_flag_c());
+
+            /////////
+
+            cpu.registers.write_word(&WordRegister::HL, 0x1000);
+            cpu.registers.write_word(register, 0x0001);
+            cpu.registers.write_byte(&ByteRegister::F, 0xFF);
+
+            let old_flag_z = cpu.registers.is_flag_z();
+
+            cpu.add_hl_rr(*register);
+
+            assert_eq!(cpu.registers.read_word(&WordRegister::HL), 0x1001);
+            assert_eq!(old_flag_z, cpu.registers.is_flag_z());
+            assert_eq!(false, cpu.registers.is_flag_n());
+            assert_eq!(false, cpu.registers.is_flag_h());
+            assert_eq!(false, cpu.registers.is_flag_c());
         }
     }
 }
