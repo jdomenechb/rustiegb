@@ -29,7 +29,7 @@ pub struct LCDC {
 
     // 0 - off
     // 1 - on
-    bg_and_window_display: bool,
+    bg_display: bool,
 }
 
 impl LCDC {
@@ -42,7 +42,7 @@ impl LCDC {
             bg_tile_map_display_select: true,
             obj_sprite_size: false,
             obj_sprite_display: true,
-            bg_and_window_display: true,
+            bg_display: true,
         }
     }
 
@@ -54,7 +54,7 @@ impl LCDC {
         self.bg_tile_map_display_select = value & 0b1000 == 0b1000;
         self.obj_sprite_size = value & 0b100 == 0b100;
         self.obj_sprite_display = value & 0b10 == 0b10;
-        self.bg_and_window_display = value & 0b1 == 0b1;
+        self.bg_display = value & 0b1 == 0b1;
     }
 
     pub fn to_u8(&self) -> u8 {
@@ -66,7 +66,7 @@ impl LCDC {
             | ((self.bg_tile_map_display_select as u8) << 3)
             | ((self.obj_sprite_size as u8) << 2)
             | ((self.obj_sprite_display as u8) << 1)
-            | (self.bg_and_window_display as u8);
+            | (self.bg_display as u8);
 
         value
     }
@@ -99,8 +99,8 @@ impl LCDC {
         return self.obj_sprite_display;
     }
 
-    pub fn bg_and_window_display(&self) -> bool {
-        return self.bg_and_window_display;
+    pub fn bg_display(&self) -> bool {
+        return self.bg_display;
     }
 
 }

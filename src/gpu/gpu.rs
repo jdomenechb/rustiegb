@@ -119,45 +119,47 @@ impl GPU {
 
             for screen_y in 0..(GPU::PIXEL_HEIGHT as u16) {
                 for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
-                    // Background
-                    let screen_y_with_offset = scy as u16 + screen_y;
-                    let screen_x_with_offset = scx as u16 + screen_x;
+                    if lcdc.bg_display() {
+                        // Background
+                        let screen_y_with_offset = scy as u16 + screen_y;
+                        let screen_x_with_offset = scx as u16 + screen_x;
 
-                    let bg_tile_map_location = bg_tile_map_start_location
-                        + (((screen_y_with_offset / PIXELS_PER_TILE) * BACKGROUND_MAP_TILE_SIZE_X) % (BACKGROUND_MAP_TILE_SIZE_X * BACKGROUND_MAP_TILE_SIZE_Y))
-                        + (screen_x_with_offset / PIXELS_PER_TILE);
+                        let bg_tile_map_location = bg_tile_map_start_location
+                            + (((screen_y_with_offset / PIXELS_PER_TILE) * BACKGROUND_MAP_TILE_SIZE_X) % (BACKGROUND_MAP_TILE_SIZE_X * BACKGROUND_MAP_TILE_SIZE_Y))
+                            + (screen_x_with_offset / PIXELS_PER_TILE);
 
-                    let bg_data_location = bg_data_start_location
-                        + memory.read_8(bg_tile_map_location) as u16 * TILE_SIZE_BYTES as u16;
+                        let bg_data_location = bg_data_start_location
+                            + memory.read_8(bg_tile_map_location) as u16 * TILE_SIZE_BYTES as u16;
 
-                    let tile_row = screen_y_with_offset as u16 % 8;
+                        let tile_row = screen_y_with_offset as u16 % 8;
 
-                    let byte1 = memory.read_8(bg_data_location + tile_row * 2);
-                    let byte2 = memory.read_8(bg_data_location + tile_row * 2 + 1);
+                        let byte1 = memory.read_8(bg_data_location + tile_row * 2);
+                        let byte2 = memory.read_8(bg_data_location + tile_row * 2 + 1);
 
-                    let bit_pos = 7 - (screen_x_with_offset % 8);
+                        let bit_pos = 7 - (screen_x_with_offset % 8);
 
-                    let pixel_bit1 = (byte1 >> bit_pos) & 0b1;
-                    let pixel_bit0 = (byte2 >> bit_pos) & 0b1;
+                        let pixel_bit1 = (byte1 >> bit_pos) & 0b1;
+                        let pixel_bit0 = (byte2 >> bit_pos) & 0b1;
 
-                    let pixel = ((pixel_bit1 << 1) | pixel_bit0) & 0b11;
-                    let pixel = match pixel {
-                        0b11 => bgp >> 6,
-                        0b10 => bgp >> 4,
-                        0b01 => bgp >> 2,
-                        0b00 => bgp >> 0,
-                        _ => panic!("Unrecognised color")
-                    } & 0b11;
+                        let pixel = ((pixel_bit1 << 1) | pixel_bit0) & 0b11;
+                        let pixel = match pixel {
+                            0b11 => bgp >> 6,
+                            0b10 => bgp >> 4,
+                            0b01 => bgp >> 2,
+                            0b00 => bgp >> 0,
+                            _ => panic!("Unrecognised color")
+                        } & 0b11;
 
-                    let color = match pixel {
-                        0b00 => Color::white(),
-                        0b01 => Color::dark_grey(),
-                        0b10 => Color::light_grey(),
-                        0b11 => Color::black(),
-                        _ => panic!("Unrecognised color")
-                    };
+                        let color = match pixel {
+                            0b00 => Color::white(),
+                            0b01 => Color::dark_grey(),
+                            0b10 => Color::light_grey(),
+                            0b11 => Color::black(),
+                            _ => panic!("Unrecognised color")
+                        };
 
-                    canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(color.to_rgba()));
+                        canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(color.to_rgba()));
+                    }
                 }
             }
 
