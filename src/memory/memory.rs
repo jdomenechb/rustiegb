@@ -689,6 +689,16 @@ impl Memory {
         // DMA
         if position == 0xFF46 {
             self.dma = value;
+
+            // DMA Transfer
+            let init_address = ((self.dma as u16) << 8 & 0xFF00);
+
+            for i in (0..0x8C).step_by(2) {
+                self.oam_ram.write_16(i,self.read_16(init_address + i));
+            }
+
+            self.dma = 0;
+
             return;
         }
 
