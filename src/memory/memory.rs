@@ -837,4 +837,8 @@ impl Memory {
     pub fn joypad(&mut self) -> &mut Joypad {
         &mut self.p1
     }
+
+    pub fn oam_ram(&mut self) -> &mut OamMemorySector {
+        &mut self.oam_ram
+    }
 }

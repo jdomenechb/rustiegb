@@ -10,4 +10,4 @@ pub mod stat;
 pub mod oam_memory_sector;
 pub mod joypad;
 pub mod wave_pattern_ram;
-mod oam_entry;
+pub mod oam_entry;

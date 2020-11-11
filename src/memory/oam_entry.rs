@@ -14,5 +14,21 @@ impl OamEntry {
             flags,
         }
     }
+
+    pub fn x(&self) -> u8 {
+        self.position_x
+    }
+
+    pub fn y(&self) -> u8 {
+        self.position_y
+    }
+
+    pub fn tile_number(&self) -> u8 {
+        self.tile_number
+    }
+
+    pub fn flags(&self) -> u8 {
+        self.flags
+    }
 }
 

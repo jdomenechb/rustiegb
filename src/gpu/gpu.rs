@@ -3,9 +3,11 @@ use crate::gpu::color::Color;
 use piston_window::*;
 use gfx_device_gl::{Factory, Resources, CommandBuffer};
 use ::image::{RgbaImage, Rgba};
+use crate::memory::oam_entry::OamEntry;
 
 pub struct GPU {
     cycles_acumulated: u16,
+    sprites_to_be_drawn: Vec<OamEntry>
 }
 
 impl GPU {
@@ -15,11 +17,13 @@ impl GPU {
     pub fn new() -> GPU {
         return GPU {
             cycles_acumulated: 0,
+            sprites_to_be_drawn: Vec::with_capacity(10),
         }
     }
 
     pub fn step(&mut self, last_instruction_cycles: u8, memory: &mut Memory)
     {
+
         self.cycles_acumulated += last_instruction_cycles as u16;
         
         match memory.stat.mode {
@@ -57,6 +61,20 @@ impl GPU {
             // Searching OAM-RAM mode
             2 =>  {
                 if self.cycles_acumulated >= 80 {
+                    self.sprites_to_be_drawn.clear();
+
+                    let ly = memory.ly;
+
+                    for oam_entry in memory.oam_ram() {
+                        if
+                            oam_entry.x() != 0
+                            && ly + 16 >= oam_entry.y()
+                            && ly + 16 < oam_entry.y() + 8 // FIXME: Replace by actual sprite height
+                        {
+                            self.sprites_to_be_drawn.push(oam_entry);
+                        }
+                    }
+
                     // Enter transferring data to LCD Driver mode
                     self.cycles_acumulated = 0;
                     memory.stat.mode = 3;
@@ -119,6 +137,11 @@ impl GPU {
 
             for screen_y in 0..(GPU::PIXEL_HEIGHT as u16) {
                 for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
+                    // Sprite
+                    if lcdc.obj_sprite_display() {
+                        
+                    }
+
                     if lcdc.bg_display() {
                         // Background
                         let screen_y_with_offset = scy as u16 + screen_y;
