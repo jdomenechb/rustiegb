@@ -1,15 +1,15 @@
 pub struct OamEntry {
-    position_x: u8,
     position_y: u8,
+    position_x: u8,
     tile_number: u8,
     flags: u8,
 }
 
 impl OamEntry {
-    pub fn from_bytes(position_x: u8, position_y: u8, tile_number: u8, flags: u8) -> OamEntry {
+    pub fn from_bytes(position_y: u8, position_x: u8, tile_number: u8, flags: u8) -> OamEntry {
         OamEntry {
-            position_x,
             position_y,
+            position_x,
             tile_number,
             flags,
         }
@@ -23,12 +23,16 @@ impl OamEntry {
         self.position_y
     }
 
+    pub fn priority(&self) -> bool {
+        self.flags & 0b1000 == 0b1000
+    }
+
     pub fn tile_number(&self) -> u8 {
         self.tile_number
     }
 
-    pub fn flags(&self) -> u8 {
-        self.flags
+    pub fn palette(&self) -> u8 {
+        self.flags & 0x1
     }
 }
 

@@ -103,7 +103,7 @@ fn main() {
         event.render(|render_args| {
             texture.update(&mut texture_context, &canvas).unwrap();
 
-            gpu.render(&mut window, &event, render_args.window_size, &memory, &mut texture_context, &mut canvas, &texture);
+            gpu.render(&mut window, &event, render_args.window_size, &memory, &mut texture_context, &texture);
             cpu.reset_available_ccycles();
 
             i += 1;
@@ -114,7 +114,7 @@ fn main() {
             while cpu.has_available_ccycles() {
                 if !cpu.is_halted() {
                     cpu.step(&mut memory);
-                    gpu.step(cpu.get_last_instruction_ccycles(), &mut memory);
+                    gpu.step(cpu.get_last_instruction_ccycles(), &mut memory, &mut canvas);
                 }
 
                 if cpu.are_interrupts_enabled() {

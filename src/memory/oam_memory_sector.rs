@@ -51,8 +51,8 @@ impl Iterator for OamMemorySector {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.count >= self.data.len() as u16 {
-            return None;
             self.count = 0;
+            return None;
         }
 
         let result = Some(self.read_oam_entry(self.count));
