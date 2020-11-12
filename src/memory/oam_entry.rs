@@ -34,5 +34,12 @@ impl OamEntry {
     pub fn palette(&self) -> u8 {
         self.flags & 0x1
     }
-}
 
+    pub fn flip_y(&self) -> bool {
+        self.flags & 0b100 == 0b100
+    }
+
+    pub fn flip_x(&self) -> bool {
+        self.flags & 0b10 == 0b10
+    }
+}

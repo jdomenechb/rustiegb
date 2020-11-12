@@ -1,11 +1,11 @@
-use crate::memory::memory::Memory;
 use crate::gpu::color::Color;
-use piston_window::*;
-use gfx_device_gl::{Factory, Resources, CommandBuffer};
-use ::image::{RgbaImage, Rgba};
+use crate::memory::memory::Memory;
 use crate::memory::oam_entry::OamEntry;
+use ::image::{Rgba, RgbaImage};
+use gfx_device_gl::{CommandBuffer, Factory, Resources};
+use piston_window::*;
 
-type DisplayPixel = [u8;4];
+type DisplayPixel = [u8; 4];
 
 pub struct GPU {
     cycles_acumulated: u16,
@@ -27,8 +27,12 @@ impl GPU {
         };
     }
 
-    pub fn step(&mut self, last_instruction_cycles: u8, memory: &mut Memory, canvas: &mut RgbaImage)
-    {
+    pub fn step(
+        &mut self,
+        last_instruction_cycles: u8,
+        memory: &mut Memory,
+        canvas: &mut RgbaImage,
+    ) {
         self.cycles_acumulated += last_instruction_cycles as u16;
 
         match memory.stat.mode {
@@ -81,10 +85,10 @@ impl GPU {
                     let ly = memory.ly;
 
                     for oam_entry in memory.oam_ram() {
-                        if
-                            oam_entry.x() != 0
+                        if oam_entry.x() != 0
                             && ly + 16 >= oam_entry.y()
-                            && ly + 16 < oam_entry.y() + 8 // FIXME: Replace by actual sprite height
+                            && ly + 16 < oam_entry.y() + 8
+                        // FIXME: Replace by actual sprite height
                         {
                             self.sprites_to_be_drawn.push(oam_entry);
                         }
@@ -105,8 +109,16 @@ impl GPU {
                         return;
                     }
 
-                    let bg_tile_map_start_location: u16 = if lcdc.bg_tile_map_display_select() { 0x9C00 } else { 0x9800 };
-                    let bg_data_start_location: u16 = if lcdc.bg_and_window_tile_data_select() { 0x8000 } else { 0x8800 };
+                    let bg_tile_map_start_location: u16 = if lcdc.bg_tile_map_display_select() {
+                        0x9C00
+                    } else {
+                        0x9800
+                    };
+                    let bg_data_start_location: u16 = if lcdc.bg_and_window_tile_data_select() {
+                        0x8000
+                    } else {
+                        0x8800
+                    };
 
                     let scx = memory.scx();
                     let scy = memory.scy();
@@ -127,22 +139,31 @@ impl GPU {
                             let screen_x_with_offset = scx as u16 + screen_x;
 
                             let bg_tile_map_location = bg_tile_map_start_location
-                                + (((screen_y_with_offset / GPU::PIXELS_PER_TILE) * GPU::BACKGROUND_MAP_TILE_SIZE_X) % (GPU::BACKGROUND_MAP_TILE_SIZE_X * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
+                                + (((screen_y_with_offset / GPU::PIXELS_PER_TILE)
+                                    * GPU::BACKGROUND_MAP_TILE_SIZE_X)
+                                    % (GPU::BACKGROUND_MAP_TILE_SIZE_X
+                                        * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
                                 + (screen_x_with_offset / GPU::PIXELS_PER_TILE);
 
                             let bg_data_location = bg_data_start_location
-                                + memory.read_8(bg_tile_map_location) as u16 * GPU::TILE_SIZE_BYTES as u16;
+                                + memory.read_8(bg_tile_map_location) as u16
+                                    * GPU::TILE_SIZE_BYTES as u16;
 
                             let tile_row = screen_y_with_offset as u16 % 8;
                             let tile_x = screen_x_with_offset % 8;
 
-                            let pixel = self.read_pixel_from_tile(memory,bg_data_location, tile_row, tile_x);
+                            let pixel = self.read_pixel_from_tile(
+                                memory,
+                                bg_data_location,
+                                tile_row,
+                                tile_x,
+                            );
                             let pixel_color = match pixel {
                                 0b11 => bgp >> 6,
                                 0b10 => bgp >> 4,
                                 0b01 => bgp >> 2,
                                 0b00 => bgp >> 0,
-                                _ => panic!("Unrecognised color")
+                                _ => panic!("Unrecognised color"),
                             } & 0b11;
 
                             let color = match pixel_color {
@@ -150,7 +171,7 @@ impl GPU {
                                 0b01 => Color::dark_grey(),
                                 0b10 => Color::light_grey(),
                                 0b11 => Color::black(),
-                                _ => panic!("Unrecognised color")
+                                _ => panic!("Unrecognised color"),
                             };
 
                             if pixel != 0x0 || pixel_to_write.is_none() {
@@ -160,7 +181,7 @@ impl GPU {
 
                         // Sprites with high priority
                         if lcdc.obj_sprite_display() {
-                            let tmp = self.draw_sprites(memory,false, screen_x, screen_y);
+                            let tmp = self.draw_sprites(memory, false, screen_x, screen_y);
 
                             if tmp.is_some() {
                                 pixel_to_write = tmp;
@@ -168,12 +189,16 @@ impl GPU {
                         }
 
                         if pixel_to_write.is_some() {
-                            canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(pixel_to_write.unwrap()));
+                            canvas.put_pixel(
+                                screen_x as u32,
+                                screen_y as u32,
+                                Rgba(pixel_to_write.unwrap()),
+                            );
                         }
                     }
                 }
             }
-            _ => panic!("Invalid GPU STAT mode")
+            _ => panic!("Invalid GPU STAT mode"),
         }
     }
 
@@ -189,7 +214,13 @@ impl GPU {
         ((pixel_bit1 << 1) | pixel_bit0) & 0b11
     }
 
-    fn draw_sprites(&self, memory: &Memory, priority: bool, screen_x: u16, screen_y: u16) -> Option<DisplayPixel> {
+    fn draw_sprites(
+        &self,
+        memory: &Memory,
+        priority: bool,
+        screen_x: u16,
+        screen_y: u16,
+    ) -> Option<DisplayPixel> {
         const SPRITE_TILES_ADDR_START: u16 = 0x8000;
 
         let mut pixel_to_write = None;
@@ -205,13 +236,15 @@ impl GPU {
             }
 
             // TODO: 8x16 mode
-            let current_pixel_x :i16 = screen_x as i16 + GPU::PIXELS_PER_TILE as i16  - sprite.x() as i16;
+            let current_pixel_x: i16 =
+                screen_x as i16 + GPU::PIXELS_PER_TILE as i16 - sprite.x() as i16;
 
             if current_pixel_x < 0 || current_pixel_x >= 8 {
                 continue;
             }
-            
-            let current_pixel_y :i16 = screen_y as i16 + (GPU::PIXELS_PER_TILE * 2) as i16 - sprite.y() as i16;
+
+            let current_pixel_y: i16 =
+                screen_y as i16 + (GPU::PIXELS_PER_TILE * 2) as i16 - sprite.y() as i16;
 
             if current_pixel_y < 0 || current_pixel_y >= 8 {
                 continue;
@@ -219,23 +252,40 @@ impl GPU {
 
             last_drawn = Some(sprite);
 
-            let sprite_addr = SPRITE_TILES_ADDR_START
-                + sprite.tile_number() as u16 * GPU::TILE_SIZE_BYTES as u16;
+            let sprite_addr =
+                SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * GPU::TILE_SIZE_BYTES as u16;
 
-            let pixel = self.read_pixel_from_tile(memory, sprite_addr, current_pixel_y as u16, current_pixel_x as u16);
+            let pixel = self.read_pixel_from_tile(
+                memory,
+                sprite_addr,
+                if sprite.flip_y() {
+                    7 - current_pixel_y
+                } else {
+                    current_pixel_y
+                } as u16,
+                if sprite.flip_x() {
+                    7 - current_pixel_x
+                } else {
+                    current_pixel_x
+                } as u16,
+            );
 
             if pixel == 0 {
                 continue;
             }
 
-            let palette = memory.read_8(if sprite.palette() == 0 { 0xFF48 } else {0xFF49});
+            let palette = memory.read_8(if sprite.palette() == 0 {
+                0xFF48
+            } else {
+                0xFF49
+            });
 
             let pixel_color = match pixel {
                 0b11 => palette >> 6,
                 0b10 => palette >> 4,
                 0b01 => palette >> 2,
                 0b00 => palette >> 0,
-                _ => panic!("Unrecognised color")
+                _ => panic!("Unrecognised color"),
             } & 0b11;
 
             let color = match pixel_color {
@@ -243,7 +293,7 @@ impl GPU {
                 0b01 => Color::dark_grey(),
                 0b10 => Color::light_grey(),
                 0b11 => Color::black(),
-                _ => panic!("Unrecognised color")
+                _ => panic!("Unrecognised color"),
             };
 
             pixel_to_write = Some(color.to_rgba())
@@ -263,7 +313,7 @@ impl GPU {
     ) {
         let pixel_size: (f64, f64) = (
             window_size.get(0).unwrap() / (GPU::PIXEL_WIDTH as f64),
-            window_size.get(1).unwrap() / (GPU::PIXEL_HEIGHT as f64)
+            window_size.get(1).unwrap() / (GPU::PIXEL_HEIGHT as f64),
         );
 
         window.draw_2d(event, |context, graphics, device| {
