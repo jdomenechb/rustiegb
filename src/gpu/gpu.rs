@@ -204,8 +204,6 @@ impl GPU {
                 continue;
             }
 
-            last_drawn = Some(sprite);
-
             // TODO: 8x16 mode
             let current_pixel_x :i16 = screen_x as i16 + GPU::PIXELS_PER_TILE as i16  - sprite.x() as i16;
 
@@ -219,10 +217,12 @@ impl GPU {
                 continue;
             }
 
+            last_drawn = Some(sprite);
+
             let sprite_addr = SPRITE_TILES_ADDR_START
                 + sprite.tile_number() as u16 * GPU::TILE_SIZE_BYTES as u16;
 
-            let pixel = self.read_pixel_from_tile(memory, sprite_addr, current_pixel_x as u16, current_pixel_y as u16);
+            let pixel = self.read_pixel_from_tile(memory, sprite_addr, current_pixel_y as u16, current_pixel_x as u16);
 
             if pixel == 0 {
                 continue;
