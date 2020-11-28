@@ -1,17 +1,17 @@
-use super::read_only_memory_sector::ReadOnlyMemorySector;
-use super::internal_ram_memory_sector::InternalRamMemorySector;
 use super::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
-use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
-use super::timer_control::TimerControl;
+use super::internal_ram_memory_sector::InternalRamMemorySector;
 use super::interrupt_flag::InterruptFlag;
 use super::lcdc::LCDC;
+use super::read_only_memory_sector::ReadOnlyMemorySector;
 use super::stat::STAT;
+use super::timer_control::TimerControl;
+use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 
+use crate::memory::joypad::Joypad;
+use crate::memory::oam_memory_sector::OamMemorySector;
+use crate::memory::wave_pattern_ram::WavePatternRam;
 use std::fs::File;
 use std::io::Read;
-use crate::memory::oam_memory_sector::OamMemorySector;
-use crate::memory::joypad::Joypad;
-use crate::memory::wave_pattern_ram::WavePatternRam;
 
 pub struct Memory {
     bootstrap_rom: Option<ReadOnlyMemorySector>,
@@ -26,6 +26,8 @@ pub struct Memory {
     serial_transfer_data: u8,
     // FF02
     sio_control: u8,
+    // FF04
+    div: u8,
     // FF06
     tma: u8,
     // FF07
@@ -81,7 +83,7 @@ pub struct Memory {
     // FF41
     pub stat: STAT,
     // FF42 - FF43
-    scy: u8, 
+    scy: u8,
     scx: u8,
     // FF44
     pub ly: u8,
@@ -102,9 +104,11 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(rom_path: &str, bootstrap: bool) -> Memory {
-        let mut data:Vec<u8> = Vec::with_capacity(0x8000);
+        let mut data: Vec<u8> = Vec::with_capacity(0x8000);
         let mut rom_file = File::open(rom_path).expect("file not found");
-        rom_file.read_to_end(&mut data).expect("Error on reading ROM contents");
+        rom_file
+            .read_to_end(&mut data)
+            .expect("Error on reading ROM contents");
 
         let bootstrap_rom;
 
@@ -113,7 +117,9 @@ impl Memory {
             let mut bootstrap_data: Vec<u8> = Vec::with_capacity(0x256);
 
             let mut bootstrap_rom_file = File::open(bootstrap_rom_path).expect("file not found");
-            bootstrap_rom_file.read_to_end(&mut bootstrap_data).expect("Error on reading ROM contents");
+            bootstrap_rom_file
+                .read_to_end(&mut bootstrap_data)
+                .expect("Error on reading ROM contents");
 
             bootstrap_rom = Some(ReadOnlyMemorySector::new(bootstrap_data));
         } else {
@@ -129,6 +135,7 @@ impl Memory {
             p1: Joypad::new(),
             serial_transfer_data: 0,
             sio_control: 0,
+            div: 0,
             tma: 0,
             timer_control: TimerControl::new(),
             interrupt_flag: InterruptFlag::new(),
@@ -220,6 +227,11 @@ impl Memory {
         // SIO control
         if position == 0xFF02 {
             return self.sio_control;
+        }
+
+        // DIV register
+        if position == 0xFF04 {
+            return self.div;
         }
 
         if position == 0xFF06 {
@@ -396,7 +408,7 @@ impl Memory {
     }
 
     pub fn read_8_signed(&self, position: u16) -> i8 {
-        let value :u8 = self.read_8(position);
+        let value: u8 = self.read_8(position);
 
         return value as i8;
     }
@@ -438,7 +450,7 @@ impl Memory {
 
         // Wave pattern RAM
         if position >= 0xFF30 && position < 0xFF40 {
-            return self.wave_pattern_ram.read_16(position - 0xFF30)
+            return self.wave_pattern_ram.read_16(position - 0xFF30);
         }
 
         // Internal RAM
@@ -452,7 +464,10 @@ impl Memory {
     pub fn write_8(&mut self, position: u16, value: u8) {
         // ROM
         if position < 0x8000 {
-            println!("Attempt to write at Memory {:X}. ROM is not writable!!!", position);
+            println!(
+                "Attempt to write at Memory {:X}. ROM is not writable!!!",
+                position
+            );
             return;
         }
 
@@ -505,6 +520,12 @@ impl Memory {
         // Serial transfer data
         if position == 0xFF02 {
             self.sio_control = value;
+            return;
+        }
+
+        // DIV register
+        if position == 0xFF04 {
+            self.div = 0;
             return;
         }
 
@@ -632,7 +653,7 @@ impl Memory {
             self.nr44 = value;
             return;
         }
-    
+
         // NR50
         if position == 0xFF24 {
             self.nr50 = value;
@@ -694,7 +715,7 @@ impl Memory {
             let init_address = (self.dma as u16) << 8 & 0xFF00;
 
             for i in (0..0x8C).step_by(2) {
-                self.oam_ram.write_16(i,self.read_16(init_address + i));
+                self.oam_ram.write_16(i, self.read_16(init_address + i));
             }
 
             self.dma = 0;
@@ -738,7 +759,6 @@ impl Memory {
             return;
         }
 
-        
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
             self.internal_ram.write_8(position - 0xFF80, value);
@@ -757,7 +777,10 @@ impl Memory {
     pub fn write_16(&mut self, position: u16, value: u16) {
         // ROM
         if position < 0x8000 {
-            println!("Attempt to write at Memory {:X}. ROM is not writable!!!", position);
+            println!(
+                "Attempt to write at Memory {:X}. ROM is not writable!!!",
+                position
+            );
             return;
         }
 
@@ -804,6 +827,10 @@ impl Memory {
         }
 
         panic!("ERROR: Memory address {:X} not writable", position);
+    }
+
+    pub fn step(&mut self, last_instruction_cycles: i16) {
+        // TODO: Implement DIV register
     }
 
     pub fn scx(&self) -> u8 {

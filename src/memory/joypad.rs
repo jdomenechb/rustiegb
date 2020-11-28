@@ -40,28 +40,35 @@ impl Joypad {
     }
 
     pub fn to_u8(&self) -> u8 {
+        if !self.p15 && !self.p14 {
+            println!("{:#010b}", 0xFF);
+            return 0xFF;
+        }
+
         let mut value = (!self.p15 as u8) << 5;
         value |= (!self.p14 as u8) << 4;
 
-        if self.p14 {
-            value |= (!self.down as u8) << 3;
-            value |= (!self.up as u8) << 2;
-            value |= (!self.left as u8) << 1;
-            value |= !self.right as u8;
-        } else if self.p15 {
-            value |= (!self.start as u8) << 3;
-            value |= (!self.select as u8) << 2;
-            value |= (!self.b as u8) << 1;
-            value |= !self.a as u8;
-        } else {
-            value |= 0b1111;
+        if self.p15 {
+            value |= (!(self.start) as u8) << 3;
+            value |= (!(self.select) as u8) << 2;
+            value |= (!(self.b) as u8) << 1;
+            value |= !(self.a) as u8;
+        } else if self.p14 {
+            value |= (!(self.down) as u8) << 3;
+            value |= (!(self.up) as u8) << 2;
+            value |= (!(self.left) as u8) << 1;
+            value |= !(self.right) as u8;
+        }
+
+        if value & 0x0F != 0x0F {
+            println!("{:#010b}", value);
         }
 
         value
     }
 
     pub fn from_u8(&mut self, new_value: u8) {
-        self.p14 = new_value & 0b10000 == 0b10000;
-        self.p15 = new_value & 0b100000 == 0b100000;
+        self.p14 = new_value & 0b10000 != 0b10000;
+        self.p15 = new_value & 0b100000 != 0b100000;
     }
 }
