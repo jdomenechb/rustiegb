@@ -17,6 +17,7 @@ use std::time::Duration;
 use clap::{App, Arg};
 use image::ImageBuffer;
 use piston_window::*;
+use std::sync::{Arc, RwLock};
 
 fn main() {
     let app_name = "RustieGB";
@@ -46,9 +47,9 @@ fn main() {
     let mut i = 1;
 
     // --- Setting up GB components
+    let mut memory = Arc::new(RwLock::new(Memory::new(matches.value_of("ROMFILE").unwrap(), bootstrap)));
     let mut cpu = CPU::new(debug_cpu, bootstrap);
-    let mut memory = Memory::new(matches.value_of("ROMFILE").unwrap(), bootstrap);
-    let mut gpu = GPU::new();
+    let mut gpu = GPU::new(memory.clone());
 
     // --- Seting up window
     let mut window: PistonWindow = WindowSettings::new(app_name, [640, 576])
@@ -75,6 +76,8 @@ fn main() {
         if let Some(Button::Keyboard(key)) = event.press_args() {
             println!("P: {:?}", key);
 
+            let mut memory = memory.write().unwrap();
+
             match key {
                 Key::X => memory.joypad().a = true,
                 Key::Z => memory.joypad().b = true,
@@ -86,10 +89,15 @@ fn main() {
                 Key::Down => memory.joypad().down = true,
                 _ => {}
             }
+
+
         };
 
         if let Some(Button::Keyboard(key)) = event.release_args() {
             println!("R: {:?}", key);
+
+            let mut memory = memory.write().unwrap();
+
             match key {
                 Key::X => memory.joypad().a = false,
                 Key::Z => memory.joypad().b = false,
@@ -111,7 +119,6 @@ fn main() {
                 &mut window,
                 &event,
                 render_args.window_size,
-                &memory,
                 &mut texture_context,
                 &texture,
             );
@@ -124,11 +131,17 @@ fn main() {
         event.update(|update_args| {
             while cpu.has_available_ccycles() {
                 if !cpu.is_halted() {
-                    cpu.step(&mut memory);
-                    gpu.step(cpu.get_last_instruction_ccycles(), &mut memory, &mut canvas);
+                    {
+                        let mut memory = memory.write().unwrap();
+
+                        cpu.step(&mut memory);
+                    }
+                    gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
                 }
 
                 if cpu.are_interrupts_enabled() {
+                    let mut memory = memory.write().unwrap();
+
                     if memory.interrupt_enable().is_vblank() && memory.interrupt_flag().is_vblank()
                     {
                         cpu.vblank_interrupt(&mut memory);

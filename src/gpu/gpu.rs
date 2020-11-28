@@ -4,12 +4,15 @@ use crate::memory::oam_entry::OamEntry;
 use ::image::{Rgba, RgbaImage};
 use gfx_device_gl::{CommandBuffer, Factory, Resources};
 use piston_window::*;
+use std::sync::{Arc, RwLock};
 
 type DisplayPixel = [u8; 4];
 
 pub struct GPU {
     cycles_acumulated: u16,
     sprites_to_be_drawn: Vec<OamEntry>,
+
+    memory: Arc<RwLock<Memory>>
 }
 
 impl GPU {
@@ -20,35 +23,45 @@ impl GPU {
     const BACKGROUND_MAP_TILE_SIZE_Y: u16 = 32;
     const PIXELS_PER_TILE: u16 = 8;
 
-    pub fn new() -> GPU {
+    pub fn new(memory: Arc<RwLock<Memory>>) -> GPU {
         return GPU {
             cycles_acumulated: 0,
             sprites_to_be_drawn: Vec::with_capacity(10),
+            memory,
         };
     }
 
     pub fn step(
         &mut self,
         last_instruction_cycles: u8,
-        memory: &mut Memory,
         canvas: &mut RgbaImage,
     ) {
+        let mode;
+
+        {
+            let memory = self.memory.read().unwrap();
+            mode = memory.stat.mode;
+        }
+
         self.cycles_acumulated += last_instruction_cycles as u16;
 
-        match memory.stat.mode {
+        match mode {
             // H-blank mode
             0 => {
                 if self.cycles_acumulated >= 204 {
                     self.cycles_acumulated = 0;
-                    memory.ly += 1;
+                    {
+                        let mut memory = self.memory.write().unwrap();
+                        memory.ly += 1;
 
-                    if memory.ly == 143 {
-                        // Enter V-blank mode
-                        memory.stat.mode = 1;
-                        memory.interrupt_flag().set_vblank(true);
-                    } else {
-                        // Enter Searching OAM-RAM mode
-                        memory.stat.mode = 2;
+                        if memory.ly == 143 {
+                            // Enter V-blank mode
+                            memory.stat.mode = 1;
+                            memory.interrupt_flag().set_vblank(true);
+                        } else {
+                            // Enter Searching OAM-RAM mode
+                            memory.stat.mode = 2;
+                        }
                     }
                 }
             }
@@ -57,12 +70,15 @@ impl GPU {
             1 => {
                 if self.cycles_acumulated >= 456 {
                     self.cycles_acumulated = 0;
-                    memory.ly += 1;
+                    {
+                        let mut memory = self.memory.write().unwrap();
+                        memory.ly += 1;
 
-                    if memory.ly > 153 {
-                        // Enter Searching OAM-RAM mode
-                        memory.stat.mode = 2;
-                        memory.ly = 0;
+                        if memory.ly > 153 {
+                            // Enter Searching OAM-RAM mode
+                            memory.stat.mode = 2;
+                            memory.ly = 0;
+                        }
                     }
                 }
             }
@@ -72,25 +88,33 @@ impl GPU {
                 if self.cycles_acumulated >= 80 {
                     // Enter transferring data to LCD Driver mode
                     self.cycles_acumulated = 0;
-                    memory.stat.mode = 3;
+
+                    {
+                        let mut memory = self.memory.write().unwrap();
+                        memory.stat.mode = 3;
+                    }
 
                     self.sprites_to_be_drawn.clear();
 
-                    let lcdc = &memory.lcdc;
+                    {
+                        let mut memory = self.memory.write().unwrap();
 
-                    if !lcdc.obj_sprite_display() {
-                        return;
-                    }
+                        let lcdc = &memory.lcdc;
 
-                    let ly = memory.ly;
+                        if !lcdc.obj_sprite_display() {
+                            return;
+                        }
 
-                    for oam_entry in memory.oam_ram() {
-                        if oam_entry.x() != 0
-                            && ly + 16 >= oam_entry.y()
-                            && ly + 16 < oam_entry.y() + 8
-                        // FIXME: Replace by actual sprite height
-                        {
-                            self.sprites_to_be_drawn.push(oam_entry);
+                        let ly = memory.ly;
+
+                        for oam_entry in memory.oam_ram() {
+                            if oam_entry.x() != 0
+                                && ly + 16 >= oam_entry.y()
+                                && ly + 16 < oam_entry.y() + 8
+                            // FIXME: Replace by actual sprite height
+                            {
+                                self.sprites_to_be_drawn.push(oam_entry);
+                            }
                         }
                     }
                 }
@@ -100,7 +124,13 @@ impl GPU {
             3 => {
                 if self.cycles_acumulated >= 172 {
                     self.cycles_acumulated = 0;
-                    memory.stat.mode = 0;
+
+                    {
+                        let mut memory = self.memory.write().unwrap();
+                        memory.stat.mode = 0;
+                    }
+
+                    let memory = self.memory.read().unwrap();
 
                     // Draw pixel line
                     let lcdc = &memory.lcdc;
@@ -114,6 +144,7 @@ impl GPU {
                     } else {
                         0x9800
                     };
+
                     let bg_data_start_location: u16 = if lcdc.bg_and_window_tile_data_select() {
                         0x8000
                     } else {
@@ -130,7 +161,7 @@ impl GPU {
 
                         // Sprites with high priority
                         if lcdc.obj_sprite_display() {
-                            pixel_to_write = self.draw_sprites(memory, true, screen_x, screen_y);
+                            pixel_to_write = self.draw_sprites(true, screen_x, screen_y);
                         }
 
                         if lcdc.bg_display() {
@@ -153,7 +184,6 @@ impl GPU {
                             let tile_x = screen_x_with_offset % 8;
 
                             let pixel = self.read_pixel_from_tile(
-                                memory,
                                 bg_data_location,
                                 tile_row,
                                 tile_x,
@@ -181,7 +211,7 @@ impl GPU {
 
                         // Sprites with high priority
                         if lcdc.obj_sprite_display() {
-                            let tmp = self.draw_sprites(memory, false, screen_x, screen_y);
+                            let tmp = self.draw_sprites(false, screen_x, screen_y);
 
                             if tmp.is_some() {
                                 pixel_to_write = tmp;
@@ -202,9 +232,16 @@ impl GPU {
         }
     }
 
-    fn read_pixel_from_tile(&self, memory: &Memory, tile_address: u16, row: u16, x: u16) -> u8 {
-        let byte1 = memory.read_8(tile_address + row * 2);
-        let byte2 = memory.read_8(tile_address + row * 2 + 1);
+    fn read_pixel_from_tile(&self, tile_address: u16, row: u16, x: u16) -> u8 {
+        let byte1;
+        let byte2;
+
+        {
+            let memory = self.memory.read().unwrap();
+
+            byte1 = memory.read_8(tile_address + row * 2);
+            byte2 = memory.read_8(tile_address + row * 2 + 1);
+        }
 
         let bit_pos = 7 - x;
 
@@ -216,7 +253,6 @@ impl GPU {
 
     fn draw_sprites(
         &self,
-        memory: &Memory,
         priority: bool,
         screen_x: u16,
         screen_y: u16,
@@ -256,7 +292,6 @@ impl GPU {
                 SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * GPU::TILE_SIZE_BYTES as u16;
 
             let pixel = self.read_pixel_from_tile(
-                memory,
                 sprite_addr,
                 if sprite.flip_y() {
                     7 - current_pixel_y
@@ -274,11 +309,17 @@ impl GPU {
                 continue;
             }
 
-            let palette = memory.read_8(if sprite.palette() == 0 {
-                0xFF48
-            } else {
-                0xFF49
-            });
+            let palette;
+
+            {
+                let memory = self.memory.read().unwrap();
+
+                palette = memory.read_8(if sprite.palette() == 0 {
+                    0xFF48
+                } else {
+                    0xFF49
+                });
+            }
 
             let pixel_color = match pixel {
                 0b11 => palette >> 6,
@@ -307,10 +348,11 @@ impl GPU {
         window: &mut PistonWindow,
         event: &Event,
         window_size: [f64; 2],
-        memory: &Memory,
         texture_context: &mut TextureContext<Factory, Resources, CommandBuffer>,
         texture: &Texture<Resources>,
     ) {
+        let memory = self.memory.read().unwrap();
+
         let pixel_size: (f64, f64) = (
             window_size.get(0).unwrap() / (GPU::PIXEL_WIDTH as f64),
             window_size.get(1).unwrap() / (GPU::PIXEL_HEIGHT as f64),
