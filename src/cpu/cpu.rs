@@ -1745,6 +1745,8 @@ impl CPU {
         if !self.registers.is_flag_z() {
             self.pc_to_increment = 3;
             self.last_instruction_ccycles = 12;
+
+            return;
         }
 
         let next_pc = self.registers.pc + 3;
@@ -1766,6 +1768,8 @@ impl CPU {
         if self.registers.is_flag_z() {
             self.pc_to_increment = 3;
             self.last_instruction_ccycles = 12;
+
+            return;
         }
 
         let next_pc = self.registers.pc + 3;
@@ -1787,6 +1791,8 @@ impl CPU {
         if !self.registers.is_flag_c() {
             self.pc_to_increment = 3;
             self.last_instruction_ccycles = 12;
+
+            return;
         }
 
         let next_pc = self.registers.pc + 3;
@@ -1808,6 +1814,8 @@ impl CPU {
         if self.registers.is_flag_c() {
             self.pc_to_increment = 3;
             self.last_instruction_ccycles = 12;
+
+            return;
         }
 
         let next_pc = self.registers.pc + 3;
