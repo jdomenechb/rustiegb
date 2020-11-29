@@ -1666,15 +1666,19 @@ impl CPU {
     }
 
     fn jp_nc_nn(&mut self) {
-        let memory = self.memory.read().unwrap();
-        let possible_value = memory.read_word(self.registers.pc + 1);
+        let possible_value;
+
+        {
+            let memory = self.memory.read().unwrap();
+            possible_value = memory.read_word(self.registers.read_word(&WordRegister::PC) + 1);
+        }
 
         self.last_executed_instruction = format!("JP NC,{:X}", possible_value).to_string();
 
         self.registers.pc += 3;
 
-        if self.registers.is_flag_c() {
-            self.registers.pc = possible_value;
+        if !self.registers.is_flag_c() {
+            self.registers.write_word(&WordRegister::PC, possible_value);
             self.last_instruction_ccycles = 16;
         } else {
             self.last_instruction_ccycles = 12;
