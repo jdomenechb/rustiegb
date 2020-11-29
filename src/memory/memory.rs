@@ -6,7 +6,6 @@ use super::read_only_memory_sector::ReadOnlyMemorySector;
 use super::stat::STAT;
 use super::timer_control::TimerControl;
 use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
-
 use crate::memory::joypad::Joypad;
 use crate::memory::memory_sector::ReadMemory;
 use crate::memory::memory_sector::WriteMemory;

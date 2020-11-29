@@ -6,13 +6,11 @@ mod memory;
 extern crate image;
 extern crate piston_window;
 
-use cpu::cpu::CPU;
-
-use gpu::gpu::GPU;
-use memory::memory::Memory;
-
 use clap::{App, Arg};
+use cpu::cpu::CPU;
+use gpu::gpu::GPU;
 use image::ImageBuffer;
+use memory::memory::Memory;
 use piston_window::*;
 use std::sync::{Arc, RwLock};
 
