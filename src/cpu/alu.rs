@@ -104,11 +104,10 @@ impl ALU {
     pub fn add_nn(&self, registers: &mut CPURegisters, a: Word, b: Word) -> Word {
         registers.set_flag_n(false);
 
-        let half_carry =
-            ((a & 0b11111111111) + (b & 0b11111111111)) & 0b10000000000 == 0b10000000000;
+        let half_carry = ((a & 0xFFF) + (b & 0xFFF)) & 0x1000 == 0x1000;
         registers.set_flag_h(half_carry);
 
-        let carry = (a as u32 + b as u32) & 0b10000000000000000 == 0b10000000000000000;
+        let carry = (a as u32 + b as u32) & 0x10000 == 0x10000;
         registers.set_flag_c(carry);
 
         a.wrapping_add(b)

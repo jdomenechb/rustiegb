@@ -76,8 +76,6 @@ fn main() {
 
     while let Some(event) = window.next() {
         if let Some(Button::Keyboard(key)) = event.press_args() {
-            println!("P: {:?}", key);
-
             let mut memory = memory.write().unwrap();
 
             match key {
@@ -94,8 +92,6 @@ fn main() {
         };
 
         if let Some(Button::Keyboard(key)) = event.release_args() {
-            println!("R: {:?}", key);
-
             let mut memory = memory.write().unwrap();
 
             match key {
