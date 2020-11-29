@@ -1171,39 +1171,42 @@ impl CPU {
 
     fn cp_r(&mut self, register: ByteRegister) {
         let n = self.registers.read_byte(&register);
-        let a = self.registers.read_byte(&ByteRegister::A);
 
         self.last_executed_instruction = format!("CP {}", register.to_string()).to_string();
 
-        self.alu.cp_n(&mut self.registers, a, n);
+        self.alu.cp_n(&mut self.registers, n);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
     }
 
     fn cp_n(&mut self) {
-        let memory = self.memory.read().unwrap();
+        let n;
 
-        let n = memory.read_byte(self.registers.pc + 1);
-        let a = self.registers.a;
+        {
+            let memory = self.memory.read().unwrap();
+            n = memory.read_byte(self.registers.pc + 1);
+        }
 
         self.last_executed_instruction = format!("CP {:X}", n).to_string();
 
-        self.alu.cp_n(&mut self.registers, a, n);
+        self.alu.cp_n(&mut self.registers, n);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
     }
 
     fn cp_mhl(&mut self) {
-        let memory = self.memory.read().unwrap();
+        let n;
 
-        let n = memory.read_byte(self.registers.read_word(&WordRegister::HL));
-        let a = self.registers.a;
+        {
+            let memory = self.memory.read().unwrap();
+            n = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        }
 
         self.last_executed_instruction = "CP (HL)".to_string();
 
-        self.alu.cp_n(&mut self.registers, a, n);
+        self.alu.cp_n(&mut self.registers, n);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;

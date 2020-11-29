@@ -1,4 +1,5 @@
 use super::registers::CPURegisters;
+use crate::cpu::registers::ByteRegister;
 use crate::{Byte, Word};
 use std::num::Wrapping;
 
@@ -107,7 +108,8 @@ impl ALU {
         return result;
     }
 
-    pub fn cp_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) {
+    pub fn cp_n(&self, registers: &mut CPURegisters, b: Byte) {
+        let a = registers.read_byte(&ByteRegister::A);
         registers.set_flag_z(a == b);
         registers.set_flag_n(true);
 
