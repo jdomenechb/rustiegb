@@ -10,9 +10,6 @@ use cpu::cpu::CPU;
 
 use gpu::gpu::GPU;
 use memory::memory::Memory;
-use std::io;
-use std::thread::sleep;
-use std::time::Duration;
 
 use clap::{App, Arg};
 use image::ImageBuffer;

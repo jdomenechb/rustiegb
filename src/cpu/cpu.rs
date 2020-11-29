@@ -2347,6 +2347,8 @@ impl CPU {
 mod test {
     use crate::cpu::cpu::CPU;
     use crate::cpu::registers::{ByteRegister, WordRegister};
+    use std::sync::{Arc, RwLock};
+    use crate::memory::memory::Memory;
 
     #[test]
     fn test_inc_rr() {
@@ -2357,7 +2359,7 @@ mod test {
             WordRegister::SP,
         ];
 
-        let mut cpu = CPU::new(false, false);
+        let mut cpu = CPU::new(Arc::new(RwLock::new(Memory::default())), false, false);
 
         for register in registers.iter() {
             // 0x0000 to 0x0001
@@ -2386,7 +2388,7 @@ mod test {
             WordRegister::HL,
             WordRegister::SP,
         ];
-        let mut cpu = CPU::new(false, false);
+        let mut cpu = CPU::new(Arc::new(RwLock::new(Memory::default())), false, false);
 
         for register in registers.iter() {
             // 0x0001 to 0x0000
@@ -2414,7 +2416,7 @@ mod test {
             WordRegister::HL,
             WordRegister::SP,
         ];
-        let mut cpu = CPU::new(false, false);
+        let mut cpu = CPU::new(Arc::new(RwLock::new(Memory::default())), false, false);
 
         for register in registers.iter() {
             cpu.registers.write_word(&WordRegister::HL, 0xFFFF);

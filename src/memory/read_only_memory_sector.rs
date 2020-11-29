@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct ReadOnlyMemorySector {
     pub data: Vec<u8>
 }
@@ -5,7 +6,7 @@ pub struct ReadOnlyMemorySector {
 impl ReadOnlyMemorySector {
     pub fn new(data: Vec<u8>) -> ReadOnlyMemorySector {
         return ReadOnlyMemorySector {
-            data: data
+            data
         };
     }
 

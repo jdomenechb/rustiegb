@@ -3,12 +3,6 @@ pub struct InternalRamMemorySector {
 }
 
 impl InternalRamMemorySector {
-    pub fn new() -> InternalRamMemorySector {
-        return InternalRamMemorySector {
-            data: [0; 0x7F]
-        };
-    }
-
     /**
      * Reads a 8bit value from memory.
      */
@@ -34,5 +28,13 @@ impl InternalRamMemorySector {
         let position = position as usize;
         self.data[position] = value as u8;
         self.data[position + 1] = (value >> 8) as u8;
+    }
+}
+
+impl Default for InternalRamMemorySector {
+    fn default() -> Self {
+        Self {
+            data: [0; 0x7F]
+        }
     }
 }
