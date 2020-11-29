@@ -19,10 +19,10 @@ use image::ImageBuffer;
 use piston_window::*;
 use std::sync::{Arc, RwLock};
 
-fn main() {
-    let app_name = "RustieGB";
+const APP_NAME: &str = "RustieGB";
 
-    let matches = App::new(app_name)
+fn main() {
+    let matches = App::new(APP_NAME)
         .arg(
             Arg::with_name("ROMFILE")
                 .required(true)
@@ -48,11 +48,11 @@ fn main() {
 
     // --- Setting up GB components
     let mut memory = Arc::new(RwLock::new(Memory::new(matches.value_of("ROMFILE").unwrap(), bootstrap)));
-    let mut cpu = CPU::new(debug_cpu, bootstrap);
+    let mut cpu = CPU::new(memory.clone(), debug_cpu, bootstrap);
     let mut gpu = GPU::new(memory.clone());
 
     // --- Seting up window
-    let mut window: PistonWindow = WindowSettings::new(app_name, [640, 576])
+    let mut window: PistonWindow = WindowSettings::new(APP_NAME, [640, 576])
         .exit_on_esc(true)
         .resizable(false)
         .build()
@@ -89,8 +89,6 @@ fn main() {
                 Key::Down => memory.joypad().down = true,
                 _ => {}
             }
-
-
         };
 
         if let Some(Button::Keyboard(key)) = event.release_args() {
@@ -131,20 +129,21 @@ fn main() {
         event.update(|update_args| {
             while cpu.has_available_ccycles() {
                 if !cpu.is_halted() {
-                    {
-                        let mut memory = memory.write().unwrap();
-
-                        cpu.step(&mut memory);
-                    }
+                    cpu.step();
                     gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
                 }
 
                 if cpu.are_interrupts_enabled() {
-                    let mut memory = memory.write().unwrap();
 
-                    if memory.interrupt_enable().is_vblank() && memory.interrupt_flag().is_vblank()
+                    let check;
+
                     {
-                        cpu.vblank_interrupt(&mut memory);
+                        let mut memory = memory.write().unwrap();
+                        check =  memory.interrupt_enable().is_vblank() && memory.interrupt_flag().is_vblank();
+                    }
+
+                    if check {
+                        cpu.vblank_interrupt();
                         cpu.unhalt();
 
                         continue;
