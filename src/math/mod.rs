@@ -1,11 +1,13 @@
-pub fn two_bytes_to_word(h: u8, l: u8) -> u16 {
-    let result: u16 = h as u16;
-    return (result << 8) + (l as u16);
+use crate::{Byte, Word};
+
+pub fn two_bytes_to_word(h: Byte, l: Byte) -> Word {
+    let result = h as Word;
+    return (result << 8) + (l as Word);
 }
 
-pub fn word_to_two_bytes(value: u16) -> (u8, u8) {
-    let low: u8 = value as u8;
-    let high: u8 = (value >> 8) as u8;
+pub fn word_to_two_bytes(value: Word) -> (Byte, Byte) {
+    let low = value as Byte;
+    let high = (value >> 8) as Byte;
 
     return (high, low);
 }

@@ -1,3 +1,5 @@
+use crate::Byte;
+
 #[derive(Default)]
 pub struct InterruptFlag {
     p10_13_transition: bool,
@@ -27,8 +29,8 @@ impl InterruptFlag {
     }
 }
 
-impl From<u8> for InterruptFlag {
-    fn from(value: u8) -> Self {
+impl From<Byte> for InterruptFlag {
+    fn from(value: Byte) -> Self {
         Self {
             p10_13_transition: value & 0b10000 == 0b10000,
             serial_io_transfer_complete: value & 0b1000 == 0b1000,
@@ -39,13 +41,13 @@ impl From<u8> for InterruptFlag {
     }
 }
 
-impl From<&InterruptFlag> for u8 {
+impl From<&InterruptFlag> for Byte {
     fn from(original: &InterruptFlag) -> Self {
-        let value = ((original.p10_13_transition as u8) << 4)
-            | ((original.serial_io_transfer_complete as u8) << 3)
-            | ((original.timer_overflow as u8) << 2)
-            | ((original.lcdc as u8) << 1)
-            | (original.vblank as u8);
+        let value = ((original.p10_13_transition as Byte) << 4)
+            | ((original.serial_io_transfer_complete as Byte) << 3)
+            | ((original.timer_overflow as Byte) << 2)
+            | ((original.lcdc as Byte) << 1)
+            | (original.vblank as Byte);
 
         value
     }

@@ -1,53 +1,54 @@
 use super::registers::CPURegisters;
+use crate::{Byte, Word};
 use std::num::Wrapping;
 
 #[derive(Debug)]
 pub struct ALU {}
 
 impl ALU {
-    pub fn add_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
+    pub fn add_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
         registers.set_flag_n(false);
 
-        let half_carry : bool = ((a & 0xf) + (b & 0xf)) & 0x10 == 0x10;
+        let half_carry: bool = ((a & 0xf) + (b & 0xf)) & 0x10 == 0x10;
         registers.set_flag_h(half_carry);
 
-        let carry: bool = (a as u16 + b as u16) & 0x100 == 0x100;
+        let carry: bool = (a as Word + b as Word) & 0x100 == 0x100;
         registers.set_flag_c(carry);
 
         let value = Wrapping(a);
         let to_add = Wrapping(b);
 
-        let value :u8 = (value + to_add).0;
+        let value: Byte = (value + to_add).0;
 
-        let zero :bool = value == 0;
+        let zero: bool = value == 0;
         registers.set_flag_z(zero);
 
         return value;
     }
 
-    pub fn inc_n(&self, registers: &mut CPURegisters, a: u8) -> u8 {
+    pub fn inc_n(&self, registers: &mut CPURegisters, a: Byte) -> Byte {
         let b = 1;
 
         registers.set_flag_n(false);
 
-        let half_carry : bool = ((a & 0xf) + (b & 0xf)) & 0x10 == 0x10;
+        let half_carry: bool = ((a & 0xf) + (b & 0xf)) & 0x10 == 0x10;
         registers.set_flag_h(half_carry);
 
         let value = Wrapping(a);
         let to_add = Wrapping(b);
 
-        let value :u8 = (value + to_add).0;
+        let value: Byte = (value + to_add).0;
 
-        let zero :bool = value == 0;
+        let zero: bool = value == 0;
         registers.set_flag_z(zero);
 
         return value;
     }
 
-    pub fn sub_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
+    pub fn sub_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
         registers.set_flag_n(true);
 
-        let half_carry : bool = b > a & 0x0f;
+        let half_carry: bool = b > a & 0x0f;
         registers.set_flag_h(half_carry);
 
         let carry: bool = b > a;
@@ -58,17 +59,17 @@ impl ALU {
 
         let value = (value - to_subtract).0;
 
-        let zero :bool = value == 0;
+        let zero: bool = value == 0;
         registers.set_flag_z(zero);
 
         return value;
     }
 
-    pub fn dec_n(&self, registers: &mut CPURegisters, a: u8,) -> u8 {
+    pub fn dec_n(&self, registers: &mut CPURegisters, a: Byte) -> Byte {
         let b = 1;
         registers.set_flag_n(true);
 
-        let half_carry : bool = b > a & 0x0f;
+        let half_carry: bool = b > a & 0x0f;
         registers.set_flag_h(half_carry);
 
         let value = Wrapping(a);
@@ -76,15 +77,15 @@ impl ALU {
 
         let value = (value - to_subtract).0;
 
-        let zero :bool = value == 0;
+        let zero: bool = value == 0;
         registers.set_flag_z(zero);
 
         return value;
     }
 
-    pub fn or_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
-        let result :u8 = a | b;
-        let zero :bool = result == 0;
+    pub fn or_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
+        let result: Byte = a | b;
+        let zero: bool = result == 0;
 
         registers.set_flag_z(zero);
         registers.set_flag_n(false);
@@ -94,9 +95,9 @@ impl ALU {
         return result;
     }
 
-    pub fn and_n(&self, registers: &mut CPURegisters, a: u8, b: u8) -> u8 {
-        let result :u8 = a & b;
-        let zero :bool = result == 0;
+    pub fn and_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
+        let result: Byte = a & b;
+        let zero: bool = result == 0;
 
         registers.set_flag_z(zero);
         registers.set_flag_n(false);
@@ -106,18 +107,18 @@ impl ALU {
         return result;
     }
 
-    pub fn cp_n(&self, registers: &mut CPURegisters, a: u8, b: u8) {
-        registers.set_flag_z( a == b);
+    pub fn cp_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) {
+        registers.set_flag_z(a == b);
         registers.set_flag_n(true);
 
-        let half_carry : bool = b > a & 0x0f;
+        let half_carry: bool = b > a & 0x0f;
         registers.set_flag_h(half_carry);
 
         let carry: bool = a < b;
         registers.set_flag_c(carry);
     }
 
-    pub fn swap_n(&self, registers: &mut CPURegisters, value: u8) -> u8 {
+    pub fn swap_n(&self, registers: &mut CPURegisters, value: Byte) -> Byte {
         registers.set_flag_n(false);
         registers.set_flag_c(false);
         registers.set_flag_h(false);
@@ -132,13 +133,13 @@ impl ALU {
         new_value
     }
 
-
     // --- 16 bit ----------------------------------------------------------------------------------
 
-    pub fn add_nn(&self, registers: &mut CPURegisters, a: u16, b: u16) -> u16 {
+    pub fn add_nn(&self, registers: &mut CPURegisters, a: Word, b: Word) -> Word {
         registers.set_flag_n(false);
 
-        let half_carry : bool = ((a & 0b11111111111) + (b & 0b11111111111)) & 0b10000000000 == 0b10000000000;
+        let half_carry: bool =
+            ((a & 0b11111111111) + (b & 0b11111111111)) & 0b10000000000 == 0b10000000000;
         registers.set_flag_h(half_carry);
 
         let carry: bool = (a as u32 + b as u32) & 0b10000000000000000 == 0b10000000000000000;
@@ -152,13 +153,13 @@ impl ALU {
         return value;
     }
 
-    pub fn add_nn_signed(&self, registers: &mut CPURegisters, a: u16, b: i16) -> u16 {
+    pub fn add_nn_signed(&self, registers: &mut CPURegisters, a: Word, b: i16) -> Word {
         let result;
 
         if b >= 0 {
-            result = self.add_nn(registers, a, b as u16)
+            result = self.add_nn(registers, a, b as Word)
         } else {
-            result = self.sub_nn(registers, a, (b * -1) as u16)
+            result = self.sub_nn(registers, a, (b * -1) as Word)
         }
 
         registers.set_flag_z(false);
@@ -167,10 +168,10 @@ impl ALU {
         result
     }
 
-    pub fn sub_nn(&self, registers: &mut CPURegisters, a: u16, b: u16) -> u16 {
+    pub fn sub_nn(&self, registers: &mut CPURegisters, a: Word, b: Word) -> Word {
         registers.set_flag_n(true);
 
-        let half_carry : bool = b > a & 0x0f;
+        let half_carry: bool = b > a & 0x0f;
         registers.set_flag_h(half_carry);
 
         let carry: bool = b > a;
@@ -181,26 +182,26 @@ impl ALU {
 
         let value = (value - to_subtract).0;
 
-        let zero :bool = value == 0;
+        let zero: bool = value == 0;
         registers.set_flag_z(zero);
 
         return value;
     }
 
-    pub fn inc_nn(&self, value: u16) -> u16 {
+    pub fn inc_nn(&self, value: Word) -> Word {
         let value = Wrapping(value);
         let to_add = Wrapping(1);
 
-        let value :u16 = (value + to_add).0;
+        let value: Word = (value + to_add).0;
 
         return value;
     }
 
-    pub fn dec_nn(&self, value: u16) -> u16 {
+    pub fn dec_nn(&self, value: Word) -> Word {
         let value = Wrapping(value);
         let to_add = Wrapping(1);
 
-        let value :u16 = (value - to_add).0;
+        let value: Word = (value - to_add).0;
 
         return value;
     }

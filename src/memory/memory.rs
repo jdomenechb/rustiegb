@@ -12,6 +12,7 @@ use crate::memory::memory_sector::ReadMemory;
 use crate::memory::memory_sector::WriteMemory;
 use crate::memory::oam_memory_sector::OamMemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
+use crate::{Byte, SignedByte, Word};
 use std::fs::File;
 use std::io::Read;
 
@@ -26,59 +27,59 @@ pub struct Memory {
     // FF00
     p1: Joypad,
     // FF01
-    serial_transfer_data: u8,
+    serial_transfer_data: Byte,
     // FF02
-    sio_control: u8,
+    sio_control: Byte,
     // FF04
-    div: u8,
+    div: Byte,
     // FF06
-    tma: u8,
+    tma: Byte,
     // FF07
     timer_control: TimerControl,
     // FF0F
     interrupt_flag: InterruptFlag,
     // FF10
-    nr10: u8,
+    nr10: Byte,
     // FF11
-    nr11: u8,
+    nr11: Byte,
     // FF12
-    nr12: u8,
+    nr12: Byte,
     // FF13
-    nr13: u8,
+    nr13: Byte,
     // FF14
-    nr14: u8,
+    nr14: Byte,
     // FF16
-    nr21: u8,
+    nr21: Byte,
     // FF17
-    nr22: u8,
+    nr22: Byte,
     // FF18
-    nr23: u8,
+    nr23: Byte,
     // FF19
-    nr24: u8,
+    nr24: Byte,
     // FF1A
-    nr30: u8,
+    nr30: Byte,
     // FF1B
-    nr31: u8,
+    nr31: Byte,
     // FF1C
-    nr32: u8,
+    nr32: Byte,
     // FF1D
-    nr33: u8,
+    nr33: Byte,
     // FF1E
-    nr34: u8,
+    nr34: Byte,
     // FF20
-    nr41: u8,
+    nr41: Byte,
     // FF21
-    nr42: u8,
+    nr42: Byte,
     // FF22
-    nr43: u8,
+    nr43: Byte,
     // FF23
-    nr44: u8,
+    nr44: Byte,
     // FF24
-    nr50: u8,
+    nr50: Byte,
     // FF25
-    nr51: u8,
+    nr51: Byte,
     // FF26
-    nr52: u8,
+    nr52: Byte,
     // Wave pattern ram (FF30 - FF3F)
     wave_pattern_ram: WavePatternRam,
     // FF40
@@ -86,19 +87,19 @@ pub struct Memory {
     // FF41
     pub stat: STAT,
     // FF42 - FF43
-    scy: u8,
-    scx: u8,
+    scy: Byte,
+    scx: Byte,
     // FF44
-    pub ly: u8,
+    pub ly: Byte,
     // FF46
-    dma: u8,
+    dma: Byte,
     // FF47 - FF49
-    bgp: u8,
-    obp1: u8,
-    obp2: u8,
+    bgp: Byte,
+    obp1: Byte,
+    obp2: Byte,
     // FF4A - FF4B
-    wy: u8,
-    wx: u8,
+    wy: Byte,
+    wx: Byte,
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
     // FFFF
@@ -107,7 +108,7 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(rom_path: &str, bootstrap: bool) -> Memory {
-        let mut data: Vec<u8> = Vec::with_capacity(0x8000);
+        let mut data: Vec<Byte> = Vec::with_capacity(0x8000);
         let mut rom_file = File::open(rom_path).expect("file not found");
         rom_file
             .read_to_end(&mut data)
@@ -117,7 +118,7 @@ impl Memory {
 
         if bootstrap {
             let bootstrap_rom_path = "./DMG_ROM.bin";
-            let mut bootstrap_data: Vec<u8> = Vec::with_capacity(0x256);
+            let mut bootstrap_data: Vec<Byte> = Vec::with_capacity(0x256);
 
             let mut bootstrap_rom_file = File::open(bootstrap_rom_path).expect("file not found");
             bootstrap_rom_file
@@ -181,7 +182,7 @@ impl Memory {
         };
     }
 
-    pub fn read_8(&self, position: u16) -> u8 {
+    pub fn read_byte(&self, position: Word) -> Byte {
         // Bootstrap rom
         if self.bootstrap_rom.is_some() && position < 0x100 {
             return self.bootstrap_rom.as_ref().unwrap().read_byte(position);
@@ -219,7 +220,7 @@ impl Memory {
 
         // P1
         if position == 0xFF00 {
-            return self.p1.to_u8();
+            return self.p1.to_byte();
         }
 
         // Serial transfer data
@@ -349,7 +350,7 @@ impl Memory {
 
         // STAT
         if position == 0xFF41 {
-            return self.stat.to_u8();
+            return self.stat.to_byte();
         }
 
         // SCY
@@ -410,13 +411,13 @@ impl Memory {
         panic!("ERROR: Memory address {:X} not readable", position);
     }
 
-    pub fn read_8_signed(&self, position: u16) -> i8 {
-        let value: u8 = self.read_8(position);
+    pub fn read_signed_byte(&self, position: Word) -> SignedByte {
+        let value = self.read_byte(position);
 
-        return value as i8;
+        return value as SignedByte;
     }
 
-    pub fn read_16(&self, position: u16) -> u16 {
+    pub fn read_word(&self, position: Word) -> Word {
         // Bootstrap rom
         if self.bootstrap_rom.is_some() && position < 0x100 {
             return self.bootstrap_rom.as_ref().unwrap().read_word(position);
@@ -464,7 +465,7 @@ impl Memory {
         panic!("ERROR: Memory address {:X} not readable", position);
     }
 
-    pub fn write_8(&mut self, position: u16, value: u8) {
+    pub fn write_byte(&mut self, position: Word, value: Byte) {
         // ROM
         if position < 0x8000 {
             println!(
@@ -511,7 +512,7 @@ impl Memory {
 
         // P1
         if position == 0xFF00 {
-            self.p1.from_u8(value);
+            self.p1.from_byte(value);
             return;
         }
 
@@ -540,7 +541,7 @@ impl Memory {
 
         // Timer Control
         if position == 0xFF07 {
-            self.timer_control.from_u8(value);
+            self.timer_control.from_byte(value);
             return;
         }
 
@@ -689,7 +690,7 @@ impl Memory {
 
         // STAT
         if position == 0xFF41 {
-            self.stat.from_u8(value);
+            self.stat.from_byte(value);
             return;
         }
 
@@ -716,10 +717,10 @@ impl Memory {
             self.dma = value;
 
             // DMA Transfer
-            let init_address = (self.dma as u16) << 8 & 0xFF00;
+            let init_address = (self.dma as Word) << 8 & 0xFF00;
 
             for i in (0..0x8C).step_by(2) {
-                self.oam_ram.write_word(i, self.read_16(init_address + i));
+                self.oam_ram.write_word(i, self.read_word(init_address + i));
             }
 
             self.dma = 0;
@@ -778,7 +779,7 @@ impl Memory {
         panic!("ERROR: Memory address {:X} not writable", position);
     }
 
-    pub fn write_16(&mut self, position: u16, value: u16) {
+    pub fn write_word(&mut self, position: Word, value: Word) {
         // ROM
         if position < 0x8000 {
             println!(
@@ -839,16 +840,16 @@ impl Memory {
     // pub fn step(&mut self, last_instruction_cycles: i16) {
     // }
 
-    pub fn scx(&self) -> u8 {
-        self.read_8(0xFF43)
+    pub fn scx(&self) -> Byte {
+        self.read_byte(0xFF43)
     }
 
-    pub fn scy(&self) -> u8 {
-        self.read_8(0xFF42)
+    pub fn scy(&self) -> Byte {
+        self.read_byte(0xFF42)
     }
 
-    pub fn bgp(&self) -> u8 {
-        self.read_8(0xFF47)
+    pub fn bgp(&self) -> Byte {
+        self.read_byte(0xFF47)
     }
 
     pub fn has_bootstrap_rom(&self) -> bool {

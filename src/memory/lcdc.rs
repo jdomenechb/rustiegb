@@ -1,3 +1,5 @@
+use crate::Byte;
+
 #[derive(Default)]
 pub struct LCDC {
     // 0 - Stop completely (no picture on screen)
@@ -47,15 +49,15 @@ impl LCDC {
         };
     }
 
-    pub fn to_u8(&self) -> u8 {
-        let value = ((self.lcd_control_operation as u8) << 7)
-            | ((self.window_tile_map_display_select as u8) << 6)
-            | ((self.window_display as u8) << 5)
-            | ((self.bg_and_window_tile_data_select as u8) << 4)
-            | ((self.bg_tile_map_display_select as u8) << 3)
-            | ((self.obj_sprite_size as u8) << 2)
-            | ((self.obj_sprite_display as u8) << 1)
-            | (self.bg_display as u8);
+    pub fn to_byte(&self) -> Byte {
+        let value = ((self.lcd_control_operation as Byte) << 7)
+            | ((self.window_tile_map_display_select as Byte) << 6)
+            | ((self.window_display as Byte) << 5)
+            | ((self.bg_and_window_tile_data_select as Byte) << 4)
+            | ((self.bg_tile_map_display_select as Byte) << 3)
+            | ((self.obj_sprite_size as Byte) << 2)
+            | ((self.obj_sprite_display as Byte) << 1)
+            | (self.bg_display as Byte);
 
         value
     }
@@ -93,8 +95,8 @@ impl LCDC {
     }
 }
 
-impl From<u8> for LCDC {
-    fn from(value: u8) -> Self {
+impl From<Byte> for LCDC {
+    fn from(value: Byte) -> Self {
         Self {
             lcd_control_operation: value & 0b10000000 == 0b10000000,
             window_tile_map_display_select: value & 0b01000000 == 0b01000000,
@@ -108,16 +110,16 @@ impl From<u8> for LCDC {
     }
 }
 
-impl From<&LCDC> for u8 {
+impl From<&LCDC> for Byte {
     fn from(original: &LCDC) -> Self {
-        let value = ((original.lcd_control_operation as u8) << 7)
-            | ((original.window_tile_map_display_select as u8) << 6)
-            | ((original.window_display as u8) << 5)
-            | ((original.bg_and_window_tile_data_select as u8) << 4)
-            | ((original.bg_tile_map_display_select as u8) << 3)
-            | ((original.obj_sprite_size as u8) << 2)
-            | ((original.obj_sprite_display as u8) << 1)
-            | (original.bg_display as u8);
+        let value = ((original.lcd_control_operation as Byte) << 7)
+            | ((original.window_tile_map_display_select as Byte) << 6)
+            | ((original.window_display as Byte) << 5)
+            | ((original.bg_and_window_tile_data_select as Byte) << 4)
+            | ((original.bg_tile_map_display_select as Byte) << 3)
+            | ((original.obj_sprite_size as Byte) << 2)
+            | ((original.obj_sprite_display as Byte) << 1)
+            | (original.bg_display as Byte);
 
         value
     }

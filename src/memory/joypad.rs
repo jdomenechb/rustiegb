@@ -1,3 +1,5 @@
+use crate::Byte;
+
 #[derive(Default)]
 pub struct Joypad {
     // P14 - P10
@@ -40,25 +42,25 @@ impl Joypad {
         }
     }
 
-    pub fn to_u8(&self) -> u8 {
+    pub fn to_byte(&self) -> Byte {
         if !self.p15 && !self.p14 {
             println!("{:#010b}", 0xFF);
             return 0xFF;
         }
 
-        let mut value = (!self.p15 as u8) << 5;
-        value |= (!self.p14 as u8) << 4;
+        let mut value = (!self.p15 as Byte) << 5;
+        value |= (!self.p14 as Byte) << 4;
 
         if self.p15 {
-            value |= (!(self.start) as u8) << 3;
-            value |= (!(self.select) as u8) << 2;
-            value |= (!(self.b) as u8) << 1;
-            value |= !(self.a) as u8;
+            value |= (!(self.start) as Byte) << 3;
+            value |= (!(self.select) as Byte) << 2;
+            value |= (!(self.b) as Byte) << 1;
+            value |= !(self.a) as Byte;
         } else if self.p14 {
-            value |= (!(self.down) as u8) << 3;
-            value |= (!(self.up) as u8) << 2;
-            value |= (!(self.left) as u8) << 1;
-            value |= !(self.right) as u8;
+            value |= (!(self.down) as Byte) << 3;
+            value |= (!(self.up) as Byte) << 2;
+            value |= (!(self.left) as Byte) << 1;
+            value |= !(self.right) as Byte;
         }
 
         if value & 0x0F != 0x0F {
@@ -68,7 +70,7 @@ impl Joypad {
         value
     }
 
-    pub fn from_u8(&mut self, new_value: u8) {
+    pub fn from_byte(&mut self, new_value: Byte) {
         self.p14 = new_value & 0b10000 != 0b10000;
         self.p15 = new_value & 0b100000 != 0b100000;
     }

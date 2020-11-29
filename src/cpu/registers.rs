@@ -1,4 +1,5 @@
 use crate::math::{two_bytes_to_word, word_to_two_bytes};
+use crate::{Byte, Word};
 use strum_macros;
 
 #[derive(strum_macros::ToString)]
@@ -25,16 +26,16 @@ pub enum WordRegister {
 
 #[derive(Debug)]
 pub struct CPURegisters {
-    pub a: u8,
-    f: u8,
-    b: u8,
-    c: u8,
-    d: u8,
-    e: u8,
-    h: u8,
-    l: u8,
-    pub sp: u16,
-    pub pc: u16,
+    pub a: Byte,
+    f: Byte,
+    b: Byte,
+    c: Byte,
+    d: Byte,
+    e: Byte,
+    h: Byte,
+    l: Byte,
+    pub sp: Word,
+    pub pc: Word,
 }
 
 impl CPURegisters {
@@ -53,7 +54,7 @@ impl CPURegisters {
         };
     }
 
-    pub fn read_byte(&self, register: &ByteRegister) -> u8 {
+    pub fn read_byte(&self, register: &ByteRegister) -> Byte {
         match register {
             ByteRegister::A => self.a,
             ByteRegister::B => self.b,
@@ -66,7 +67,7 @@ impl CPURegisters {
         }
     }
 
-    pub fn read_word(&self, register: &WordRegister) -> u16 {
+    pub fn read_word(&self, register: &WordRegister) -> Word {
         match register {
             WordRegister::AF => two_bytes_to_word(self.a, self.f),
             WordRegister::BC => two_bytes_to_word(self.b, self.c),
@@ -77,7 +78,7 @@ impl CPURegisters {
         }
     }
 
-    pub fn write_byte(&mut self, register: &ByteRegister, value: u8) {
+    pub fn write_byte(&mut self, register: &ByteRegister, value: Byte) {
         match register {
             ByteRegister::A => self.a = value,
             ByteRegister::B => self.b = value,
@@ -90,8 +91,8 @@ impl CPURegisters {
         }
     }
 
-    pub fn write_word(&mut self, register: &WordRegister, value: u16) {
-        let parts: (u8, u8) = word_to_two_bytes(value);
+    pub fn write_word(&mut self, register: &WordRegister, value: Word) {
+        let parts: (Byte, Byte) = word_to_two_bytes(value);
 
         match register {
             WordRegister::AF => {
@@ -117,7 +118,7 @@ impl CPURegisters {
 
     // --- FLAGS ---
     fn set_flag(&mut self, position: u8, value: bool) {
-        let mask: u8 = 1 << position;
+        let mask = 1 << position;
 
         if value {
             self.f |= mask;

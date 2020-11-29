@@ -1,8 +1,10 @@
+use crate::Byte;
+
 #[derive(Default)]
 pub struct TimerControl {
     started: bool,
     period_microseconds: f64,
-    frecuency_option: u8,
+    frecuency_option: Byte,
 }
 
 // TODO: Move to From<> impl
@@ -15,9 +17,9 @@ impl TimerControl {
         };
     }
 
-    pub fn from_u8(&mut self, value: u8) {
-        self.started = value & 0x4 == 0x4;
-        self.frecuency_option = value & 0x3;
+    pub fn from_byte(&mut self, value: Byte) {
+        self.started = value & 0b100 == 0b100;
+        self.frecuency_option = value & 0b11;
 
         match self.frecuency_option {
             0 => self.period_microseconds = 1.0 / 4096.0 * 1000000.0,

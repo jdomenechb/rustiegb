@@ -18,6 +18,10 @@ use std::sync::{Arc, RwLock};
 
 const APP_NAME: &str = "RustieGB";
 
+type Byte = u8;
+type Word = u16;
+type SignedByte = i8;
+
 fn main() {
     let matches = App::new(APP_NAME)
         .arg(

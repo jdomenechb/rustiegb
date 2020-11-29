@@ -1,18 +1,19 @@
 use crate::gpu::color::Color;
 use crate::memory::memory::Memory;
 use crate::memory::oam_entry::OamEntry;
+use crate::{Byte, Word};
 use ::image::{Rgba, RgbaImage};
 use gfx_device_gl::{CommandBuffer, Factory, Resources};
 use piston_window::*;
 use std::sync::{Arc, RwLock};
 
-type DisplayPixel = [u8; 4];
+type DisplayPixel = [Byte; 4];
 
 pub struct GPU {
     cycles_acumulated: u16,
     sprites_to_be_drawn: Vec<OamEntry>,
 
-    memory: Arc<RwLock<Memory>>
+    memory: Arc<RwLock<Memory>>,
 }
 
 impl GPU {
@@ -31,11 +32,7 @@ impl GPU {
         };
     }
 
-    pub fn step(
-        &mut self,
-        last_instruction_cycles: u8,
-        canvas: &mut RgbaImage,
-    ) {
+    pub fn step(&mut self, last_instruction_cycles: u8, canvas: &mut RgbaImage) {
         let mode;
 
         {
@@ -139,13 +136,13 @@ impl GPU {
                         return;
                     }
 
-                    let bg_tile_map_start_location: u16 = if lcdc.bg_tile_map_display_select() {
+                    let bg_tile_map_start_location = if lcdc.bg_tile_map_display_select() {
                         0x9C00
                     } else {
                         0x9800
                     };
 
-                    let bg_data_start_location: u16 = if lcdc.bg_and_window_tile_data_select() {
+                    let bg_data_start_location = if lcdc.bg_and_window_tile_data_select() {
                         0x8000
                     } else {
                         0x8800
@@ -177,17 +174,14 @@ impl GPU {
                                 + (screen_x_with_offset / GPU::PIXELS_PER_TILE);
 
                             let bg_data_location = bg_data_start_location
-                                + memory.read_8(bg_tile_map_location) as u16
-                                    * GPU::TILE_SIZE_BYTES as u16;
+                                + memory.read_byte(bg_tile_map_location) as Word
+                                    * GPU::TILE_SIZE_BYTES as Word;
 
                             let tile_row = screen_y_with_offset as u16 % 8;
                             let tile_x = screen_x_with_offset % 8;
 
-                            let pixel = self.read_pixel_from_tile(
-                                bg_data_location,
-                                tile_row,
-                                tile_x,
-                            );
+                            let pixel =
+                                self.read_pixel_from_tile(bg_data_location, tile_row, tile_x);
                             let pixel_color = match pixel {
                                 0b11 => bgp >> 6,
                                 0b10 => bgp >> 4,
@@ -232,15 +226,15 @@ impl GPU {
         }
     }
 
-    fn read_pixel_from_tile(&self, tile_address: u16, row: u16, x: u16) -> u8 {
+    fn read_pixel_from_tile(&self, tile_address: Word, row: u16, x: u16) -> Byte {
         let byte1;
         let byte2;
 
         {
             let memory = self.memory.read().unwrap();
 
-            byte1 = memory.read_8(tile_address + row * 2);
-            byte2 = memory.read_8(tile_address + row * 2 + 1);
+            byte1 = memory.read_byte(tile_address + row * 2);
+            byte2 = memory.read_byte(tile_address + row * 2 + 1);
         }
 
         let bit_pos = 7 - x;
@@ -251,12 +245,7 @@ impl GPU {
         ((pixel_bit1 << 1) | pixel_bit0) & 0b11
     }
 
-    fn draw_sprites(
-        &self,
-        priority: bool,
-        screen_x: u16,
-        screen_y: u16,
-    ) -> Option<DisplayPixel> {
+    fn draw_sprites(&self, priority: bool, screen_x: u16, screen_y: u16) -> Option<DisplayPixel> {
         const SPRITE_TILES_ADDR_START: u16 = 0x8000;
 
         let mut pixel_to_write = None;
@@ -297,12 +286,12 @@ impl GPU {
                     7 - current_pixel_y
                 } else {
                     current_pixel_y
-                } as u16,
+                } as Word,
                 if sprite.flip_x() {
                     7 - current_pixel_x
                 } else {
                     current_pixel_x
-                } as u16,
+                } as Word,
             );
 
             if pixel == 0 {
@@ -314,7 +303,7 @@ impl GPU {
             {
                 let memory = self.memory.read().unwrap();
 
-                palette = memory.read_8(if sprite.palette() == 0 {
+                palette = memory.read_byte(if sprite.palette() == 0 {
                     0xFF48
                 } else {
                     0xFF49

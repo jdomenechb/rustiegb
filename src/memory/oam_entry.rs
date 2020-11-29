@@ -1,12 +1,19 @@
+use crate::Byte;
+
 pub struct OamEntry {
-    position_y: u8,
-    position_x: u8,
-    tile_number: u8,
-    flags: u8,
+    position_y: Byte,
+    position_x: Byte,
+    tile_number: Byte,
+    flags: Byte,
 }
 
 impl OamEntry {
-    pub fn with_bytes(position_y: u8, position_x: u8, tile_number: u8, flags: u8) -> OamEntry {
+    pub fn with_bytes(
+        position_y: Byte,
+        position_x: Byte,
+        tile_number: Byte,
+        flags: Byte,
+    ) -> OamEntry {
         OamEntry {
             position_y,
             position_x,
@@ -15,11 +22,11 @@ impl OamEntry {
         }
     }
 
-    pub fn x(&self) -> u8 {
+    pub fn x(&self) -> Byte {
         self.position_x
     }
 
-    pub fn y(&self) -> u8 {
+    pub fn y(&self) -> Byte {
         self.position_y
     }
 
@@ -27,11 +34,11 @@ impl OamEntry {
         self.flags & 0b1000 == 0b1000
     }
 
-    pub fn tile_number(&self) -> u8 {
+    pub fn tile_number(&self) -> Byte {
         self.tile_number
     }
 
-    pub fn palette(&self) -> u8 {
+    pub fn palette(&self) -> Byte {
         self.flags & 0x1
     }
 
