@@ -3,7 +3,6 @@ use super::registers::CPURegisters;
 use crate::cpu::registers::{ByteRegister, WordRegister};
 use crate::memory::memory::Memory;
 use crate::{Byte, Word};
-use std::num::Wrapping;
 use std::sync::{Arc, RwLock};
 
 pub struct CPU {
@@ -770,7 +769,7 @@ impl CPU {
 
         self.last_executed_instruction = "ADC A,(HL)".to_string();
 
-        value2 = value2.overflowing_add(self.registers.is_flag_c() as Byte).0;
+        value2 = value2.wrapping_add(self.registers.is_flag_c() as Byte);
 
         let result = self.alu.add_n(&mut self.registers, value1, value2);
         self.registers.write_byte(&ByteRegister::A, result);
@@ -786,7 +785,7 @@ impl CPU {
         let mut value2 = memory.read_byte(self.registers.pc + 1);
         self.last_executed_instruction = format!("ADC A,{:X}", value2).to_string();
 
-        value2 = value2.overflowing_add(self.registers.is_flag_c() as Byte).0;
+        value2 = value2.wrapping_add(self.registers.is_flag_c() as Byte);
 
         let result = self.alu.add_n(&mut self.registers, value1, value2);
         self.registers.a = result;
@@ -912,7 +911,7 @@ impl CPU {
         self.last_executed_instruction = format!("SBC A,{}", register.to_string()).to_string();
 
         let value = self.registers.read_byte(&ByteRegister::A);
-        let to_subtract = self.registers.read_byte(&register).overflowing_add(1).0;
+        let to_subtract = self.registers.read_byte(&register).wrapping_add(1);
         let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
         self.registers.write_byte(&ByteRegister::A, value);
 
@@ -928,8 +927,7 @@ impl CPU {
         let memory = self.memory.read().unwrap();
         let to_subtract = memory
             .read_byte(self.registers.read_word(&WordRegister::HL))
-            .overflowing_add(1)
-            .0;
+            .wrapping_add(1);
 
         let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
         self.registers.write_byte(&ByteRegister::A, value);
@@ -946,7 +944,7 @@ impl CPU {
 
         self.last_executed_instruction = format!("SBC A,{}", value2).to_string();
 
-        value2 = value2.overflowing_add(self.registers.is_flag_c() as Byte).0;
+        value2 = value2.wrapping_add(self.registers.is_flag_c() as Byte);
 
         let result = self.alu.sub_n(&mut self.registers, value1, value2);
 
@@ -1524,7 +1522,7 @@ impl CPU {
 
         let to_sum = memory.read_signed_byte(self.registers.pc + 1) + 2;
 
-        self.registers.pc = self.registers.pc.overflowing_add(to_sum as Word).0;
+        self.registers.pc = self.registers.pc.wrapping_add(to_sum as Word);
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 12;
@@ -2176,32 +2174,32 @@ impl CPU {
     fn daa(&mut self) {
         self.last_executed_instruction = "DAA".to_string();
 
-        let mut register_a = Wrapping(self.registers.read_byte(&ByteRegister::A));
+        let mut register_a = self.registers.read_byte(&ByteRegister::A);
 
         if !self.registers.is_flag_n() {
             // Addition
-            if self.registers.is_flag_c() || register_a.0 > 0x99 {
-                register_a += Wrapping(0x60);
+            if self.registers.is_flag_c() || register_a > 0x99 {
+                register_a = register_a.wrapping_add(0x60);
                 self.registers.set_flag_c(true);
             }
 
-            if self.registers.is_flag_h() || (register_a.0 & 0x0f) > 0x09 {
-                register_a += Wrapping(0x6);
+            if self.registers.is_flag_h() || (register_a & 0x0f) > 0x09 {
+                register_a = register_a.wrapping_add(0x06);
             }
         } else {
             if self.registers.is_flag_c() {
-                register_a -= Wrapping(0x60);
+                register_a = register_a.wrapping_sub(0x60);
             }
 
             if self.registers.is_flag_h() {
-                register_a -= Wrapping(0x6);
+                register_a = register_a.wrapping_sub(0x06);
             }
         }
 
-        self.registers.set_flag_z(register_a.0 == 0);
+        self.registers.set_flag_z(register_a == 0);
         self.registers.set_flag_h(false);
 
-        self.registers.write_byte(&ByteRegister::A, register_a.0);
+        self.registers.write_byte(&ByteRegister::A, register_a);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
