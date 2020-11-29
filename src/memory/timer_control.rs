@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct TimerControl {
     started: bool,
     period_microseconds: f64,

@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct InterruptFlag {
     p10_13_transition: bool,
     serial_io_transfer_complete: bool,

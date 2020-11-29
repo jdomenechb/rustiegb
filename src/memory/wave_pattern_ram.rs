@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct WavePatternRam {
     data: [u8; 0x10]
 }

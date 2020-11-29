@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct LCDC {
     // 0 - Stop completely (no picture on screen)
     // 1 - operation

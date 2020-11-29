@@ -13,6 +13,7 @@ use crate::memory::wave_pattern_ram::WavePatternRam;
 use std::fs::File;
 use std::io::Read;
 
+#[derive(Default)]
 pub struct Memory {
     bootstrap_rom: Option<ReadOnlyMemorySector>,
     rom: ReadOnlyMemorySector,
@@ -129,9 +130,9 @@ impl Memory {
         return Memory {
             bootstrap_rom,
             rom: ReadOnlyMemorySector::new(data),
-            video_ram: VideoRam8kMemorySector::new(),
-            switchable_ram_bank: InternalRam8kMemorySector::new(),
-            internal_ram_8k: InternalRam8kMemorySector::new(),
+            video_ram: VideoRam8kMemorySector::default(),
+            switchable_ram_bank: InternalRam8kMemorySector::default(),
+            internal_ram_8k: InternalRam8kMemorySector::default(),
             p1: Joypad::new(),
             serial_transfer_data: 0,
             sio_control: 0,
@@ -172,9 +173,9 @@ impl Memory {
             obp2: 0xFF,
             wy: 0x00,
             wx: 0x00,
-            internal_ram: InternalRamMemorySector::new(),
+            internal_ram: InternalRamMemorySector::default(),
             interrupt_enable: InterruptFlag::new(),
-            oam_ram: OamMemorySector::new(),
+            oam_ram: OamMemorySector::default(),
         };
     }
 

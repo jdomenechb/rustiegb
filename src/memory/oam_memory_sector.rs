@@ -6,13 +6,6 @@ pub struct OamMemorySector {
 }
 
 impl OamMemorySector {
-    pub fn new() -> OamMemorySector {
-        return OamMemorySector {
-            data: [0; 0xA0],
-            count: 0,
-        };
-    }
-
     pub fn read_8(&self, position: u16) -> u8 {
         return self.data[position as usize];
     }
@@ -59,5 +52,14 @@ impl Iterator for OamMemorySector {
         self.count += 4;
 
         result
+    }
+}
+
+impl Default for OamMemorySector {
+    fn default() -> Self {
+        Self {
+            data: [0; 0xA0],
+            count: 0,
+        }
     }
 }

@@ -3,12 +3,6 @@ pub struct VideoRam8kMemorySector {
 }
 
 impl VideoRam8kMemorySector {
-    pub fn new() -> VideoRam8kMemorySector {
-        return VideoRam8kMemorySector {
-            data: [0; 0x2000]
-        };
-    }
-
     /**
      * Reads a 8bit value from memory.
      */
@@ -34,5 +28,13 @@ impl VideoRam8kMemorySector {
         let position = position as usize;
         self.data[position] = value as u8;
         self.data[position + 1] = (value >> 8) as u8;
+    }
+}
+
+impl Default for VideoRam8kMemorySector {
+    fn default() -> Self {
+        Self {
+            data: [0; 0x2000]
+        }
     }
 }

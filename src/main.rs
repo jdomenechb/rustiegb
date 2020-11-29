@@ -10,18 +10,16 @@ use cpu::cpu::CPU;
 
 use gpu::gpu::GPU;
 use memory::memory::Memory;
-use std::io;
-use std::thread::sleep;
-use std::time::Duration;
 
 use clap::{App, Arg};
 use image::ImageBuffer;
 use piston_window::*;
+use std::sync::{Arc, RwLock};
+
+const APP_NAME: &str = "RustieGB";
 
 fn main() {
-    let app_name = "RustieGB";
-
-    let matches = App::new(app_name)
+    let matches = App::new(APP_NAME)
         .arg(
             Arg::with_name("ROMFILE")
                 .required(true)
@@ -46,12 +44,12 @@ fn main() {
     let mut i = 1;
 
     // --- Setting up GB components
-    let mut cpu = CPU::new(debug_cpu, bootstrap);
-    let mut memory = Memory::new(matches.value_of("ROMFILE").unwrap(), bootstrap);
-    let mut gpu = GPU::new();
+    let mut memory = Arc::new(RwLock::new(Memory::new(matches.value_of("ROMFILE").unwrap(), bootstrap)));
+    let mut cpu = CPU::new(memory.clone(), debug_cpu, bootstrap);
+    let mut gpu = GPU::new(memory.clone());
 
     // --- Seting up window
-    let mut window: PistonWindow = WindowSettings::new(app_name, [640, 576])
+    let mut window: PistonWindow = WindowSettings::new(APP_NAME, [640, 576])
         .exit_on_esc(true)
         .resizable(false)
         .build()
@@ -75,6 +73,8 @@ fn main() {
         if let Some(Button::Keyboard(key)) = event.press_args() {
             println!("P: {:?}", key);
 
+            let mut memory = memory.write().unwrap();
+
             match key {
                 Key::X => memory.joypad().a = true,
                 Key::Z => memory.joypad().b = true,
@@ -90,6 +90,9 @@ fn main() {
 
         if let Some(Button::Keyboard(key)) = event.release_args() {
             println!("R: {:?}", key);
+
+            let mut memory = memory.write().unwrap();
+
             match key {
                 Key::X => memory.joypad().a = false,
                 Key::Z => memory.joypad().b = false,
@@ -111,7 +114,6 @@ fn main() {
                 &mut window,
                 &event,
                 render_args.window_size,
-                &memory,
                 &mut texture_context,
                 &texture,
             );
@@ -124,14 +126,21 @@ fn main() {
         event.update(|update_args| {
             while cpu.has_available_ccycles() {
                 if !cpu.is_halted() {
-                    cpu.step(&mut memory);
-                    gpu.step(cpu.get_last_instruction_ccycles(), &mut memory, &mut canvas);
+                    cpu.step();
+                    gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
                 }
 
                 if cpu.are_interrupts_enabled() {
-                    if memory.interrupt_enable().is_vblank() && memory.interrupt_flag().is_vblank()
+
+                    let check;
+
                     {
-                        cpu.vblank_interrupt(&mut memory);
+                        let mut memory = memory.write().unwrap();
+                        check =  memory.interrupt_enable().is_vblank() && memory.interrupt_flag().is_vblank();
+                    }
+
+                    if check {
+                        cpu.vblank_interrupt();
                         cpu.unhalt();
 
                         continue;

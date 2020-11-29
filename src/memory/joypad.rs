@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct Joypad {
     // P14 - P10
     pub right: bool,
