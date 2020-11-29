@@ -44,7 +44,10 @@ fn main() {
     let mut i = 1;
 
     // --- Setting up GB components
-    let mut memory = Arc::new(RwLock::new(Memory::new(matches.value_of("ROMFILE").unwrap(), bootstrap)));
+    let memory = Arc::new(RwLock::new(Memory::new(
+        matches.value_of("ROMFILE").unwrap(),
+        bootstrap,
+    )));
     let mut cpu = CPU::new(memory.clone(), debug_cpu, bootstrap);
     let mut gpu = GPU::new(memory.clone());
 
@@ -123,7 +126,7 @@ fn main() {
         });
 
         // Actions to do on update
-        event.update(|update_args| {
+        event.update(|_update_args| {
             while cpu.has_available_ccycles() {
                 if !cpu.is_halted() {
                     cpu.step();
@@ -131,12 +134,12 @@ fn main() {
                 }
 
                 if cpu.are_interrupts_enabled() {
-
                     let check;
 
                     {
                         let mut memory = memory.write().unwrap();
-                        check =  memory.interrupt_enable().is_vblank() && memory.interrupt_flag().is_vblank();
+                        check = memory.interrupt_enable().is_vblank()
+                            && memory.interrupt_flag().is_vblank();
                     }
 
                     if check {

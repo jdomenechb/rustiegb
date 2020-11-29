@@ -9,11 +9,10 @@ pub struct STAT {
     pub mode: u8,
 }
 
+// TODO: Move to From<> impl
 impl STAT {
     pub fn new() -> STAT {
-        return STAT {
-            mode: 0,
-        }
+        return STAT { mode: 0 };
     }
 
     pub fn from_u8(&mut self, value: u8) {

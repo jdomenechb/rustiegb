@@ -12,7 +12,7 @@ pub struct LCDC {
     // 1 - on
     window_display: bool,
 
-    // 0 - $8800-$97FF              
+    // 0 - $8800-$97FF
     // 1 - $8000-$8FFF
     bg_and_window_tile_data_select: bool,
 
@@ -44,23 +44,11 @@ impl LCDC {
             obj_sprite_size: false,
             obj_sprite_display: true,
             bg_display: true,
-        }
-    }
-
-    pub fn from_u8(&mut self, value: u8) {
-        self.lcd_control_operation = value & 0b10000000 == 0b10000000;
-        self.window_tile_map_display_select = value & 0b01000000 == 0b01000000;
-        self.window_display = value & 0b00100000 == 0b00100000;
-        self.bg_and_window_tile_data_select = value & 0b10000 == 0b10000;
-        self.bg_tile_map_display_select = value & 0b1000 == 0b1000;
-        self.obj_sprite_size = value & 0b100 == 0b100;
-        self.obj_sprite_display = value & 0b10 == 0b10;
-        self.bg_display = value & 0b1 == 0b1;
+        };
     }
 
     pub fn to_u8(&self) -> u8 {
-        let value =
-            ((self.lcd_control_operation as u8) << 7)
+        let value = ((self.lcd_control_operation as u8) << 7)
             | ((self.window_tile_map_display_select as u8) << 6)
             | ((self.window_display as u8) << 5)
             | ((self.bg_and_window_tile_data_select as u8) << 4)
@@ -103,5 +91,34 @@ impl LCDC {
     pub fn bg_display(&self) -> bool {
         return self.bg_display;
     }
+}
 
+impl From<u8> for LCDC {
+    fn from(value: u8) -> Self {
+        Self {
+            lcd_control_operation: value & 0b10000000 == 0b10000000,
+            window_tile_map_display_select: value & 0b01000000 == 0b01000000,
+            window_display: value & 0b00100000 == 0b00100000,
+            bg_and_window_tile_data_select: value & 0b10000 == 0b10000,
+            bg_tile_map_display_select: value & 0b1000 == 0b1000,
+            obj_sprite_size: value & 0b100 == 0b100,
+            obj_sprite_display: value & 0b10 == 0b10,
+            bg_display: value & 0b1 == 0b1,
+        }
+    }
+}
+
+impl From<&LCDC> for u8 {
+    fn from(original: &LCDC) -> Self {
+        let value = ((original.lcd_control_operation as u8) << 7)
+            | ((original.window_tile_map_display_select as u8) << 6)
+            | ((original.window_display as u8) << 5)
+            | ((original.bg_and_window_tile_data_select as u8) << 4)
+            | ((original.bg_tile_map_display_select as u8) << 3)
+            | ((original.obj_sprite_size as u8) << 2)
+            | ((original.obj_sprite_display as u8) << 1)
+            | (original.bg_display as u8);
+
+        value
+    }
 }

@@ -8,7 +8,7 @@ pub struct OamMemorySector {
 
 impl OamMemorySector {
     fn read_oam_entry(&self, position: u16) -> OamEntry {
-        OamEntry::from_bytes(
+        OamEntry::with_bytes(
             self.data.read_8(position),
             self.data.read_8(position + 1),
             self.data.read_8(position + 2),

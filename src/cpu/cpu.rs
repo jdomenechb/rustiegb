@@ -3,14 +3,13 @@ use super::registers::CPURegisters;
 use crate::cpu::registers::{ByteRegister, WordRegister};
 use crate::memory::memory::Memory;
 use std::num::Wrapping;
-use std::sync::{RwLock, Arc};
+use std::sync::{Arc, RwLock};
 
 pub struct CPU {
     memory: Arc<RwLock<Memory>>,
 
     pub registers: CPURegisters,
     alu: ALU,
-    trace: bool,
     available_cycles: i32,
 
     pc_to_increment: i8,
@@ -30,7 +29,6 @@ impl CPU {
 
             registers: CPURegisters::new(bootstrap),
             alu: ALU {},
-            trace: false,
             available_cycles: CPU::AVAILABLE_CCYCLES_PER_FRAME,
 
             pc_to_increment: -1,
@@ -96,7 +94,7 @@ impl CPU {
             0x0E => self.ld_r_n(ByteRegister::C),
 
             0x11 => self.ld_rr_nn(WordRegister::DE),
-            0x12 => self.ld_mrr_r( WordRegister::DE, ByteRegister::A),
+            0x12 => self.ld_mrr_r(WordRegister::DE, ByteRegister::A),
             0x13 => self.inc_rr(WordRegister::DE),
             0x14 => self.inc_r(ByteRegister::D),
             0x15 => self.dec_r(ByteRegister::D),
@@ -1267,11 +1265,7 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
-    fn ld_r_mrr(
-        &mut self,
-        register_to: ByteRegister,
-        register_from: WordRegister,
-    ) {
+    fn ld_r_mrr(&mut self, register_to: ByteRegister, register_from: WordRegister) {
         self.last_executed_instruction = format!(
             "LD {},({})",
             register_to.to_string(),
@@ -1420,11 +1414,7 @@ impl CPU {
         self.last_instruction_ccycles = 4;
     }
 
-    fn ld_mrr_r(
-        &mut self,
-        register_to: WordRegister,
-        register_from: ByteRegister,
-    ) {
+    fn ld_mrr_r(&mut self, register_to: WordRegister, register_from: ByteRegister) {
         let mut memory = self.memory.write().unwrap();
 
         self.last_executed_instruction = format!(
@@ -2138,7 +2128,7 @@ impl CPU {
 
         let mask = !(0x1 << bit);
 
-        let mut value = self.registers.read_byte(&register) & mask;
+        let value = self.registers.read_byte(&register) & mask;
         self.registers.write_byte(&register, value);
 
         self.pc_to_increment = 2;
@@ -2163,7 +2153,7 @@ impl CPU {
 
         let mask = 0x1 << bit;
 
-        let mut value = self.registers.read_byte(&register) | mask;
+        let value = self.registers.read_byte(&register) | mask;
         self.registers.write_byte(&register, value);
 
         self.pc_to_increment = 2;
@@ -2290,7 +2280,11 @@ impl CPU {
 
     pub fn vblank_interrupt(&mut self) {
         {
-            self.memory.write().unwrap().interrupt_flag().set_vblank(false);
+            self.memory
+                .write()
+                .unwrap()
+                .interrupt_flag()
+                .set_vblank(false);
         }
 
         self.interrupt_vv(0x40)
@@ -2347,8 +2341,8 @@ impl CPU {
 mod test {
     use crate::cpu::cpu::CPU;
     use crate::cpu::registers::{ByteRegister, WordRegister};
-    use std::sync::{Arc, RwLock};
     use crate::memory::memory::Memory;
+    use std::sync::{Arc, RwLock};
 
     #[test]
     fn test_inc_rr() {

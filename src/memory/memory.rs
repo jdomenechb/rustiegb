@@ -344,7 +344,7 @@ impl Memory {
 
         // LCDC
         if position == 0xFF40 {
-            return self.lcdc.to_u8();
+            return (&self.lcdc).into();
         }
 
         // STAT
@@ -404,7 +404,7 @@ impl Memory {
 
         // Interrupt enable
         if position == 0xFFFF {
-            return self.interrupt_enable.to_u8();
+            return (&self.interrupt_enable).into();
         }
 
         panic!("ERROR: Memory address {:X} not readable", position);
@@ -545,7 +545,7 @@ impl Memory {
 
         // Interrupt Flag
         if position == 0xFF0F {
-            self.interrupt_flag.from_u8(value);
+            self.interrupt_flag = value.into();
             return;
         }
 
@@ -682,7 +682,7 @@ impl Memory {
 
         // LCDC
         if position == 0xFF40 {
-            self.lcdc.from_u8(value);
+            self.lcdc = value.into();
             return;
         }
 
@@ -770,7 +770,7 @@ impl Memory {
 
         // Interrupt enable
         if position == 0xFFFF {
-            self.interrupt_enable.from_u8(value);
+            self.interrupt_enable = value.into();
             return;
         }
 
@@ -832,9 +832,9 @@ impl Memory {
         panic!("ERROR: Memory address {:X} not writable", position);
     }
 
-    pub fn step(&mut self, last_instruction_cycles: i16) {
-        // TODO: Implement DIV register
-    }
+    // TODO: Implement DIV register
+    // pub fn step(&mut self, last_instruction_cycles: i16) {
+    // }
 
     pub fn scx(&self) -> u8 {
         self.read_8(0xFF43)
