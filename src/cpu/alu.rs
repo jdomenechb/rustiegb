@@ -124,15 +124,12 @@ impl ALU {
         registers.set_flag_n(false);
         registers.set_flag_c(false);
         registers.set_flag_h(false);
+        registers.set_flag_z(value == 0);
 
-        let new_low = (value >> 2) & 0b11;
-        let new_high = (value << 2) & 0b1100;
+        let new_low = (value >> 4) & 0x0F;
+        let new_high = (value << 4) & 0xF0;
 
-        let new_value = new_low | new_high;
-
-        registers.set_flag_z(new_value == 0);
-
-        new_value
+        new_low | new_high
     }
 
     // --- 16 bit ----------------------------------------------------------------------------------
