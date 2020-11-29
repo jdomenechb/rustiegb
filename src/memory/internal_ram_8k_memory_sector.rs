@@ -1,33 +1,33 @@
-use crate::memory::memory_sector::{MemorySector, WriteMemory, ReadMemory};
+use crate::memory::memory_sector::{MemorySector, ReadMemory, WriteMemory};
 
 pub struct InternalRam8kMemorySector {
-    data: MemorySector
+    data: MemorySector,
 }
 
 impl ReadMemory for InternalRam8kMemorySector {
-    fn read_8(&self, position: u16) -> u8 {
-        self.data.read_8(position)
+    fn read_byte(&self, position: u16) -> u8 {
+        self.data.read_byte(position)
     }
 
-    fn read_16(&self, position: u16) -> u16 {
-        self.data.read_16(position)
+    fn read_word(&self, position: u16) -> u16 {
+        self.data.read_word(position)
     }
 }
 
 impl WriteMemory for InternalRam8kMemorySector {
-    fn write_8(&mut self, position: u16, value: u8) {
-        self.data.write_8(position, value);
+    fn write_byte(&mut self, position: u16, value: u8) {
+        self.data.write_byte(position, value);
     }
 
-    fn write_16(&mut self, position: u16, value: u16) {
-        self.data.write_16(position, value);
+    fn write_word(&mut self, position: u16, value: u16) {
+        self.data.write_word(position, value);
     }
 }
 
 impl Default for InternalRam8kMemorySector {
     fn default() -> Self {
         Self {
-            data: MemorySector::new(0x2000),
+            data: MemorySector::with_size(0x2000),
         }
     }
 }

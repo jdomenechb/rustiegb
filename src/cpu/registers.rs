@@ -1,14 +1,26 @@
+use crate::math::{two_bytes_to_word, word_to_two_bytes};
 use strum_macros;
-use crate::math::{two_u8_to_u16, u16_to_two_u8};
 
 #[derive(strum_macros::ToString)]
 pub enum ByteRegister {
-    A, B, C, D, E, F, H, L
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    H,
+    L,
 }
 
 #[derive(strum_macros::ToString, Copy, Clone)]
 pub enum WordRegister {
-    AF, BC, DE, HL, PC, SP
+    AF,
+    BC,
+    DE,
+    HL,
+    PC,
+    SP,
 }
 
 #[derive(Debug)]
@@ -56,10 +68,10 @@ impl CPURegisters {
 
     pub fn read_word(&self, register: &WordRegister) -> u16 {
         match register {
-            WordRegister::AF => two_u8_to_u16(self.a, self.f),
-            WordRegister::BC => two_u8_to_u16(self.b, self.c),
-            WordRegister::DE => two_u8_to_u16(self.d, self.e),
-            WordRegister::HL => two_u8_to_u16(self.h, self.l),
+            WordRegister::AF => two_bytes_to_word(self.a, self.f),
+            WordRegister::BC => two_bytes_to_word(self.b, self.c),
+            WordRegister::DE => two_bytes_to_word(self.d, self.e),
+            WordRegister::HL => two_bytes_to_word(self.h, self.l),
             WordRegister::PC => self.pc,
             WordRegister::SP => self.sp,
         }
@@ -78,45 +90,56 @@ impl CPURegisters {
         }
     }
 
-    pub fn write_word(&mut self, register: &WordRegister, value: u16)  {
-        let parts: (u8, u8) = u16_to_two_u8(value);
+    pub fn write_word(&mut self, register: &WordRegister, value: u16) {
+        let parts: (u8, u8) = word_to_two_bytes(value);
 
         match register {
-            WordRegister::AF => { self.a = parts.0; self.f = parts.1 & 0xF0 },
-            WordRegister::BC => { self.b = parts.0; self.c = parts.1 },
-            WordRegister::DE => { self.d = parts.0; self.e = parts.1 },
-            WordRegister::HL => { self.h = parts.0; self.l = parts.1 },
+            WordRegister::AF => {
+                self.a = parts.0;
+                self.f = parts.1 & 0xF0
+            }
+            WordRegister::BC => {
+                self.b = parts.0;
+                self.c = parts.1
+            }
+            WordRegister::DE => {
+                self.d = parts.0;
+                self.e = parts.1
+            }
+            WordRegister::HL => {
+                self.h = parts.0;
+                self.l = parts.1
+            }
             WordRegister::PC => self.pc = value,
             WordRegister::SP => self.sp = value,
         }
     }
 
-
     // --- FLAGS ---
-    fn set_flag(&mut self, position: u8, value :bool) {
-        let mask :u8 = 1 << position; 
+    fn set_flag(&mut self, position: u8, value: bool) {
+        let mask: u8 = 1 << position;
 
-        if value  {
+        if value {
             self.f |= mask;
         } else {
             self.f &= !mask;
         }
     }
 
-    pub fn set_flag_z(&mut self, value:bool) {
+    pub fn set_flag_z(&mut self, value: bool) {
         self.set_flag(7, value);
     }
 
-    pub fn set_flag_n(&mut self, value:bool) {
-        self.set_flag(6, value); 
+    pub fn set_flag_n(&mut self, value: bool) {
+        self.set_flag(6, value);
     }
 
-    pub fn set_flag_h(&mut self, value:bool) {
-        self.set_flag(5, value); 
+    pub fn set_flag_h(&mut self, value: bool) {
+        self.set_flag(5, value);
     }
 
-    pub fn set_flag_c(&mut self, value:bool) {
-        self.set_flag(4, value); 
+    pub fn set_flag_c(&mut self, value: bool) {
+        self.set_flag(4, value);
     }
 
     pub fn is_flag_z(&self) -> bool {

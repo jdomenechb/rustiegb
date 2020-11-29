@@ -184,37 +184,37 @@ impl Memory {
     pub fn read_8(&self, position: u16) -> u8 {
         // Bootstrap rom
         if self.bootstrap_rom.is_some() && position < 0x100 {
-            return self.bootstrap_rom.as_ref().unwrap().read_8(position);
+            return self.bootstrap_rom.as_ref().unwrap().read_byte(position);
         }
 
         // ROM
         if position < 0x8000 {
-            return self.rom.read_8(position);
+            return self.rom.read_byte(position);
         }
 
         // Video RAM
         if position >= 0x8000 && position < 0xA000 {
-            return self.video_ram.read_8(position - 0x8000);
+            return self.video_ram.read_byte(position - 0x8000);
         }
 
         // 8k switchable RAM bank
         if position >= 0xA000 && position < 0xC000 {
-            return self.switchable_ram_bank.read_8(position - 0xA000);
+            return self.switchable_ram_bank.read_byte(position - 0xA000);
         }
 
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
-            return self.internal_ram_8k.read_8(position - 0xC000);
+            return self.internal_ram_8k.read_byte(position - 0xC000);
         }
 
         // Echo of Internal RAM
         if position >= 0xE000 && position < 0xFE00 {
-            return self.internal_ram_8k.read_8(position - 0xE000);
+            return self.internal_ram_8k.read_byte(position - 0xE000);
         }
 
         // OAM Ram
         if position >= 0xFE00 && position < 0xFEA0 {
-            return self.oam_ram.read_8(position - 0xFE00);
+            return self.oam_ram.read_byte(position - 0xFE00);
         }
 
         // P1
@@ -339,7 +339,7 @@ impl Memory {
 
         // Wave pattern RAM
         if position >= 0xFF30 && position < 0xFF40 {
-            return self.wave_pattern_ram.read_8(position - 0xFF30);
+            return self.wave_pattern_ram.read_byte(position - 0xFF30);
         }
 
         // LCDC
@@ -399,7 +399,7 @@ impl Memory {
 
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
-            return self.internal_ram.read_8(position - 0xFF80);
+            return self.internal_ram.read_byte(position - 0xFF80);
         }
 
         // Interrupt enable
@@ -419,46 +419,46 @@ impl Memory {
     pub fn read_16(&self, position: u16) -> u16 {
         // Bootstrap rom
         if self.bootstrap_rom.is_some() && position < 0x100 {
-            return self.bootstrap_rom.as_ref().unwrap().read_16(position);
+            return self.bootstrap_rom.as_ref().unwrap().read_word(position);
         }
 
         // ROM
         if position < 0x8000 {
-            return self.rom.read_16(position);
+            return self.rom.read_word(position);
         }
 
         // Video RAM
         if position >= 0x8000 && position < 0xA000 {
-            return self.video_ram.read_16(position - 0x8000);
+            return self.video_ram.read_word(position - 0x8000);
         }
 
         // 8k switchable RAM bank
         if position >= 0xA000 && position < 0xC000 {
-            return self.switchable_ram_bank.read_16(position - 0xA000);
+            return self.switchable_ram_bank.read_word(position - 0xA000);
         }
 
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
-            return self.internal_ram_8k.read_16(position - 0xC000);
+            return self.internal_ram_8k.read_word(position - 0xC000);
         }
 
         // Echo of internal RAM
         if position >= 0xE000 && position < 0xFE00 {
-            return self.internal_ram_8k.read_16(position - 0xE000);
+            return self.internal_ram_8k.read_word(position - 0xE000);
         }
 
         if position >= 0xFE00 && position < 0xFEA0 {
-            return self.oam_ram.read_16(position - 0xFE00);
+            return self.oam_ram.read_word(position - 0xFE00);
         }
 
         // Wave pattern RAM
         if position >= 0xFF30 && position < 0xFF40 {
-            return self.wave_pattern_ram.read_16(position - 0xFF30);
+            return self.wave_pattern_ram.read_word(position - 0xFF30);
         }
 
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
-            return self.internal_ram.read_16(position - 0xFF80);
+            return self.internal_ram.read_word(position - 0xFF80);
         }
 
         panic!("ERROR: Memory address {:X} not readable", position);
@@ -476,30 +476,31 @@ impl Memory {
 
         // Video RAM
         if position >= 0x8000 && position < 0xA000 {
-            self.video_ram.write_8(position - 0x8000, value);
+            self.video_ram.write_byte(position - 0x8000, value);
             return;
         }
 
         // 8k switchable RAM bank
         if position >= 0xA000 && position < 0xC000 {
-            self.switchable_ram_bank.write_8(position - 0xA000, value);
+            self.switchable_ram_bank
+                .write_byte(position - 0xA000, value);
             return;
         }
 
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
-            self.internal_ram_8k.write_8(position - 0xC000, value);
+            self.internal_ram_8k.write_byte(position - 0xC000, value);
             return;
         }
 
         // Echo of internal RAM
         if position >= 0xE000 && position < 0xFE00 {
-            self.internal_ram_8k.write_8(position - 0xE000, value);
+            self.internal_ram_8k.write_byte(position - 0xE000, value);
             return;
         }
 
         if position >= 0xFE00 && position < 0xFEA0 {
-            self.oam_ram.write_8(position - 0xFE00, value);
+            self.oam_ram.write_byte(position - 0xFE00, value);
             return;
         }
 
@@ -676,7 +677,7 @@ impl Memory {
         }
 
         if position >= 0xFF30 && position < 0xFF40 {
-            self.wave_pattern_ram.write_8(position - 0xFF30, value);
+            self.wave_pattern_ram.write_byte(position - 0xFF30, value);
             return;
         }
 
@@ -718,7 +719,7 @@ impl Memory {
             let init_address = (self.dma as u16) << 8 & 0xFF00;
 
             for i in (0..0x8C).step_by(2) {
-                self.oam_ram.write_16(i, self.read_16(init_address + i));
+                self.oam_ram.write_word(i, self.read_16(init_address + i));
             }
 
             self.dma = 0;
@@ -764,7 +765,7 @@ impl Memory {
 
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
-            self.internal_ram.write_8(position - 0xFF80, value);
+            self.internal_ram.write_byte(position - 0xFF80, value);
             return;
         }
 
@@ -788,26 +789,28 @@ impl Memory {
         }
 
         if position >= 0x8000 && position < 0xA000 {
-            return self.video_ram.write_16(position - 0x8000, value);
+            return self.video_ram.write_word(position - 0x8000, value);
         }
 
         // Internal RAM 8k
         if position >= 0xA000 && position < 0xC000 {
-            return self.switchable_ram_bank.write_16(position - 0xA000, value);
+            return self
+                .switchable_ram_bank
+                .write_word(position - 0xA000, value);
         }
 
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
-            return self.internal_ram_8k.write_16(position - 0xC000, value);
+            return self.internal_ram_8k.write_word(position - 0xC000, value);
         }
 
         // Echo of internal RAM
         if position >= 0xE000 && position < 0xFE00 {
-            return self.internal_ram_8k.write_16(position - 0xE000, value);
+            return self.internal_ram_8k.write_word(position - 0xE000, value);
         }
 
         if position >= 0xFE00 && position < 0xFEA0 {
-            return self.oam_ram.write_16(position - 0xE000, value);
+            return self.oam_ram.write_word(position - 0xE000, value);
         }
 
         if position >= 0xFEA0 && position < 0xFF00 {
@@ -816,7 +819,7 @@ impl Memory {
         }
 
         if position >= 0xFF30 && position < 0xFF40 {
-            return self.wave_pattern_ram.write_16(position - 0xFF30, value);
+            return self.wave_pattern_ram.write_word(position - 0xFF30, value);
         }
 
         if position >= 0xFF4C && position < 0xFF80 {
@@ -826,7 +829,7 @@ impl Memory {
 
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
-            return self.internal_ram.write_16(position - 0xFF80, value);
+            return self.internal_ram.write_word(position - 0xFF80, value);
         }
 
         panic!("ERROR: Memory address {:X} not writable", position);
