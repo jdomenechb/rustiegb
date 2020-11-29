@@ -8,6 +8,8 @@ use super::timer_control::TimerControl;
 use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 
 use crate::memory::joypad::Joypad;
+use crate::memory::memory_sector::ReadMemory;
+use crate::memory::memory_sector::WriteMemory;
 use crate::memory::oam_memory_sector::OamMemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
 use std::fs::File;
@@ -161,7 +163,7 @@ impl Memory {
             nr50: 0x77,
             nr51: 0xf3,
             nr52: 0xf1,
-            wave_pattern_ram: WavePatternRam::new(),
+            wave_pattern_ram: WavePatternRam::default(),
             lcdc: LCDC::new(),
             stat: STAT::new(),
             scy: 0x00,

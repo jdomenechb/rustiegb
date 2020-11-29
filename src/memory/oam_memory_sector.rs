@@ -1,41 +1,39 @@
+use crate::memory::memory_sector::{MemorySector, ReadMemory, WriteMemory};
 use crate::memory::oam_entry::OamEntry;
 
 pub struct OamMemorySector {
-    data: [u8; 0xA0],
+    data: MemorySector,
     count: u16,
 }
 
 impl OamMemorySector {
-    pub fn read_8(&self, position: u16) -> u8 {
-        return self.data[position as usize];
-    }
-
-    pub fn read_16(&self, position: u16) -> u16{
-        let position = position as usize;
-        let mut result: u16 = self.data[position] as u16;
-        result += (self.data[position + 1] as u16) << 8;
-        return result;
-    }
-
-    pub fn write_8(&mut self, position: u16, value: u8) {
-        self.data[position as usize] = value;
-    }
-
-    pub fn write_16(&mut self, position: u16, value: u16) {
-        let position = position as usize;
-        self.data[position] = value as u8;
-        self.data[position + 1] = (value >> 8) as u8;
-    }
-
     fn read_oam_entry(&self, position: u16) -> OamEntry {
-        let position = position as usize;
-
         OamEntry::from_bytes(
-            self.data[position],
-            self.data[position + 1],
-            self.data[position + 2],
-            self.data[position + 3]
+            self.data.read_8(position),
+            self.data.read_8(position + 1),
+            self.data.read_8(position + 2),
+            self.data.read_8(position + 3),
         )
+    }
+}
+
+impl ReadMemory for OamMemorySector {
+    fn read_8(&self, position: u16) -> u8 {
+        self.data.read_8(position)
+    }
+
+    fn read_16(&self, position: u16) -> u16 {
+        self.data.read_16(position)
+    }
+}
+
+impl WriteMemory for OamMemorySector {
+    fn write_8(&mut self, position: u16, value: u8) {
+        self.data.write_8(position, value);
+    }
+
+    fn write_16(&mut self, position: u16, value: u16) {
+        self.data.write_16(position, value);
     }
 }
 
@@ -58,7 +56,7 @@ impl Iterator for OamMemorySector {
 impl Default for OamMemorySector {
     fn default() -> Self {
         Self {
-            data: [0; 0xA0],
+            data: MemorySector::new(0xA0),
             count: 0,
         }
     }

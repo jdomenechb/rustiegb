@@ -1,29 +1,31 @@
-#[derive(Default)]
+use crate::memory::memory_sector::{MemorySector, ReadMemory};
+
 pub struct ReadOnlyMemorySector {
-    pub data: Vec<u8>
+    pub data: MemorySector,
 }
 
 impl ReadOnlyMemorySector {
-    pub fn new(data: Vec<u8>) -> ReadOnlyMemorySector {
-        return ReadOnlyMemorySector {
-            data
-        };
+    pub fn new(data: Vec<u8>) -> Self {
+        Self {
+            data: MemorySector::with_data(data),
+        }
+    }
+}
+
+impl ReadMemory for ReadOnlyMemorySector {
+    fn read_8(&self, position: u16) -> u8 {
+        self.data.read_8(position)
     }
 
-    /**
-     * Reads a 8bit value from memory.
-     */
-    pub fn read_8(&self, position: u16) -> u8 {
-        return self.data[position as usize];
+    fn read_16(&self, position: u16) -> u16 {
+        self.data.read_16(position)
     }
+}
 
-    /**
-     * Reads a 16bit value from memory. First byte is lower part, second is higher.
-     */
-    pub fn read_16(&self, position: u16) -> u16{
-        let position = position as usize;
-        let mut result: u16 = self.data[position] as u16;
-        result += (self.data[position + 1] as u16) << 8;
-        return result;
+impl Default for ReadOnlyMemorySector {
+    fn default() -> Self {
+        Self {
+            data: MemorySector::new(0x8000),
+        }
     }
 }
