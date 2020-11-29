@@ -9,115 +9,83 @@ pub struct ALU {}
 impl ALU {
     pub fn add_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
         registers.set_flag_n(false);
+        registers.set_flag_h(((a & 0xf) + (b & 0xf)) & 0x10 == 0x10);
+        registers.set_flag_c((a as Word + b as Word) & 0x100 == 0x100);
 
-        let half_carry: bool = ((a & 0xf) + (b & 0xf)) & 0x10 == 0x10;
-        registers.set_flag_h(half_carry);
+        let value = a.wrapping_add(b);
 
-        let carry: bool = (a as Word + b as Word) & 0x100 == 0x100;
-        registers.set_flag_c(carry);
+        registers.set_flag_z(value == 0);
 
-        let value = Wrapping(a);
-        let to_add = Wrapping(b);
-
-        let value: Byte = (value + to_add).0;
-
-        let zero: bool = value == 0;
-        registers.set_flag_z(zero);
-
-        return value;
+        value
     }
 
     pub fn inc_n(&self, registers: &mut CPURegisters, a: Byte) -> Byte {
         let b = 1;
 
         registers.set_flag_n(false);
+        registers.set_flag_h(((a & 0xf) + (b & 0xf)) & 0x10 == 0x10);
 
-        let half_carry: bool = ((a & 0xf) + (b & 0xf)) & 0x10 == 0x10;
-        registers.set_flag_h(half_carry);
+        let value = a.wrapping_add(b);
 
-        let value = Wrapping(a);
-        let to_add = Wrapping(b);
+        registers.set_flag_z(value == 0);
 
-        let value: Byte = (value + to_add).0;
-
-        let zero: bool = value == 0;
-        registers.set_flag_z(zero);
-
-        return value;
+        value
     }
 
     pub fn sub_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
         registers.set_flag_n(true);
+        registers.set_flag_h(b > a & 0x0f);
+        registers.set_flag_c(b > a);
 
-        let half_carry: bool = b > a & 0x0f;
-        registers.set_flag_h(half_carry);
+        let value = a.wrapping_sub(b);
 
-        let carry: bool = b > a;
-        registers.set_flag_c(carry);
+        registers.set_flag_z(value == 0);
 
-        let value = Wrapping(a);
-        let to_subtract = Wrapping(b);
-
-        let value = (value - to_subtract).0;
-
-        let zero: bool = value == 0;
-        registers.set_flag_z(zero);
-
-        return value;
+        value
     }
 
     pub fn dec_n(&self, registers: &mut CPURegisters, a: Byte) -> Byte {
         let b = 1;
+
         registers.set_flag_n(true);
+        registers.set_flag_h(b > a & 0x0f);
 
-        let half_carry: bool = b > a & 0x0f;
-        registers.set_flag_h(half_carry);
+        let value = a.wrapping_sub(b);
 
-        let value = Wrapping(a);
-        let to_subtract = Wrapping(b);
+        registers.set_flag_z(value == 0);
 
-        let value = (value - to_subtract).0;
-
-        let zero: bool = value == 0;
-        registers.set_flag_z(zero);
-
-        return value;
+        value
     }
 
     pub fn or_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
-        let result: Byte = a | b;
-        let zero: bool = result == 0;
+        let result = a | b;
 
-        registers.set_flag_z(zero);
+        registers.set_flag_z(result == 0);
         registers.set_flag_n(false);
         registers.set_flag_h(false);
         registers.set_flag_c(false);
 
-        return result;
+        result
     }
 
     pub fn and_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
-        let result: Byte = a & b;
-        let zero: bool = result == 0;
+        let result = a & b;
 
-        registers.set_flag_z(zero);
+        registers.set_flag_z(result == 0);
         registers.set_flag_n(false);
         registers.set_flag_h(true);
         registers.set_flag_c(false);
 
-        return result;
+        result
     }
 
     pub fn cp_n(&self, registers: &mut CPURegisters, b: Byte) {
         let a = registers.read_byte(&ByteRegister::A);
+
         registers.set_flag_z(a == b);
         registers.set_flag_n(true);
-
-        let half_carry: bool = b > a & 0x0f;
-        registers.set_flag_h(half_carry);
-
-        let carry: bool = a < b;
-        registers.set_flag_c(carry);
+        registers.set_flag_h(b > a & 0x0f);
+        registers.set_flag_c(a < b);
     }
 
     pub fn swap_n(&self, registers: &mut CPURegisters, value: Byte) -> Byte {
@@ -137,71 +105,32 @@ impl ALU {
     pub fn add_nn(&self, registers: &mut CPURegisters, a: Word, b: Word) -> Word {
         registers.set_flag_n(false);
 
-        let half_carry: bool =
+        let half_carry =
             ((a & 0b11111111111) + (b & 0b11111111111)) & 0b10000000000 == 0b10000000000;
         registers.set_flag_h(half_carry);
 
-        let carry: bool = (a as u32 + b as u32) & 0b10000000000000000 == 0b10000000000000000;
+        let carry = (a as u32 + b as u32) & 0b10000000000000000 == 0b10000000000000000;
         registers.set_flag_c(carry);
 
-        let value = Wrapping(a);
-        let to_add = Wrapping(b);
-
-        let value = (value + to_add).0;
-
-        return value;
+        a.wrapping_add(b)
     }
 
     pub fn add_nn_signed(&self, registers: &mut CPURegisters, a: Word, b: i16) -> Word {
-        let result;
-
-        if b >= 0 {
-            result = self.add_nn(registers, a, b as Word)
-        } else {
-            result = self.sub_nn(registers, a, (b * -1) as Word)
-        }
+        let b = b as Word;
 
         registers.set_flag_z(false);
-        registers.set_flag_z(false);
+        registers.set_flag_n(false);
+        registers.set_flag_h((a & 0x000f) + (b & 0x000f) > 0x000f);
+        registers.set_flag_c((a & 0x00ff) + (b & 0x00ff) > 0x00ff);
 
-        result
-    }
-
-    pub fn sub_nn(&self, registers: &mut CPURegisters, a: Word, b: Word) -> Word {
-        registers.set_flag_n(true);
-
-        let half_carry: bool = b > a & 0x0f;
-        registers.set_flag_h(half_carry);
-
-        let carry: bool = b > a;
-        registers.set_flag_c(carry);
-
-        let value = Wrapping(a);
-        let to_subtract = Wrapping(b);
-
-        let value = (value - to_subtract).0;
-
-        let zero: bool = value == 0;
-        registers.set_flag_z(zero);
-
-        return value;
+        a.wrapping_add(b)
     }
 
     pub fn inc_nn(&self, value: Word) -> Word {
-        let value = Wrapping(value);
-        let to_add = Wrapping(1);
-
-        let value: Word = (value + to_add).0;
-
-        return value;
+        value.wrapping_add(1)
     }
 
     pub fn dec_nn(&self, value: Word) -> Word {
-        let value = Wrapping(value);
-        let to_add = Wrapping(1);
-
-        let value: Word = (value - to_add).0;
-
-        return value;
+        value.wrapping_sub(1)
     }
 }
