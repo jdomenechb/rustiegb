@@ -1,7 +1,6 @@
 use super::registers::CPURegisters;
 use crate::cpu::registers::ByteRegister;
 use crate::{Byte, Word};
-use std::num::Wrapping;
 
 #[derive(Debug)]
 pub struct ALU {}

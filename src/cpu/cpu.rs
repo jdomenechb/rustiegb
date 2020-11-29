@@ -866,15 +866,19 @@ impl CPU {
     }
 
     fn sub_n(&mut self) {
-        let memory = self.memory.read().unwrap();
+        let to_subtract;
 
-        let value = self.registers.a;
-        let to_subtract = memory.read_byte(self.registers.pc + 1);
+        {
+            let memory = self.memory.read().unwrap();
+            to_subtract = memory.read_byte(self.registers.pc + 1);
+        }
+
+        let value = self.registers.read_byte(&ByteRegister::A);
 
         self.last_executed_instruction = format!("SUB A, {:X}", to_subtract).to_string();
 
         let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
-        self.registers.a = value;
+        self.registers.write_byte(&ByteRegister::A, value);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;

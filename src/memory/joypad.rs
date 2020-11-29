@@ -44,7 +44,6 @@ impl Joypad {
 
     pub fn to_byte(&self) -> Byte {
         if !self.p15 && !self.p14 {
-            println!("{:#010b}", 0xFF);
             return 0xFF;
         }
 
@@ -61,10 +60,6 @@ impl Joypad {
             value |= (!(self.up) as Byte) << 2;
             value |= (!(self.left) as Byte) << 1;
             value |= !(self.right) as Byte;
-        }
-
-        if value & 0x0F != 0x0F {
-            println!("{:#010b}", value);
         }
 
         value
