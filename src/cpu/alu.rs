@@ -33,7 +33,7 @@ impl ALU {
 
     pub fn sub_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
         registers.set_flag_n(true);
-        registers.set_flag_h(b > a & 0x0f);
+        registers.set_flag_h((b & 0x0f) > (a & 0x0f));
         registers.set_flag_c(b > a);
 
         let value = a.wrapping_sub(b);
@@ -83,7 +83,7 @@ impl ALU {
 
         registers.set_flag_z(a == b);
         registers.set_flag_n(true);
-        registers.set_flag_h(b > a & 0x0f);
+        registers.set_flag_h((a & 0x0f) < (b & 0x0f));
         registers.set_flag_c(a < b);
     }
 
