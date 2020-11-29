@@ -127,6 +127,12 @@ impl CPURegisters {
         }
     }
 
+    fn read_flag(&self, position: u8) -> bool {
+        let mask = 1 << position;
+
+        self.f & mask == mask
+    }
+
     pub fn set_flag_z(&mut self, value: bool) {
         self.set_flag(7, value);
     }
@@ -144,18 +150,18 @@ impl CPURegisters {
     }
 
     pub fn is_flag_z(&self) -> bool {
-        return self.f & 0b10000000 == 0b10000000;
-    }
-
-    pub fn is_flag_c(&self) -> bool {
-        return self.f & 0b00010000 == 0b00010000;
+        self.read_flag(7)
     }
 
     pub fn is_flag_n(&self) -> bool {
-        return self.f & 0b01000000 == 0b01000000;
+        self.read_flag(6)
     }
 
     pub fn is_flag_h(&self) -> bool {
-        return self.f & 0b00100000 == 0b00100000;
+        self.read_flag(5)
+    }
+
+    pub fn is_flag_c(&self) -> bool {
+        self.read_flag(4)
     }
 }
