@@ -92,6 +92,7 @@ impl CPU {
             0x0C => self.inc_r(ByteRegister::C),
             0x0D => self.dec_r(ByteRegister::C),
             0x0E => self.ld_r_n(ByteRegister::C),
+            0x0F => self.rrc_r(ByteRegister::A, false),
 
             0x11 => self.ld_rr_nn(WordRegister::DE),
             0x12 => self.ld_mrr_r(WordRegister::DE, ByteRegister::A),
@@ -395,6 +396,15 @@ impl CPU {
             0x05 => self.rlc_r(ByteRegister::L),
             0x06 => self.rlc_mrr(WordRegister::HL),
             0x07 => self.rlc_r(ByteRegister::A),
+
+            0x08 => self.rrc_r(ByteRegister::B, true),
+            0x09 => self.rrc_r(ByteRegister::C, true),
+            0x0A => self.rrc_r(ByteRegister::D, true),
+            0x0B => self.rrc_r(ByteRegister::E, true),
+            0x0C => self.rrc_r(ByteRegister::H, true),
+            0x0D => self.rrc_r(ByteRegister::L, true),
+
+            0x0F => self.rrc_r(ByteRegister::A, true),
 
             0x10 => self.rl_r(ByteRegister::B),
             0x11 => self.rl_r(ByteRegister::C),
@@ -2096,6 +2106,27 @@ impl CPU {
         self.registers.set_flag_n(false);
 
         self.registers.write_byte(&ByteRegister::A, value);
+
+        self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn rrc_r(&mut self, register: ByteRegister, set_zero: bool) {
+        self.last_executed_instruction = format!("RRC {}", register.to_string()).to_string();
+
+        let mut value = self.registers.read_byte(&register);
+        let new_carry: bool = value & 0x1 == 0x1;
+
+        value = value >> 1;
+        value = value | ((new_carry as Byte) << 7);
+
+        self.registers
+            .set_flag_z(if set_zero { value == 0 } else { false });
+        self.registers.set_flag_c(new_carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.registers.write_byte(&register, value);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
