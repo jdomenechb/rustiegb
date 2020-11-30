@@ -99,6 +99,9 @@ pub struct Memory {
     // FF4A - FF4B
     wy: Byte,
     wx: Byte,
+    // FF4D - CGB ONLY
+    key1: Byte,
+
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
     // FFFF
@@ -175,6 +178,7 @@ impl Memory {
             obp2: 0xFF,
             wy: 0x00,
             wx: 0x00,
+            key1: 0x00,
             internal_ram: InternalRamMemorySector::default(),
             interrupt_enable: InterruptFlag::new(),
             oam_ram: OamMemorySector::default(),
@@ -397,6 +401,11 @@ impl Memory {
             return self.wx;
         }
 
+        // KEY 1
+        if position == 0xFF4D {
+            return self.key1;
+        }
+
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
             return self.internal_ram.read_byte(position - 0xFF80);
@@ -411,9 +420,7 @@ impl Memory {
     }
 
     pub fn read_signed_byte(&self, position: Word) -> SignedByte {
-        let value = self.read_byte(position);
-
-        return value as SignedByte;
+        self.read_byte(position) as SignedByte
     }
 
     pub fn read_word(&self, position: Word) -> Word {
@@ -758,7 +765,19 @@ impl Memory {
         }
 
         // Empty but unusable for I/O
-        if position >= 0xFF4C && position < 0xFF80 {
+        if position == 0xFF4C {
+            println!("Attempt to write at an unused RAM position {:X}", position);
+            return;
+        }
+
+        // KEY 1
+        if position == 0xFF4D {
+            self.key1 = value;
+            return;
+        }
+
+        // Empty but unusable for I/O
+        if position >= 0xFF4E && position < 0xFF80 {
             println!("Attempt to write at an unused RAM position {:X}", position);
             return;
         }
