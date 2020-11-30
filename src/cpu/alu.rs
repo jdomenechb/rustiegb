@@ -6,12 +6,12 @@ use crate::{Byte, Word};
 pub struct ALU {}
 
 impl ALU {
-    pub fn add_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
+    pub fn add_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte, carry: bool) -> Byte {
         registers.set_flag_n(false);
-        registers.set_flag_h(((a & 0xf) + (b & 0xf)) & 0x10 == 0x10);
-        registers.set_flag_c((a as Word + b as Word) & 0x100 == 0x100);
+        registers.set_flag_h((a & 0xf) + (b & 0xf) + (carry as Byte) & 0x10 == 0x10);
+        registers.set_flag_c((a as Word + b as Word + carry as Word) & 0x100 == 0x100);
 
-        let value = a.wrapping_add(b);
+        let value = a.wrapping_add(b).wrapping_add(carry as Byte);
 
         registers.set_flag_z(value == 0);
 
@@ -31,12 +31,12 @@ impl ALU {
         value
     }
 
-    pub fn sub_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
+    pub fn sub_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte, carry: bool) -> Byte {
         registers.set_flag_n(true);
-        registers.set_flag_h((b & 0x0f) > (a & 0x0f));
-        registers.set_flag_c(b > a);
+        registers.set_flag_h((a & 0x0f) < ((b & 0x0f) + (carry as Byte)));
+        registers.set_flag_c((a as Word) < ((b as Word) + (carry as Word)));
 
-        let value = a.wrapping_sub(b);
+        let value = a.wrapping_sub(b).wrapping_sub(carry as Byte);
 
         registers.set_flag_z(value == 0);
 

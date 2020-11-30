@@ -745,15 +745,11 @@ impl CPU {
         let value1: Byte = self.registers.read_byte(&ByteRegister::A);
         let value2: Byte = self.registers.read_byte(&register);
 
-        let had_carry = self.registers.is_flag_c();
-
         self.last_executed_instruction = format!("ADC A,{}", register.to_string()).to_string();
 
-        let mut result = self.alu.add_n(&mut self.registers, value1, value2);
+        let carry = self.registers.is_flag_c();
 
-        if had_carry {
-            result = self.alu.add_n(&mut self.registers, result, 1);
-        }
+        let result = self.alu.add_n(&mut self.registers, value1, value2, carry);
 
         self.registers.write_byte(&ByteRegister::A, result);
 
@@ -765,13 +761,13 @@ impl CPU {
         let memory = self.memory.read().unwrap();
 
         let value1 = self.registers.read_byte(&ByteRegister::A);
-        let mut value2 = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let value2 = memory.read_byte(self.registers.read_word(&WordRegister::HL));
 
         self.last_executed_instruction = "ADC A,(HL)".to_string();
 
-        value2 = value2.wrapping_add(self.registers.is_flag_c() as Byte);
+        let carry = self.registers.is_flag_c();
 
-        let result = self.alu.add_n(&mut self.registers, value1, value2);
+        let result = self.alu.add_n(&mut self.registers, value1, value2, carry);
         self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
@@ -782,12 +778,13 @@ impl CPU {
         let memory = self.memory.read().unwrap();
 
         let value1 = self.registers.a;
-        let mut value2 = memory.read_byte(self.registers.pc + 1);
+        let value2 = memory.read_byte(self.registers.pc + 1);
+
         self.last_executed_instruction = format!("ADC A,{:X}", value2).to_string();
 
-        value2 = value2.wrapping_add(self.registers.is_flag_c() as Byte);
+        let carry = self.registers.is_flag_c();
 
-        let result = self.alu.add_n(&mut self.registers, value1, value2);
+        let result = self.alu.add_n(&mut self.registers, value1, value2, carry);
         self.registers.a = result;
 
         self.pc_to_increment = 2;
@@ -800,7 +797,7 @@ impl CPU {
 
         self.last_executed_instruction = format!("ADD A,{}", register_v.to_string()).to_string();
 
-        let result = self.alu.add_n(&mut self.registers, value1, value2);
+        let result = self.alu.add_n(&mut self.registers, value1, value2, false);
         self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
@@ -814,7 +811,7 @@ impl CPU {
 
         self.last_executed_instruction = format!("ADD A,{:X}", value1).to_string();
 
-        let result = self.alu.add_n(&mut self.registers, value1, value2);
+        let result = self.alu.add_n(&mut self.registers, value1, value2, false);
         self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 2;
@@ -828,7 +825,7 @@ impl CPU {
 
         self.last_executed_instruction = "ADD A,(HL)".to_string();
 
-        let result = self.alu.add_n(&mut self.registers, value1, value2);
+        let result = self.alu.add_n(&mut self.registers, value1, value2, false);
         self.registers.write_byte(&ByteRegister::A, result);
 
         self.pc_to_increment = 1;
@@ -877,7 +874,9 @@ impl CPU {
 
         self.last_executed_instruction = format!("SUB A, {:X}", to_subtract).to_string();
 
-        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        let value = self
+            .alu
+            .sub_n(&mut self.registers, value, to_subtract, false);
         self.registers.write_byte(&ByteRegister::A, value);
 
         self.pc_to_increment = 2;
@@ -889,7 +888,9 @@ impl CPU {
 
         let value = self.registers.read_byte(&ByteRegister::A);
         let to_subtract = self.registers.read_byte(&register);
-        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        let value = self
+            .alu
+            .sub_n(&mut self.registers, value, to_subtract, false);
         self.registers.write_byte(&ByteRegister::A, value);
 
         self.pc_to_increment = 1;
@@ -904,7 +905,9 @@ impl CPU {
         let memory = self.memory.read().unwrap();
         let to_subtract = memory.read_byte(self.registers.read_word(&WordRegister::HL));
 
-        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        let value = self
+            .alu
+            .sub_n(&mut self.registers, value, to_subtract, false);
         self.registers.write_byte(&ByteRegister::A, value);
 
         self.pc_to_increment = 1;
@@ -915,8 +918,14 @@ impl CPU {
         self.last_executed_instruction = format!("SBC A,{}", register.to_string()).to_string();
 
         let value = self.registers.read_byte(&ByteRegister::A);
-        let to_subtract = self.registers.read_byte(&register).wrapping_add(1);
-        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        let to_subtract = self.registers.read_byte(&register);
+
+        let carry = self.registers.is_flag_c();
+
+        let value = self
+            .alu
+            .sub_n(&mut self.registers, value, to_subtract, carry);
+
         self.registers.write_byte(&ByteRegister::A, value);
 
         self.pc_to_increment = 1;
@@ -929,11 +938,14 @@ impl CPU {
         let value = self.registers.read_byte(&ByteRegister::A);
 
         let memory = self.memory.read().unwrap();
-        let to_subtract = memory
-            .read_byte(self.registers.read_word(&WordRegister::HL))
-            .wrapping_add(1);
+        let to_subtract = memory.read_byte(self.registers.read_word(&WordRegister::HL));
 
-        let value = self.alu.sub_n(&mut self.registers, value, to_subtract);
+        let carry = self.registers.is_flag_c();
+
+        let value = self
+            .alu
+            .sub_n(&mut self.registers, value, to_subtract, carry);
+
         self.registers.write_byte(&ByteRegister::A, value);
 
         self.pc_to_increment = 1;
@@ -944,13 +956,13 @@ impl CPU {
         let memory = self.memory.read().unwrap();
 
         let value1 = self.registers.read_byte(&ByteRegister::A);
-        let mut value2 = memory.read_byte(self.registers.read_word(&WordRegister::PC) + 1);
+        let value2 = memory.read_byte(self.registers.read_word(&WordRegister::PC) + 1);
 
         self.last_executed_instruction = format!("SBC A,{}", value2).to_string();
 
-        value2 = value2.wrapping_add(self.registers.is_flag_c() as Byte);
+        let carry = self.registers.is_flag_c();
 
-        let result = self.alu.sub_n(&mut self.registers, value1, value2);
+        let result = self.alu.sub_n(&mut self.registers, value1, value2, carry);
 
         self.registers.write_byte(&ByteRegister::A, result);
 

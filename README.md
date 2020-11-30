@@ -5,7 +5,7 @@ GB emulator written in Rust
 - [ ] 01: Special
 - [ ] 02: Interrupts
 - [x] 03: op sp,hl
-- [ ] 04: op r,imm
+- [x] 04: op r,imm
 - [x] 05: op rp
 - [x] 06: ld r,r
 - [x] 07: jr,jp,call,ret,rst
