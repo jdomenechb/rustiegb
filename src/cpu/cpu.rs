@@ -2128,8 +2128,8 @@ impl CPU {
 
         self.registers.write_byte(&register, value);
 
-        self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
+        self.pc_to_increment = if set_zero { 2 } else { 1 };
+        self.last_instruction_ccycles = if set_zero { 4 } else { 2 };
     }
 
     fn srl_r(&mut self, register: ByteRegister) {
