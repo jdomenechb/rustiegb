@@ -2012,13 +2012,12 @@ impl CPU {
     fn rl_r(&mut self, register: ByteRegister) {
         self.last_executed_instruction = format!("RL {}", register.to_string()).to_string();
 
-        let value = self.registers.read_byte(&register);
+        let mut value = self.registers.read_byte(&register);
         let new_carry: bool = value & 0b10000000 == 0b10000000;
 
-        self.registers.write_byte(
-            &register,
-            (value << 1) | (0b00000001 & (self.registers.is_flag_c() as Byte)),
-        );
+        value = (value << 1) | (0x1 & (self.registers.is_flag_c() as Byte));
+
+        self.registers.write_byte(&register, value);
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_c(new_carry);
