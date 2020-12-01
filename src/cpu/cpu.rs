@@ -428,7 +428,17 @@ impl CPU {
             0x23 => self.sla_r(ByteRegister::E),
             0x24 => self.sla_r(ByteRegister::H),
             0x25 => self.sla_r(ByteRegister::L),
+
             0x27 => self.sla_r(ByteRegister::A),
+
+            0x28 => self.sra_r(ByteRegister::B),
+            0x29 => self.sra_r(ByteRegister::C),
+            0x2A => self.sra_r(ByteRegister::D),
+            0x2B => self.sra_r(ByteRegister::E),
+            0x2C => self.sra_r(ByteRegister::H),
+            0x2D => self.sra_r(ByteRegister::L),
+
+            0x2F => self.sra_r(ByteRegister::A),
 
             0x30 => self.swap_r(ByteRegister::B),
             0x31 => self.swap_r(ByteRegister::C),
@@ -2159,6 +2169,27 @@ impl CPU {
         let carry: bool = value & 0b10000000 == 0b10000000;
 
         value = value << 1;
+
+        self.registers.write_byte(&register, value);
+
+        self.registers.set_flag_z(value == 0);
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_c(carry);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 8;
+    }
+
+    fn sra_r(&mut self, register: ByteRegister) {
+        self.last_executed_instruction = format!("SRA {}", register.to_string()).to_string();
+
+        let mut value = self.registers.read_byte(&register);
+        let msb = value & 0b10000000;
+        let carry = value & 0x1 == 0x1;
+
+        value = value >> 1;
+        value |= msb;
 
         self.registers.write_byte(&register, value);
 
