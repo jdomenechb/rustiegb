@@ -2146,10 +2146,9 @@ impl CPU {
 
         let value = self.registers.read_byte(&register);
 
-        let carry: bool = value & 0b1 == 1;
-        let msf = value & 0b10000000;
+        let carry: bool = value & 0x1 == 1;
 
-        let result = msf | ((value >> 1) & 0b01111111);
+        let result = (value >> 1) & 0b01111111;
         self.registers.write_byte(&register, result);
 
         self.registers.set_flag_z(result == 0);
