@@ -403,7 +403,7 @@ impl CPU {
             0x0B => self.rrc_r(ByteRegister::E, true),
             0x0C => self.rrc_r(ByteRegister::H, true),
             0x0D => self.rrc_r(ByteRegister::L, true),
-
+            0x0E => self.rrc_mhl(),
             0x0F => self.rrc_r(ByteRegister::A, true),
 
             0x10 => self.rl_r(ByteRegister::B),
@@ -2138,7 +2138,37 @@ impl CPU {
         self.registers.write_byte(&register, value);
 
         self.pc_to_increment = if set_zero { 2 } else { 1 };
-        self.last_instruction_ccycles = if set_zero { 4 } else { 2 };
+        self.last_instruction_ccycles = if set_zero { 8 } else { 4 };
+    }
+
+    fn rrc_mhl(&mut self) {
+        self.last_executed_instruction = "RRC (HL)".to_string();
+
+        let address = self.registers.read_word(&WordRegister::HL);
+        let mut value;
+
+        {
+            let memory = self.memory.read().unwrap();
+            value = memory.read_byte(address)
+        }
+
+        let new_carry: bool = value & 0x1 == 0x1;
+
+        value = value >> 1;
+        value = value | ((new_carry as Byte) << 7);
+
+        self.registers.set_flag_z(value == 0);
+        self.registers.set_flag_c(new_carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        {
+            let mut memory = self.memory.write().unwrap();
+            memory.write_byte(address, value)
+        }
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
     }
 
     fn srl_r(&mut self, register: ByteRegister) {
