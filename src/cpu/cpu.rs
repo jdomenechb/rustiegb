@@ -412,6 +412,7 @@ impl CPU {
             0x13 => self.rl_r(ByteRegister::E),
             0x14 => self.rl_r(ByteRegister::H),
             0x15 => self.rl_r(ByteRegister::L),
+            0x16 => self.rl_mhl(),
             0x17 => self.rl_r(ByteRegister::A),
 
             0x18 => self.rr_r(ByteRegister::B),
@@ -420,6 +421,7 @@ impl CPU {
             0x1B => self.rr_r(ByteRegister::E),
             0x1C => self.rr_r(ByteRegister::H),
             0x1D => self.rr_r(ByteRegister::L),
+            0x1E => self.rr_mhl(),
             0x1F => self.rr_r(ByteRegister::A),
 
             0x20 => self.sla_r(ByteRegister::B),
@@ -428,7 +430,7 @@ impl CPU {
             0x23 => self.sla_r(ByteRegister::E),
             0x24 => self.sla_r(ByteRegister::H),
             0x25 => self.sla_r(ByteRegister::L),
-
+            0x26 => self.sla_mhl(),
             0x27 => self.sla_r(ByteRegister::A),
 
             0x28 => self.sra_r(ByteRegister::B),
@@ -437,7 +439,7 @@ impl CPU {
             0x2B => self.sra_r(ByteRegister::E),
             0x2C => self.sra_r(ByteRegister::H),
             0x2D => self.sra_r(ByteRegister::L),
-
+            0x2E => self.sra_mhl(),
             0x2F => self.sra_r(ByteRegister::A),
 
             0x30 => self.swap_r(ByteRegister::B),
@@ -446,6 +448,7 @@ impl CPU {
             0x33 => self.swap_r(ByteRegister::E),
             0x34 => self.swap_r(ByteRegister::H),
             0x35 => self.swap_r(ByteRegister::L),
+            0x36 => self.swap_mhl(),
             0x37 => self.swap_r(ByteRegister::A),
 
             0x38 => self.srl_r(ByteRegister::B),
@@ -454,7 +457,7 @@ impl CPU {
             0x3B => self.srl_r(ByteRegister::E),
             0x3C => self.srl_r(ByteRegister::H),
             0x3D => self.srl_r(ByteRegister::L),
-
+            0x3E => self.srl_mhl(),
             0x3F => self.srl_r(ByteRegister::A),
 
             0x40 => self.bit_v_r(0, ByteRegister::B),
@@ -672,10 +675,6 @@ impl CPU {
             0xFD => self.set_v_r(7, ByteRegister::L),
             0xFE => self.set_v_mhl(7),
             0xFF => self.set_v_r(7, ByteRegister::A),
-
-            _ => {
-                panic!("CB Instruction not implemented: {:X}", op);
-            }
         }
     }
 
@@ -2019,6 +2018,34 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    fn rr_mhl(&mut self) {
+        self.last_executed_instruction = "RR (HL)".into();
+
+        let address = self.registers.read_word(&WordRegister::HL);
+        let mut memory = self.memory.write().unwrap();
+
+        let mut value = memory.read_byte(address);
+
+        let carry: bool = value & 0b1 == 1;
+        let msf = if self.registers.is_flag_c() {
+            0b10000000
+        } else {
+            0
+        };
+
+        value = msf | ((value >> 1) & 0b01111111);
+
+        self.registers.set_flag_z(value == 0);
+        self.registers.set_flag_c(carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        memory.write_byte(address, value);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
+    }
+
     fn rl_r(&mut self, register: ByteRegister) {
         self.last_executed_instruction = format!("RL {}", register.to_string()).to_string();
 
@@ -2036,6 +2063,28 @@ impl CPU {
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
+    }
+
+    fn rl_mhl(&mut self) {
+        self.last_executed_instruction = "RL (HL)".into();
+
+        let address = self.registers.read_word(&WordRegister::HL);
+        let mut memory = self.memory.write().unwrap();
+
+        let mut value = memory.read_byte(address);
+        let new_carry: bool = value & 0b10000000 == 0b10000000;
+
+        value = (value << 1) | (0x1 & (self.registers.is_flag_c() as Byte));
+
+        memory.write_byte(address, value);
+
+        self.registers.set_flag_z(value == 0);
+        self.registers.set_flag_c(new_carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
     }
 
     /**
@@ -2190,6 +2239,28 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    fn srl_mhl(&mut self) {
+        self.last_executed_instruction = "SRL (HL)".to_string();
+
+        let mut memory = self.memory.write().unwrap();
+        let address = self.registers.read_word(&WordRegister::HL);
+        let mut value = memory.read_byte(address);
+
+        let carry: bool = value & 0x1 == 1;
+
+        let result = (value >> 1) & 0b01111111;
+
+        memory.write_byte(address, result);
+
+        self.registers.set_flag_z(result == 0);
+        self.registers.set_flag_c(carry);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_n(false);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
+    }
+
     fn sla_r(&mut self, register: ByteRegister) {
         self.last_executed_instruction = format!("SLA {}", register.to_string()).to_string();
 
@@ -2208,6 +2279,28 @@ impl CPU {
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
+    }
+
+    fn sla_mhl(&mut self) {
+        self.last_executed_instruction = "SLA (HL)".to_string();
+
+        let mut memory = self.memory.write().unwrap();
+        let address = self.registers.read_word(&WordRegister::HL);
+        let mut value = memory.read_byte(address);
+
+        let carry: bool = value & 0b10000000 == 0b10000000;
+
+        value = value << 1;
+
+        memory.write_byte(address, value);
+
+        self.registers.set_flag_z(value == 0);
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_c(carry);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
     }
 
     fn sra_r(&mut self, register: ByteRegister) {
@@ -2231,6 +2324,30 @@ impl CPU {
         self.last_instruction_ccycles = 8;
     }
 
+    fn sra_mhl(&mut self) {
+        self.last_executed_instruction = "SRA (HL)".to_string();
+
+        let mut memory = self.memory.write().unwrap();
+        let address = self.registers.read_word(&WordRegister::HL);
+        let mut value = memory.read_byte(address);
+
+        let msb = value & 0b10000000;
+        let carry = value & 0x1 == 0x1;
+
+        value = value >> 1;
+        value |= msb;
+
+        memory.write_byte(address, value);
+
+        self.registers.set_flag_z(value == 0);
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h(false);
+        self.registers.set_flag_c(carry);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
+    }
+
     fn swap_r(&mut self, register: ByteRegister) {
         self.last_executed_instruction = format!("SWAP {}", register.to_string()).to_string();
 
@@ -2240,6 +2357,21 @@ impl CPU {
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
+    }
+
+    fn swap_mhl(&mut self) {
+        self.last_executed_instruction = "SWAP (HL)".to_string();
+
+        let mut memory = self.memory.write().unwrap();
+        let address = self.registers.read_word(&WordRegister::HL);
+        let mut value = memory.read_byte(address);
+
+        value = self.alu.swap_n(&mut self.registers, value);
+
+        memory.write_byte(address, value);
+
+        self.pc_to_increment = 2;
+        self.last_instruction_ccycles = 16;
     }
 
     fn res_v_r(&mut self, bit: u8, register: ByteRegister) {
