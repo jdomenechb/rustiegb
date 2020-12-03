@@ -94,6 +94,7 @@ impl CPU {
             0x0E => self.ld_r_n(ByteRegister::C),
             0x0F => self.rrc_r(ByteRegister::A, false),
 
+            0x10 => self.stop(),
             0x11 => self.ld_rr_nn(WordRegister::DE),
             0x12 => self.ld_mrr_r(WordRegister::DE, ByteRegister::A),
             0x13 => self.inc_rr(WordRegister::DE),
@@ -2248,11 +2249,11 @@ impl CPU {
 
         let carry: bool = value & 0x1 == 1;
 
-        let result = (value >> 1) & 0b01111111;
+        value = (value >> 1) & 0b01111111;
 
-        memory.write_byte(address, result);
+        memory.write_byte(address, value);
 
-        self.registers.set_flag_z(result == 0);
+        self.registers.set_flag_z(value == 0);
         self.registers.set_flag_c(carry);
         self.registers.set_flag_h(false);
         self.registers.set_flag_n(false);
@@ -2563,6 +2564,14 @@ impl CPU {
         self.ime = true;
 
         self.pc_to_increment = 1;
+        self.last_instruction_ccycles = 4;
+    }
+
+    fn stop(&mut self) {
+        // TODO
+        self.last_executed_instruction = "STOP".to_string();
+
+        self.pc_to_increment = 2;
         self.last_instruction_ccycles = 4;
     }
 
