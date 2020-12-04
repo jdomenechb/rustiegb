@@ -1,6 +1,7 @@
 use crate::gpu::color::Color;
 use crate::memory::memory::Memory;
 use crate::memory::oam_entry::OamEntry;
+use crate::memory::stat::STATMode;
 use crate::{Byte, Word};
 use ::image::{Rgba, RgbaImage};
 use gfx_device_gl::{CommandBuffer, Factory, Resources};
@@ -37,34 +38,35 @@ impl GPU {
 
         {
             let memory = self.memory.read().unwrap();
-            mode = memory.stat.mode;
+            mode = memory.stat.mode();
         }
 
         self.cycles_acumulated += last_instruction_cycles as u16;
 
         match mode {
             // H-blank mode
-            0 => {
+            STATMode::Mode0 => {
                 if self.cycles_acumulated >= 204 {
                     self.cycles_acumulated = 0;
+
                     {
                         let mut memory = self.memory.write().unwrap();
                         memory.ly += 1;
 
                         if memory.ly == 143 {
                             // Enter V-blank mode
-                            memory.stat.mode = 1;
+                            memory.stat.set_mode(STATMode::Mode1);
                             memory.interrupt_flag().set_vblank(true);
                         } else {
                             // Enter Searching OAM-RAM mode
-                            memory.stat.mode = 2;
+                            memory.stat.set_mode(STATMode::Mode2);
                         }
                     }
                 }
             }
 
             // V-blank mode
-            1 => {
+            STATMode::Mode1 => {
                 if self.cycles_acumulated >= 456 {
                     self.cycles_acumulated = 0;
                     {
@@ -73,7 +75,7 @@ impl GPU {
 
                         if memory.ly > 153 {
                             // Enter Searching OAM-RAM mode
-                            memory.stat.mode = 2;
+                            memory.stat.set_mode(STATMode::Mode2);
                             memory.ly = 0;
                         }
                     }
@@ -81,14 +83,14 @@ impl GPU {
             }
 
             // Searching OAM-RAM mode
-            2 => {
+            STATMode::Mode2 => {
                 if self.cycles_acumulated >= 80 {
                     // Enter transferring data to LCD Driver mode
                     self.cycles_acumulated = 0;
 
                     {
                         let mut memory = self.memory.write().unwrap();
-                        memory.stat.mode = 3;
+                        memory.stat.set_mode(STATMode::Mode3);
                     }
 
                     self.sprites_to_be_drawn.clear();
@@ -118,13 +120,13 @@ impl GPU {
             }
 
             // Transferring data to LCD Driver mode
-            3 => {
+            STATMode::Mode3 => {
                 if self.cycles_acumulated >= 172 {
                     self.cycles_acumulated = 0;
 
                     {
                         let mut memory = self.memory.write().unwrap();
-                        memory.stat.mode = 0;
+                        memory.stat.set_mode(STATMode::Mode0);
                     }
 
                     let memory = self.memory.read().unwrap();
@@ -222,7 +224,6 @@ impl GPU {
                     }
                 }
             }
-            _ => panic!("Invalid GPU STAT mode"),
         }
     }
 

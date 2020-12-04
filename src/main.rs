@@ -132,16 +132,28 @@ fn main() {
                 }
 
                 if cpu.are_interrupts_enabled() {
-                    let check;
+                    let check_vblank;
+                    let check_lcd_stat;
 
                     {
                         let mut memory = memory.write().unwrap();
-                        check = memory.interrupt_enable().is_vblank()
+
+                        check_vblank = memory.interrupt_enable().is_vblank()
                             && memory.interrupt_flag().is_vblank();
+
+                        check_lcd_stat = memory.interrupt_enable().is_lcd_stat()
+                            && memory.interrupt_flag().is_lcd_stat();
                     }
 
-                    if check {
+                    if check_vblank {
                         cpu.vblank_interrupt();
+                        cpu.unhalt();
+
+                        continue;
+                    }
+
+                    if check_lcd_stat {
+                        cpu.lcd_stat_interrupt();
                         cpu.unhalt();
 
                         continue;

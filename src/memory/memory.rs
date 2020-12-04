@@ -168,7 +168,7 @@ impl Memory {
             nr52: 0xf1,
             wave_pattern_ram: WavePatternRam::default(),
             lcdc: LCDC::new(),
-            stat: STAT::new(),
+            stat: STAT::default(),
             scy: 0x00,
             scx: 0x00,
             ly: 0x00,
@@ -353,7 +353,7 @@ impl Memory {
 
         // STAT
         if position == 0xFF41 {
-            return self.stat.to_byte();
+            return (&self.stat).into();
         }
 
         // SCY
@@ -696,7 +696,7 @@ impl Memory {
 
         // STAT
         if position == 0xFF41 {
-            self.stat.from_byte(value);
+            self.stat = value.into();
             return;
         }
 

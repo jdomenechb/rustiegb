@@ -2543,6 +2543,18 @@ impl CPU {
         self.interrupt_vv(0x40)
     }
 
+    pub fn lcd_stat_interrupt(&mut self) {
+        {
+            self.memory
+                .write()
+                .unwrap()
+                .interrupt_flag()
+                .set_lcd_stat(false);
+        }
+
+        self.interrupt_vv(0x48)
+    }
+
     /**
      * Disables interrupts
      */
