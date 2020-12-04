@@ -20,6 +20,7 @@ pub struct GPU {
 impl GPU {
     pub const PIXEL_WIDTH: u8 = 160;
     pub const PIXEL_HEIGHT: u8 = 144;
+
     const TILE_SIZE_BYTES: u8 = 16;
     const BACKGROUND_MAP_TILE_SIZE_X: u16 = 32;
     const BACKGROUND_MAP_TILE_SIZE_Y: u16 = 32;
@@ -45,52 +46,49 @@ impl GPU {
 
         match mode {
             // H-blank mode
-            STATMode::Mode0 => {
+            STATMode::HBlank => {
                 if self.cycles_acumulated >= 204 {
                     self.cycles_acumulated = 0;
 
                     {
                         let mut memory = self.memory.write().unwrap();
-                        memory.ly += 1;
+                        memory.ly_increment();
 
-                        if memory.ly == 143 {
-                            // Enter V-blank mode
-                            memory.stat.set_mode(STATMode::Mode1);
-                            memory.interrupt_flag().set_vblank(true);
+                        if memory.ly.has_reached_end_of_screen() {
+                            memory.set_stat_mode(STATMode::VBlank);
                         } else {
-                            // Enter Searching OAM-RAM mode
-                            memory.stat.set_mode(STATMode::Mode2);
+                            memory.set_stat_mode(STATMode::SearchOamRam);
                         }
                     }
                 }
             }
 
             // V-blank mode
-            STATMode::Mode1 => {
+            STATMode::VBlank => {
                 if self.cycles_acumulated >= 456 {
                     self.cycles_acumulated = 0;
                     {
                         let mut memory = self.memory.write().unwrap();
-                        memory.ly += 1;
+                        memory.ly_increment();
 
-                        if memory.ly > 153 {
+                        if memory.ly.has_reached_end_of_vblank() {
                             // Enter Searching OAM-RAM mode
-                            memory.stat.set_mode(STATMode::Mode2);
-                            memory.ly = 0;
+                            memory.set_stat_mode(STATMode::SearchOamRam);
+                            memory.ly_reset();
                         }
                     }
                 }
             }
 
             // Searching OAM-RAM mode
-            STATMode::Mode2 => {
+            STATMode::SearchOamRam => {
                 if self.cycles_acumulated >= 80 {
                     // Enter transferring data to LCD Driver mode
                     self.cycles_acumulated = 0;
 
                     {
                         let mut memory = self.memory.write().unwrap();
-                        memory.stat.set_mode(STATMode::Mode3);
+                        memory.set_stat_mode(STATMode::LCDTransfer);
                     }
 
                     self.sprites_to_be_drawn.clear();
@@ -104,7 +102,7 @@ impl GPU {
                             return;
                         }
 
-                        let ly = memory.ly;
+                        let ly: u8 = memory.ly.clone().into();
 
                         for oam_entry in memory.oam_ram() {
                             if oam_entry.x() != 0
@@ -120,13 +118,13 @@ impl GPU {
             }
 
             // Transferring data to LCD Driver mode
-            STATMode::Mode3 => {
+            STATMode::LCDTransfer => {
                 if self.cycles_acumulated >= 172 {
                     self.cycles_acumulated = 0;
 
                     {
                         let mut memory = self.memory.write().unwrap();
-                        memory.stat.set_mode(STATMode::Mode0);
+                        memory.set_stat_mode(STATMode::HBlank);
                     }
 
                     let memory = self.memory.read().unwrap();
@@ -153,7 +151,7 @@ impl GPU {
                     let scx = memory.scx();
                     let scy = memory.scy();
                     let bgp = memory.bgp();
-                    let screen_y = memory.ly as u16;
+                    let screen_y = Byte::from(memory.ly.clone()) as u16;
 
                     for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
                         let mut pixel_to_write: Option<DisplayPixel> = None;

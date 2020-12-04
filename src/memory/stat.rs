@@ -2,28 +2,28 @@ use crate::Byte;
 
 #[derive(Clone)]
 pub enum STATMode {
-    Mode0,
-    Mode1,
-    Mode2,
-    Mode3,
+    HBlank,
+    VBlank,
+    SearchOamRam,
+    LCDTransfer,
 }
 
 impl Default for STATMode {
     fn default() -> Self {
-        Self::Mode0
+        Self::HBlank
     }
 }
 
 #[derive(Default)]
 pub struct STAT {
-    lyc_ly_coincidence: bool,
-    mode_2: bool,
-    mode_1: bool,
-    mode_0: bool,
+    pub lyc_ly_coincidence: bool,
+    pub mode_2: bool,
+    pub mode_1: bool,
+    pub mode_0: bool,
 
     // false: not equal to LCDC LY
     // true: LYC = LCDC LY
-    coincidence_flag: bool,
+    pub coincidence_flag: bool,
 
     // 0x0 - During H-Blank
     // 0x1 - During V-Blank
@@ -35,10 +35,10 @@ pub struct STAT {
 impl STAT {
     fn mode_number(&self) -> u8 {
         match self.mode {
-            STATMode::Mode0 => 0x0,
-            STATMode::Mode1 => 0x1,
-            STATMode::Mode2 => 0x2,
-            STATMode::Mode3 => 0x3,
+            STATMode::HBlank => 0x0,
+            STATMode::VBlank => 0x1,
+            STATMode::SearchOamRam => 0x2,
+            STATMode::LCDTransfer => 0x3,
         }
     }
 
@@ -61,10 +61,10 @@ impl From<Byte> for STAT {
             coincidence_flag: value & 0b100 == 0b100,
 
             mode: match value & 0b11 {
-                0x00 => STATMode::Mode0,
-                0x01 => STATMode::Mode1,
-                0x10 => STATMode::Mode2,
-                0x11 => STATMode::Mode3,
+                0x00 => STATMode::HBlank,
+                0x01 => STATMode::VBlank,
+                0x10 => STATMode::SearchOamRam,
+                0x11 => STATMode::LCDTransfer,
                 _ => panic!("Unrecognized STAT mode"),
             },
         }

@@ -7,9 +7,11 @@ use super::stat::STAT;
 use super::timer_control::TimerControl;
 use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use crate::memory::joypad::Joypad;
+use crate::memory::ly::LY;
 use crate::memory::memory_sector::ReadMemory;
 use crate::memory::memory_sector::WriteMemory;
 use crate::memory::oam_memory_sector::OamMemorySector;
+use crate::memory::stat::STATMode;
 use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, SignedByte, Word};
 use std::fs::File;
@@ -89,7 +91,9 @@ pub struct Memory {
     scy: Byte,
     scx: Byte,
     // FF44
-    pub ly: Byte,
+    pub ly: LY,
+    // FF45
+    lyc: Byte,
     // FF46
     dma: Byte,
     // FF47 - FF49
@@ -171,7 +175,8 @@ impl Memory {
             stat: STAT::default(),
             scy: 0x00,
             scx: 0x00,
-            ly: 0x00,
+            ly: LY::default(),
+            lyc: 0x00,
             dma: 0x00,
             bgp: 0xFC,
             obp1: 0xFF,
@@ -368,7 +373,12 @@ impl Memory {
 
         // LY
         if position == 0xFF44 {
-            return self.ly;
+            return self.ly.clone().into();
+        }
+
+        // LYC
+        if position == 0xFF45 {
+            return self.lyc;
         }
 
         // DMA
@@ -714,7 +724,13 @@ impl Memory {
 
         // LY
         if position == 0xFF44 {
-            self.ly = value;
+            self.ly = value.into();
+            return;
+        }
+
+        // LYC
+        if position == 0xFF45 {
+            self.lyc = value;
             return;
         }
 
@@ -892,5 +908,52 @@ impl Memory {
 
     pub fn oam_ram(&mut self) -> &mut OamMemorySector {
         &mut self.oam_ram
+    }
+
+    pub fn set_stat_mode(&mut self, mode: STATMode) {
+        match mode {
+            STATMode::HBlank => {
+                if self.stat.mode_0 {
+                    self.interrupt_flag.set_lcd_stat(true);
+                }
+            }
+
+            STATMode::VBlank => {
+                if self.stat.mode_1 {
+                    self.interrupt_flag.set_lcd_stat(true);
+                }
+
+                self.interrupt_flag().set_vblank(true);
+            }
+            STATMode::SearchOamRam => {
+                if self.stat.mode_2 {
+                    self.interrupt_flag.set_lcd_stat(true);
+                }
+            }
+            _ => {}
+        }
+
+        self.stat.set_mode(mode);
+    }
+
+    pub fn ly_increment(&mut self) {
+        self.ly.increment();
+        self.determine_ly_interrupt();
+    }
+
+    pub fn ly_reset(&mut self) {
+        self.ly.reset();
+        self.determine_ly_interrupt();
+    }
+
+    fn determine_ly_interrupt(&mut self) {
+        let ly = Byte::from(self.ly.clone());
+
+        if self.stat.lyc_ly_coincidence {
+            self.interrupt_flag.set_lcd_stat(
+                (ly == self.lyc && self.stat.coincidence_flag)
+                    || (ly != self.lyc && !self.stat.coincidence_flag),
+            );
+        }
     }
 }
