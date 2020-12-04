@@ -79,17 +79,42 @@ fn main() {
             let mut memory = memory.write().unwrap();
 
             match key {
-                Key::X => memory.joypad().a = true,
-                Key::Z => memory.joypad().b = true,
-                Key::Return => memory.joypad().start = true,
-                Key::RShift => memory.joypad().select = true,
-                Key::Left => memory.joypad().left = true,
-                Key::Right => memory.joypad().right = true,
-                Key::Up => memory.joypad().up = true,
-                Key::Down => memory.joypad().down = true,
+                Key::X => {
+                    memory.joypad().a = true;
+                    memory.interrupt_flag().set_p10_p13_transition(true);
+                }
+                Key::Z => {
+                    memory.joypad().b = true;
+                    memory.interrupt_flag().set_p10_p13_transition(true);
+                }
+                Key::Return => {
+                    memory.joypad().start = true;
+                    memory.interrupt_flag().set_p10_p13_transition(true);
+                }
+                Key::RShift => {
+                    memory.joypad().select = true;
+                    memory.interrupt_flag().set_p10_p13_transition(true);
+                }
+                Key::Left => {
+                    memory.joypad().left = true;
+                    memory.interrupt_flag().set_p10_p13_transition(true);
+                }
+                Key::Right => {
+                    memory.joypad().right = true;
+                    memory.interrupt_flag().set_p10_p13_transition(true);
+                }
+                Key::Up => {
+                    memory.joypad().up = true;
+                    memory.interrupt_flag().set_p10_p13_transition(true);
+                }
+                Key::Down => {
+                    memory.joypad().down = true;
+                    memory.interrupt_flag().set_p10_p13_transition(true);
+                }
+
                 _ => {}
-            }
-        };
+            };
+        }
 
         if let Some(Button::Keyboard(key)) = event.release_args() {
             let mut memory = memory.write().unwrap();
@@ -134,6 +159,7 @@ fn main() {
                 if cpu.are_interrupts_enabled() {
                     let check_vblank;
                     let check_lcd_stat;
+                    let check_joystick;
 
                     {
                         let mut memory = memory.write().unwrap();
@@ -143,6 +169,9 @@ fn main() {
 
                         check_lcd_stat = memory.interrupt_enable().is_lcd_stat()
                             && memory.interrupt_flag().is_lcd_stat();
+
+                        check_joystick = memory.interrupt_enable().is_p10_p13_transition()
+                            && memory.interrupt_flag().is_p10_p13_transition();
                     }
 
                     if check_vblank {
@@ -154,6 +183,13 @@ fn main() {
 
                     if check_lcd_stat {
                         cpu.lcd_stat_interrupt();
+                        cpu.unhalt();
+
+                        continue;
+                    }
+
+                    if check_joystick {
+                        cpu.p10_p13_transition_interrupt();
                         cpu.unhalt();
 
                         continue;

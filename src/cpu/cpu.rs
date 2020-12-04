@@ -2555,6 +2555,18 @@ impl CPU {
         self.interrupt_vv(0x48)
     }
 
+    pub fn p10_p13_transition_interrupt(&mut self) {
+        {
+            self.memory
+                .write()
+                .unwrap()
+                .interrupt_flag()
+                .set_p10_p13_transition(false);
+        }
+
+        self.interrupt_vv(0x60)
+    }
+
     /**
      * Disables interrupts
      */

@@ -35,6 +35,14 @@ impl InterruptFlag {
     pub fn set_lcd_stat(&mut self, value: bool) {
         self.lcd_stat = value;
     }
+
+    pub fn is_p10_p13_transition(&self) -> bool {
+        self.p10_13_transition
+    }
+
+    pub fn set_p10_p13_transition(&mut self, value: bool) {
+        self.p10_13_transition = value;
+    }
 }
 
 impl From<Byte> for InterruptFlag {
