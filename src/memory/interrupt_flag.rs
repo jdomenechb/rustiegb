@@ -43,6 +43,14 @@ impl InterruptFlag {
     pub fn set_p10_p13_transition(&mut self, value: bool) {
         self.p10_13_transition = value;
     }
+
+    pub fn is_timer_overflow(&self) -> bool {
+        self.timer_overflow
+    }
+
+    pub fn set_timer_overflow(&mut self, value: bool) {
+        self.timer_overflow = value;
+    }
 }
 
 impl From<Byte> for InterruptFlag {

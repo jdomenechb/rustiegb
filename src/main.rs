@@ -159,6 +159,7 @@ fn main() {
                 if cpu.are_interrupts_enabled() {
                     let check_vblank;
                     let check_lcd_stat;
+                    let check_timer_overflow;
                     let check_joystick;
 
                     {
@@ -169,6 +170,9 @@ fn main() {
 
                         check_lcd_stat = memory.interrupt_enable().is_lcd_stat()
                             && memory.interrupt_flag().is_lcd_stat();
+
+                        check_timer_overflow = memory.interrupt_enable().is_timer_overflow()
+                            && memory.interrupt_flag().is_timer_overflow();
 
                         check_joystick = memory.interrupt_enable().is_p10_p13_transition()
                             && memory.interrupt_flag().is_p10_p13_transition();
@@ -187,6 +191,15 @@ fn main() {
 
                         continue;
                     }
+
+                    if check_timer_overflow {
+                        cpu.timer_overflow_interrupt();
+                        cpu.unhalt();
+
+                        continue;
+                    }
+
+                    // TODO: Serial transfer
 
                     if check_joystick {
                         cpu.p10_p13_transition_interrupt();

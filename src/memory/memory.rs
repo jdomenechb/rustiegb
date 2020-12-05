@@ -33,6 +33,8 @@ pub struct Memory {
     sio_control: Byte,
     // FF04
     div: Byte,
+    // FF05
+    tima: Byte,
     // FF06
     tma: Byte,
     // FF07
@@ -110,6 +112,9 @@ pub struct Memory {
     internal_ram: InternalRamMemorySector,
     // FFFF
     interrupt_enable: InterruptFlag,
+
+    // -- Other
+    remaining_instruction_cycles: u32,
 }
 
 impl Memory {
@@ -146,8 +151,9 @@ impl Memory {
             serial_transfer_data: 0,
             sio_control: 0,
             div: 0,
+            tima: 0,
             tma: 0,
-            timer_control: TimerControl::new(),
+            timer_control: TimerControl::default(),
             interrupt_flag: InterruptFlag::new(),
             nr10: 0x80,
             nr11: 0xBF,
@@ -187,6 +193,7 @@ impl Memory {
             internal_ram: InternalRamMemorySector::default(),
             interrupt_enable: InterruptFlag::new(),
             oam_ram: OamMemorySector::default(),
+            remaining_instruction_cycles: 0,
         };
     }
 
@@ -246,8 +253,19 @@ impl Memory {
             return self.div;
         }
 
+        // TIMA
+        if position == 0xFF05 {
+            return self.tima;
+        }
+
+        // TMA
         if position == 0xFF06 {
             return self.tma;
+        }
+
+        // Interrupt flag
+        if position == 0xFF0F {
+            return (&self.interrupt_flag).into();
         }
 
         // NR10
@@ -550,6 +568,13 @@ impl Memory {
             return;
         }
 
+        // TIMA
+        if position == 0xFF05 {
+            self.tima = value;
+            return;
+        }
+
+        // TMA
         if position == 0xFF06 {
             self.tma = value;
             return;
@@ -557,7 +582,7 @@ impl Memory {
 
         // Timer Control
         if position == 0xFF07 {
-            self.timer_control.from_byte(value);
+            self.timer_control = value.into();
             return;
         }
 
@@ -870,9 +895,34 @@ impl Memory {
         panic!("ERROR: Memory address {:X} not writable", position);
     }
 
-    // TODO: Implement DIV register
-    // pub fn step(&mut self, last_instruction_cycles: i16) {
-    // }
+    pub fn step(&mut self, last_instruction_cycles: i16) {
+        if !self.timer_control.started {
+            self.remaining_instruction_cycles = 0;
+            return;
+        }
+
+        self.remaining_instruction_cycles += last_instruction_cycles as u32 * 64;
+
+        let divider: u16 = match self.timer_control.input_clock_select {
+            0 => 64,
+            1 => 1,
+            2 => 4,
+            3 => 16,
+            _ => panic!("Invalid input clock select"),
+        };
+
+        while self.remaining_instruction_cycles as i16 - divider as i16 > 0 {
+            let result = self.tima.overflowing_add(1);
+            self.tima = result.0;
+
+            if result.1 {
+                self.interrupt_flag.set_timer_overflow(true);
+                self.tima = self.tma;
+            }
+
+            self.remaining_instruction_cycles -= divider as u32;
+        }
+    }
 
     pub fn scx(&self) -> Byte {
         self.read_byte(0xFF43)

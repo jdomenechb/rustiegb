@@ -1073,6 +1073,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f4c8858baa4ad3c8bcc156ae91a0ffe22b76a3975c40c49b4f04c15c6bce0da"
 
 [[package]]
+name = "readonly"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45abc1c3a18669574c914b075cdc510c34bb3f1fb18f17b1ebf65ca5b3753796"
+dependencies = [
+ "proc-macro2 1.0.24",
+ "quote 1.0.7",
+ "syn",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.1.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1101,6 +1112,7 @@ dependencies = [
  "gfx_device_gl",
  "image",
  "piston_window",
+ "readonly",
  "strum",
  "strum_macros",
 ]

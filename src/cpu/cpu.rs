@@ -376,8 +376,10 @@ impl CPU {
 
         self.registers.pc += self.pc_to_increment as Word;
 
-        // TODO: enable when ready
-        //memory.step(self.last_instruction_ccycles);
+        self.memory
+            .write()
+            .unwrap()
+            .step(self.last_instruction_ccycles);
     }
 
     fn prefix_cb(&mut self) {
@@ -2553,6 +2555,18 @@ impl CPU {
         }
 
         self.interrupt_vv(0x48)
+    }
+
+    pub fn timer_overflow_interrupt(&mut self) {
+        {
+            self.memory
+                .write()
+                .unwrap()
+                .interrupt_flag()
+                .set_timer_overflow(false);
+        }
+
+        self.interrupt_vv(0x50)
     }
 
     pub fn p10_p13_transition_interrupt(&mut self) {
