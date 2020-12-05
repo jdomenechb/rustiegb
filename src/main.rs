@@ -151,10 +151,8 @@ fn main() {
         // Actions to do on update
         event.update(|_update_args| {
             while cpu.has_available_ccycles() {
-                if !cpu.is_halted() {
-                    cpu.step();
-                    gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
-                }
+                cpu.step();
+                gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
 
                 if cpu.are_interrupts_enabled() {
                     let check_vblank;
