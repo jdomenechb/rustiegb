@@ -31,7 +31,7 @@ impl OamEntry {
     }
 
     pub fn priority(&self) -> bool {
-        self.flags & 0b1000 == 0b1000
+        self.flags & 0b10000000 == 0b10000000
     }
 
     pub fn tile_number(&self) -> Byte {
@@ -39,14 +39,14 @@ impl OamEntry {
     }
 
     pub fn palette(&self) -> Byte {
-        self.flags & 0x1
+        self.flags & 0b10000
     }
 
     pub fn flip_y(&self) -> bool {
-        self.flags & 0b100 == 0b100
+        self.flags & 0b1000000 == 0b1000000
     }
 
     pub fn flip_x(&self) -> bool {
-        self.flags & 0b10 == 0b10
+        self.flags & 0b100000 == 0b100000
     }
 }

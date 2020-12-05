@@ -103,12 +103,12 @@ impl GPU {
                         }
 
                         let ly: u8 = memory.ly.clone().into();
+                        let sprite_size = if lcdc.obj_sprite_size() { 16 } else { 8 };
 
                         for oam_entry in memory.oam_ram() {
                             if oam_entry.x() != 0
                                 && ly + 16 >= oam_entry.y()
-                                && ly + 16 < oam_entry.y() + 8
-                            // FIXME: Replace by actual sprite height
+                                && ly + 16 < oam_entry.y() + sprite_size
                             {
                                 self.sprites_to_be_drawn.push(oam_entry);
                             }
@@ -249,6 +249,12 @@ impl GPU {
 
         let mut pixel_to_write = None;
         let mut last_drawn: Option<&OamEntry> = None;
+        let sprite_size;
+
+        {
+            let memory = self.memory.read().unwrap();
+            sprite_size = if memory.lcdc.obj_sprite_size() { 16 } else { 8 };
+        }
 
         for sprite in &self.sprites_to_be_drawn {
             if priority != sprite.priority() {
@@ -259,7 +265,6 @@ impl GPU {
                 continue;
             }
 
-            // TODO: 8x16 mode
             let current_pixel_x: i16 =
                 screen_x as i16 + GPU::PIXELS_PER_TILE as i16 - sprite.x() as i16;
 
@@ -270,7 +275,7 @@ impl GPU {
             let current_pixel_y: i16 =
                 screen_y as i16 + (GPU::PIXELS_PER_TILE * 2) as i16 - sprite.y() as i16;
 
-            if current_pixel_y < 0 || current_pixel_y >= 8 {
+            if current_pixel_y < 0 || current_pixel_y >= sprite_size as i16 {
                 continue;
             }
 
