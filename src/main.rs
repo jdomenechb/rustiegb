@@ -43,7 +43,6 @@ fn main() {
     // --- Other vars
     let debug_cpu: bool = matches.is_present("debug-cpu");
     let bootstrap = matches.is_present("bootstrap");
-    let mut i = 1;
 
     // --- Setting up GB components
     let memory = Arc::new(RwLock::new(Memory::new(
@@ -144,8 +143,6 @@ fn main() {
                 &texture,
             );
             cpu.reset_available_ccycles();
-
-            i += 1;
         });
 
         // Actions to do on update
