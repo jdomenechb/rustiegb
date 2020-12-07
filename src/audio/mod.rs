@@ -1,15 +1,20 @@
 use crate::memory::memory::Memory;
 use crate::Word;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Device, SupportedStreamConfig};
+use cpal::{Device, Stream, SupportedStreamConfig};
 use std::sync::{Arc, RwLock};
 
 pub trait AudioUnit {
-    fn play_pulse(&self, frequency: f32, wave_duty_percent: f32);
+    fn play_pulse(&mut self, stream_n: u8, frequency: f32, wave_duty_percent: f32);
 }
 
 pub struct CpalAudioUnit {
     device: Device,
+
+    stream_1: Option<Stream>,
+    stream_2: Option<Stream>,
+    stream_3: Option<Stream>,
+    stream_4: Option<Stream>,
 }
 
 impl CpalAudioUnit {
@@ -20,15 +25,21 @@ impl CpalAudioUnit {
             .default_output_device()
             .expect("failed to find a default output device");
 
-        Self { device }
+        Self {
+            device,
+            stream_1: None,
+            stream_2: None,
+            stream_3: None,
+            stream_4: None,
+        }
     }
 }
 
 impl AudioUnit for CpalAudioUnit {
-    fn play_pulse(&self, frequency: f32, wave_duty_percent: f32) {
+    fn play_pulse(&mut self, stream_n: u8, frequency: f32, wave_duty_percent: f32) {
         let config = self.device.default_output_config().unwrap();
 
-        match config.sample_format() {
+        let stream = match config.sample_format() {
             cpal::SampleFormat::F32 => {
                 run::<f32>(&self.device, &config.into(), frequency, wave_duty_percent).unwrap()
             }
@@ -38,6 +49,12 @@ impl AudioUnit for CpalAudioUnit {
             cpal::SampleFormat::U16 => {
                 run::<u16>(&self.device, &config.into(), frequency, wave_duty_percent).unwrap()
             }
+        };
+
+        match stream_n {
+            1 => self.stream_1 = Some(stream),
+            2 => self.stream_2 = Some(stream),
+            _ => panic!("Non pulse stream given"),
         }
 
         fn run<T>(
@@ -45,7 +62,7 @@ impl AudioUnit for CpalAudioUnit {
             config: &cpal::StreamConfig,
             frequency: f32,
             wave_duty_percent: f32,
-        ) -> Result<(), anyhow::Error>
+        ) -> Result<Stream, anyhow::Error>
         where
             T: cpal::Sample,
         {
@@ -82,12 +99,7 @@ impl AudioUnit for CpalAudioUnit {
                 err_fn,
             )?;
 
-            stream.play()?;
-
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            println!("dfef");
-
-            Ok(())
+            Ok(stream)
         }
     }
 }
@@ -95,9 +107,10 @@ impl AudioUnit for CpalAudioUnit {
 pub struct OutputDebugAudioUnit {}
 
 impl AudioUnit for OutputDebugAudioUnit {
-    fn play_pulse(&self, frequency: f32, wave_duty_percent: f32) {
+    fn play_pulse(&mut self, stream_n: u8, frequency: f32, wave_duty_percent: f32) {
         println!(
-            "Played at {} Hz, {}% duty",
+            "S{}: Played at {} Hz, {}% duty",
+            stream_n,
             frequency,
             wave_duty_percent * 100.0
         );
@@ -136,17 +149,18 @@ impl AudioUnitAdapter {
 
         // Sound 1
         if audio_triggers.0 {
-            self.read_pulse(0xFF14, 0xFF13, 0xFF12, 0xFF11, Some(0xFF10));
+            self.read_pulse(1, 0xFF14, 0xFF13, 0xFF12, 0xFF11, Some(0xFF10));
         }
 
         // Sound 2
         if audio_triggers.1 {
-            self.read_pulse(0xFF19, 0xFF18, 0xFF17, 0xFF16, None);
+            self.read_pulse(2, 0xFF19, 0xFF18, 0xFF17, 0xFF16, None);
         }
     }
 
     fn read_pulse(
         &mut self,
+        wave_n: u8,
         control_addr: Word,
         frequency_addr: Word,
         volume_addr: Word,
@@ -187,6 +201,6 @@ impl AudioUnitAdapter {
             _ => panic!("Invalid Wave Duty"),
         };
 
-        self.au.play_pulse(frequency, wave_duty_percent);
+        self.au.play_pulse(wave_n, frequency, wave_duty_percent);
     }
 }
