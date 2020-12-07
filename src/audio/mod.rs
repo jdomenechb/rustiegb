@@ -7,6 +7,20 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, SupportedStreamConfig};
 use std::sync::{Arc, RwLock};
 
+pub enum VolumeEnvelopeDirection {
+    UP,
+    DOWN,
+}
+
+impl From<bool> for VolumeEnvelopeDirection {
+    fn from(value: bool) -> Self {
+        match value {
+            false => Self::DOWN,
+            true => Self::UP,
+        }
+    }
+}
+
 pub struct AudioUnit {
     auo: Box<dyn AudioUnitOutput>,
     memory: Arc<RwLock<Memory>>,
@@ -93,6 +107,15 @@ impl AudioUnit {
             _ => panic!("Invalid Wave Duty"),
         };
 
-        self.auo.play_pulse(wave_n, frequency, wave_duty_percent);
+        let initial_envelope_vol = (volume_reg >> 4) & 0xF;
+        let envelope_direction = VolumeEnvelopeDirection::from(volume_reg & 0b1000 == 0b1000);
+
+        self.auo.play_pulse(
+            wave_n,
+            frequency,
+            wave_duty_percent,
+            initial_envelope_vol,
+            envelope_direction,
+        );
     }
 }
