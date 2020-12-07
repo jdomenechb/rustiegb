@@ -9,7 +9,8 @@ extern crate cpal;
 extern crate image;
 extern crate piston_window;
 
-use crate::audio::{AudioUnit, AudioUnitAdapter, CpalAudioUnit, OutputDebugAudioUnit};
+use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput, DebugAudioUnitOutput};
+use crate::audio::AudioUnit;
 use clap::{App, Arg};
 use cpu::cpu::CPU;
 use gpu::gpu::GPU;
@@ -62,15 +63,15 @@ fn main() {
     let mut cpu = CPU::new(memory.clone(), debug_cpu, bootstrap);
     let mut gpu = GPU::new(memory.clone());
 
-    let audio_unit: Box<dyn AudioUnit>;
+    let audio_unit_output: Box<dyn AudioUnitOutput>;
 
     if debug_audio {
-        audio_unit = Box::new(OutputDebugAudioUnit {});
+        audio_unit_output = Box::new(DebugAudioUnitOutput {});
     } else {
-        audio_unit = Box::new(CpalAudioUnit::new());
+        audio_unit_output = Box::new(CpalAudioUnitOutput::new());
     }
 
-    let mut audio = AudioUnitAdapter::new(audio_unit, memory.clone());
+    let mut audio_unit = AudioUnit::new(audio_unit_output, memory.clone());
 
     // --- Seting up window
     let mut window: PistonWindow = WindowSettings::new(APP_NAME, [640, 576])
@@ -170,7 +171,7 @@ fn main() {
             while cpu.has_available_ccycles() {
                 cpu.step();
                 gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
-                audio.step();
+                audio_unit.step();
 
                 if cpu.are_interrupts_enabled() {
                     let check_vblank;
