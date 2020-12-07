@@ -5,7 +5,7 @@ use cpal::{Device, SupportedStreamConfig};
 use std::sync::{Arc, RwLock};
 
 pub trait AudioUnit {
-    fn play_pulse(&self, frequency: f32);
+    fn play_pulse(&self, frequency: f32, wave_duty_percent: f32);
 }
 
 pub struct CpalAudioUnit {
@@ -25,19 +25,26 @@ impl CpalAudioUnit {
 }
 
 impl AudioUnit for CpalAudioUnit {
-    fn play_pulse(&self, frequency: f32) {
+    fn play_pulse(&self, frequency: f32, wave_duty_percent: f32) {
         let config = self.device.default_output_config().unwrap();
 
         match config.sample_format() {
-            cpal::SampleFormat::F32 => run::<f32>(&self.device, &config.into(), frequency).unwrap(),
-            cpal::SampleFormat::I16 => run::<i16>(&self.device, &config.into(), frequency).unwrap(),
-            cpal::SampleFormat::U16 => run::<u16>(&self.device, &config.into(), frequency).unwrap(),
+            cpal::SampleFormat::F32 => {
+                run::<f32>(&self.device, &config.into(), frequency, wave_duty_percent).unwrap()
+            }
+            cpal::SampleFormat::I16 => {
+                run::<i16>(&self.device, &config.into(), frequency, wave_duty_percent).unwrap()
+            }
+            cpal::SampleFormat::U16 => {
+                run::<u16>(&self.device, &config.into(), frequency, wave_duty_percent).unwrap()
+            }
         }
 
         fn run<T>(
             device: &cpal::Device,
             config: &cpal::StreamConfig,
             frequency: f32,
+            wave_duty_percent: f32,
         ) -> Result<(), anyhow::Error>
         where
             T: cpal::Sample,
@@ -46,11 +53,17 @@ impl AudioUnit for CpalAudioUnit {
             let channels = config.channels as usize;
 
             let mut sample_clock = 0f32;
+            let sample_in_period = sample_rate / frequency;
+            let high_part_max = sample_in_period * wave_duty_percent;
 
             let mut next_value = move || {
                 sample_clock = (sample_clock + 1.0) % sample_rate; // 0..44099
 
-                -(sample_clock / (sample_rate / frequency / 2.0) % 2.0) + 0.5
+                if sample_clock % sample_in_period <= high_part_max {
+                    1.0
+                } else {
+                    -1.0
+                }
             };
 
             let err_fn = |err| println!("an error occurred on stream: {}", err);
@@ -71,7 +84,8 @@ impl AudioUnit for CpalAudioUnit {
 
             stream.play()?;
 
-            std::thread::sleep(std::time::Duration::from_millis(50));
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            println!("dfef");
 
             Ok(())
         }
@@ -81,8 +95,12 @@ impl AudioUnit for CpalAudioUnit {
 pub struct OutputDebugAudioUnit {}
 
 impl AudioUnit for OutputDebugAudioUnit {
-    fn play_pulse(&self, frequency: f32) {
-        println!("Played at {} Hz", frequency);
+    fn play_pulse(&self, frequency: f32, wave_duty_percent: f32) {
+        println!(
+            "Played at {} Hz, {}% duty",
+            frequency,
+            wave_duty_percent * 100.0
+        );
     }
 }
 
@@ -114,7 +132,7 @@ impl AudioUnitAdapter {
             return;
         }
 
-        // TODO: sound 2-4
+        // TODO: sound 3-4
 
         // Sound 1
         if audio_triggers.0 {
@@ -122,7 +140,7 @@ impl AudioUnitAdapter {
         }
 
         // Sound 2
-        if audio_triggers.2 {
+        if audio_triggers.1 {
             self.read_pulse(0xFF19, 0xFF18, 0xFF17, 0xFF16, None);
         }
     }
@@ -156,13 +174,19 @@ impl AudioUnitAdapter {
             }
         }
 
-        let trigger = control_reg & 0b10000000 == 0b10000000;
-
-        // TODO: Implement trigger
-
         let frequency = ((control_reg as u16 & 0b111) << 8) | frequency_reg as u16;
         let frequency = 131072 as f32 / (2048 - frequency) as f32;
 
-        self.au.play_pulse(frequency);
+        let wave_duty = (length_reg >> 6) & 0b11;
+
+        let wave_duty_percent: f32 = match wave_duty {
+            0b00 => 0.125,
+            0b01 => 0.25,
+            0b10 => 0.50,
+            0b11 => 0.75,
+            _ => panic!("Invalid Wave Duty"),
+        };
+
+        self.au.play_pulse(frequency, wave_duty_percent);
     }
 }
