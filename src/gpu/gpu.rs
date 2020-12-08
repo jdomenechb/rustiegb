@@ -270,8 +270,9 @@ impl GPU {
 
         let mut cache = self.tile_row_cache.borrow_mut();
 
-        if cache.contains_key(&key) {
-            return *cache.get(&key).unwrap();
+        match cache.get(&key) {
+            Some(result) => return *result,
+            _ => {}
         }
 
         let memory = self.memory.borrow();
