@@ -5,7 +5,8 @@ use crate::Word;
 use audio_unit_output::AudioUnitOutput;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, SupportedStreamConfig};
-use std::sync::{Arc, RwLock};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub enum VolumeEnvelopeDirection {
     UP,
@@ -23,11 +24,11 @@ impl From<bool> for VolumeEnvelopeDirection {
 
 pub struct AudioUnit {
     auo: Box<dyn AudioUnitOutput>,
-    memory: Arc<RwLock<Memory>>,
+    memory: Rc<RefCell<Memory>>,
 }
 
 impl AudioUnit {
-    pub fn new(au: Box<dyn AudioUnitOutput>, memory: Arc<RwLock<Memory>>) -> Self {
+    pub fn new(au: Box<dyn AudioUnitOutput>, memory: Rc<RefCell<Memory>>) -> Self {
         Self { auo: au, memory }
     }
 
@@ -36,7 +37,7 @@ impl AudioUnit {
         let audio_triggers;
 
         {
-            let mut memory = self.memory.write().unwrap();
+            let mut memory = self.memory.borrow_mut();
 
             nr52 = memory.read_byte(0xFF26);
             audio_triggers = memory.audio_has_been_trigerred();
@@ -80,7 +81,7 @@ impl AudioUnit {
         let sweep;
 
         {
-            let memory = self.memory.read().unwrap();
+            let memory = self.memory.borrow();
 
             control_reg = memory.internally_read_byte(control_addr).unwrap();
             frequency_reg = memory.internally_read_byte(frequency_addr).unwrap();
