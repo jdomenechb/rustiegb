@@ -1,4 +1,5 @@
 use crate::gpu::color::Color;
+use crate::math::word_to_two_bytes;
 use crate::memory::memory::Memory;
 use crate::memory::oam_entry::OamEntry;
 use crate::memory::stat::STATMode;
@@ -151,10 +152,18 @@ impl GPU {
                     let scx = memory.scx();
                     let scy = memory.scy();
                     let bgp = memory.bgp();
+
                     let screen_y = Byte::from(memory.ly.clone()) as u16;
+                    let screen_y_with_offset = scy as u16 + screen_y;
+                    let tile_row = screen_y_with_offset as u16 % 8;
+
+                    let mut previous_bg_tile_map_location = 0u16;
+                    let mut tile_bytes = (0, 0);
 
                     for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
                         let mut pixel_to_write: Option<DisplayPixel> = None;
+                        let screen_x_with_offset = scx as u16 + screen_x;
+                        let tile_x = screen_x_with_offset % 8;
 
                         // Sprites with high priority
                         if lcdc.obj_sprite_display() {
@@ -163,9 +172,6 @@ impl GPU {
 
                         if lcdc.bg_display() {
                             // Background
-                            let screen_y_with_offset = scy as u16 + screen_y;
-                            let screen_x_with_offset = scx as u16 + screen_x;
-
                             let bg_tile_map_location = bg_tile_map_start_location
                                 + (((screen_y_with_offset / GPU::PIXELS_PER_TILE)
                                     * GPU::BACKGROUND_MAP_TILE_SIZE_X)
@@ -173,15 +179,17 @@ impl GPU {
                                         * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
                                 + (screen_x_with_offset / GPU::PIXELS_PER_TILE);
 
-                            let bg_data_location = bg_data_start_location
-                                + memory.read_byte(bg_tile_map_location) as Word
-                                    * GPU::TILE_SIZE_BYTES as Word;
+                            if previous_bg_tile_map_location != bg_tile_map_location {
+                                let bg_data_location = bg_data_start_location
+                                    + memory.read_byte(bg_tile_map_location) as Word
+                                        * GPU::TILE_SIZE_BYTES as Word;
 
-                            let tile_row = screen_y_with_offset as u16 % 8;
-                            let tile_x = screen_x_with_offset % 8;
+                                tile_bytes = self.read_tile_row(bg_data_location, tile_row);
 
-                            let pixel =
-                                self.read_pixel_from_tile(bg_data_location, tile_row, tile_x);
+                                previous_bg_tile_map_location = bg_tile_map_location;
+                            }
+
+                            let pixel = self.read_pixel_from_tile(tile_x, tile_bytes);
                             let pixel_color = match pixel {
                                 0b11 => bgp >> 6,
                                 0b10 => bgp >> 4,
@@ -225,23 +233,22 @@ impl GPU {
         }
     }
 
-    fn read_pixel_from_tile(&self, tile_address: Word, row: u16, x: u16) -> Byte {
-        let byte1;
-        let byte2;
-
-        {
-            let memory = self.memory.read().unwrap();
-
-            byte1 = memory.read_byte(tile_address + row * 2);
-            byte2 = memory.read_byte(tile_address + row * 2 + 1);
-        }
-
-        let bit_pos = 7 - x;
+    fn read_pixel_from_tile(&self, bit_offset: u16, (byte1, byte2): (Byte, Byte)) -> Byte {
+        let bit_pos = 7 - bit_offset;
 
         let pixel_bit1 = (byte1 >> bit_pos) & 0b1;
         let pixel_bit0 = (byte2 >> bit_pos) & 0b1;
 
         ((pixel_bit1 << 1) | pixel_bit0) & 0b11
+    }
+
+    fn read_tile_row(&self, tile_address: Word, row: u16) -> (Byte, Byte) {
+        let memory = self.memory.read().unwrap();
+
+        let word = memory.read_word(tile_address + row * 2);
+        let bytes = word_to_two_bytes(word);
+
+        (bytes.1, bytes.0)
     }
 
     fn draw_sprites(&self, priority: bool, screen_x: u16, screen_y: u16) -> Option<DisplayPixel> {
@@ -285,17 +292,19 @@ impl GPU {
                 SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * GPU::TILE_SIZE_BYTES as u16;
 
             let pixel = self.read_pixel_from_tile(
-                sprite_addr,
-                if sprite.flip_y() {
-                    7 - current_pixel_y
-                } else {
-                    current_pixel_y
-                } as Word,
                 if sprite.flip_x() {
                     7 - current_pixel_x
                 } else {
                     current_pixel_x
                 } as Word,
+                self.read_tile_row(
+                    sprite_addr,
+                    if sprite.flip_y() {
+                        7 - current_pixel_y
+                    } else {
+                        current_pixel_y
+                    } as Word,
+                ),
             );
 
             if pixel == 0 {
