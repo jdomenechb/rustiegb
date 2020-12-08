@@ -12,7 +12,8 @@ use gpu::gpu::GPU;
 use image::ImageBuffer;
 use memory::memory::Memory;
 use piston_window::*;
-use std::sync::{Arc, RwLock};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 const APP_NAME: &str = "RustieGB";
 
@@ -45,7 +46,7 @@ fn main() {
     let bootstrap = matches.is_present("bootstrap");
 
     // --- Setting up GB components
-    let memory = Arc::new(RwLock::new(Memory::new(
+    let memory = Rc::new(RefCell::new(Memory::new(
         matches.value_of("ROMFILE").unwrap(),
         bootstrap,
     )));
@@ -75,7 +76,7 @@ fn main() {
 
     while let Some(event) = window.next() {
         if let Some(Button::Keyboard(key)) = event.press_args() {
-            let mut memory = memory.write().unwrap();
+            let mut memory = memory.borrow_mut();
 
             match key {
                 Key::X => {
@@ -116,7 +117,7 @@ fn main() {
         }
 
         if let Some(Button::Keyboard(key)) = event.release_args() {
-            let mut memory = memory.write().unwrap();
+            let mut memory = memory.borrow_mut();
 
             match key {
                 Key::X => memory.joypad().a = false,
@@ -158,7 +159,7 @@ fn main() {
                     let check_joystick;
 
                     {
-                        let mut memory = memory.write().unwrap();
+                        let mut memory = memory.borrow_mut();
 
                         check_vblank = memory.interrupt_enable().is_vblank()
                             && memory.interrupt_flag().is_vblank();
