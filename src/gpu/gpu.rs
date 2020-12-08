@@ -9,7 +9,7 @@ use gfx_device_gl::{CommandBuffer, Factory, Resources};
 use piston_window::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::rc::Rc;
 
 type DisplayPixel = [Byte; 4];
 
@@ -17,7 +17,7 @@ pub struct GPU {
     cycles_acumulated: u16,
     sprites_to_be_drawn: Vec<OamEntry>,
 
-    memory: Arc<RwLock<Memory>>,
+    memory: Rc<RefCell<Memory>>,
 
     tile_row_cache: RefCell<HashMap<(Word, u16), (Byte, Byte)>>,
 }
@@ -31,7 +31,7 @@ impl GPU {
     const BACKGROUND_MAP_TILE_SIZE_Y: u16 = 32;
     const PIXELS_PER_TILE: u16 = 8;
 
-    pub fn new(memory: Arc<RwLock<Memory>>) -> GPU {
+    pub fn new(memory: Rc<RefCell<Memory>>) -> GPU {
         return GPU {
             cycles_acumulated: 0,
             sprites_to_be_drawn: Vec::with_capacity(10),
@@ -44,7 +44,7 @@ impl GPU {
         let mode;
 
         {
-            let memory = self.memory.read().unwrap();
+            let memory = self.memory.borrow();
             mode = memory.stat.mode();
         }
 
@@ -57,7 +57,7 @@ impl GPU {
                     self.cycles_acumulated = 0;
 
                     {
-                        let mut memory = self.memory.write().unwrap();
+                        let mut memory = self.memory.borrow_mut();
                         memory.ly_increment();
 
                         if memory.ly.has_reached_end_of_screen() {
@@ -74,7 +74,7 @@ impl GPU {
                 if self.cycles_acumulated >= 456 {
                     self.cycles_acumulated = 0;
                     {
-                        let mut memory = self.memory.write().unwrap();
+                        let mut memory = self.memory.borrow_mut();
                         memory.ly_increment();
 
                         if memory.ly.has_reached_end_of_vblank() {
@@ -93,7 +93,7 @@ impl GPU {
                     // Enter transferring data to LCD Driver mode
                     self.cycles_acumulated = 0;
 
-                    let mut memory = self.memory.write().unwrap();
+                    let mut memory = self.memory.borrow_mut();
                     memory.set_stat_mode(STATMode::LCDTransfer);
 
                     self.sprites_to_be_drawn.clear();
@@ -124,11 +124,11 @@ impl GPU {
                     self.cycles_acumulated = 0;
 
                     {
-                        let mut memory = self.memory.write().unwrap();
+                        let mut memory = self.memory.borrow_mut();
                         memory.set_stat_mode(STATMode::HBlank);
                     }
 
-                    let memory = self.memory.read().unwrap();
+                    let memory = self.memory.borrow();
 
                     // Draw pixel line
                     let lcdc = &memory.lcdc;
@@ -274,7 +274,7 @@ impl GPU {
             return *cache.get(&key).unwrap();
         }
 
-        let memory = self.memory.read().unwrap();
+        let memory = self.memory.borrow();
 
         let word = memory.read_word(tile_address + row * 2);
         let bytes = word_to_two_bytes(word);
@@ -389,7 +389,7 @@ impl GPU {
         texture_context: &mut TextureContext<Factory, Resources, CommandBuffer>,
         texture: &Texture<Resources>,
     ) {
-        let memory = self.memory.read().unwrap();
+        let memory = self.memory.borrow();
 
         let pixel_size: (f64, f64) = (
             window_size.get(0).unwrap() / (GPU::PIXEL_WIDTH as f64),
