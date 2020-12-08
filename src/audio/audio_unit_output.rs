@@ -4,35 +4,21 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, Stream};
 
 pub trait AudioUnitOutput {
-    fn play_pulse(
-        &mut self,
-        stream_n: u8,
-        frequency: f32,
-        wave_duty_percent: f32,
-        initial_volume_envelope: Byte,
-        volume_envelope_direction: VolumeEnvelopeDirection,
-    );
+    fn play_pulse(&mut self, description: PulseDescription);
     fn stop_all(&mut self);
 }
 
 pub struct DebugAudioUnitOutput {}
 
 impl AudioUnitOutput for DebugAudioUnitOutput {
-    fn play_pulse(
-        &mut self,
-        stream_n: u8,
-        frequency: f32,
-        wave_duty_percent: f32,
-        initial_volume_envelope: Byte,
-        volume_envelope_direction: VolumeEnvelopeDirection,
-    ) {
+    fn play_pulse(&mut self, description: PulseDescription) {
         println!(
             "S{}: Played at {} Hz, {}% duty. Env:  IV{}, D{}",
-            stream_n,
-            frequency,
-            wave_duty_percent * 100.0,
-            initial_volume_envelope,
-            match volume_envelope_direction {
+            description.pulse_n,
+            description.frequency,
+            description.wave_duty_percent * 100.0,
+            description.initial_volume_envelope,
+            match description.volume_envelope_direction {
                 VolumeEnvelopeDirection::UP => "UP",
                 VolumeEnvelopeDirection::DOWN => "DOWN",
             }
@@ -44,6 +30,14 @@ impl AudioUnitOutput for DebugAudioUnitOutput {
     }
 }
 
+pub struct PulseDescription {
+    pub pulse_n: u8,
+    pub frequency: f32,
+    pub wave_duty_percent: f32,
+    pub initial_volume_envelope: Byte,
+    pub volume_envelope_direction: VolumeEnvelopeDirection,
+}
+
 pub struct CpalAudioUnitOutput {
     device: Device,
 
@@ -51,6 +45,9 @@ pub struct CpalAudioUnitOutput {
     stream_2: Option<Stream>,
     stream_3: Option<Stream>,
     stream_4: Option<Stream>,
+
+    audio_status_1: Option<PulseDescription>,
+    audio_status_2: Option<PulseDescription>,
 }
 
 impl CpalAudioUnitOutput {
@@ -67,52 +64,29 @@ impl CpalAudioUnitOutput {
             stream_2: None,
             stream_3: None,
             stream_4: None,
+            audio_status_1: None,
+            audio_status_2: None,
         }
     }
 }
 
 impl AudioUnitOutput for CpalAudioUnitOutput {
-    fn play_pulse(
-        &mut self,
-        stream_n: u8,
-        frequency: f32,
-        wave_duty_percent: f32,
-        initial_volume_envelope: Byte,
-        volume_envelope_direction: VolumeEnvelopeDirection,
-    ) {
+    fn play_pulse(&mut self, description: PulseDescription) {
         let config = self.device.default_output_config().unwrap();
 
         let stream = match config.sample_format() {
-            cpal::SampleFormat::F32 => run::<f32>(
-                &self.device,
-                &config.into(),
-                frequency,
-                wave_duty_percent,
-                initial_volume_envelope,
-                volume_envelope_direction,
-            )
-            .unwrap(),
-            cpal::SampleFormat::I16 => run::<i16>(
-                &self.device,
-                &config.into(),
-                frequency,
-                wave_duty_percent,
-                initial_volume_envelope,
-                volume_envelope_direction,
-            )
-            .unwrap(),
-            cpal::SampleFormat::U16 => run::<u16>(
-                &self.device,
-                &config.into(),
-                frequency,
-                wave_duty_percent,
-                initial_volume_envelope,
-                volume_envelope_direction,
-            )
-            .unwrap(),
+            cpal::SampleFormat::F32 => {
+                run::<f32>(&self.device, &config.into(), &description).unwrap()
+            }
+            cpal::SampleFormat::I16 => {
+                run::<i16>(&self.device, &config.into(), &description).unwrap()
+            }
+            cpal::SampleFormat::U16 => {
+                run::<u16>(&self.device, &config.into(), &description).unwrap()
+            }
         };
 
-        match stream_n {
+        match description.pulse_n {
             1 => self.stream_1 = Some(stream),
             2 => self.stream_2 = Some(stream),
             _ => panic!("Non pulse stream given"),
@@ -121,10 +95,7 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         fn run<T>(
             device: &cpal::Device,
             config: &cpal::StreamConfig,
-            frequency: f32,
-            wave_duty_percent: f32,
-            initial_volume_envelope: Byte,
-            volume_envelope_direction: VolumeEnvelopeDirection,
+            description: &PulseDescription,
         ) -> Result<Stream, anyhow::Error>
         where
             T: cpal::Sample,
@@ -133,10 +104,10 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
             let channels = config.channels as usize;
 
             let mut sample_clock = 0f32;
-            let sample_in_period = sample_rate / frequency;
-            let high_part_max = sample_in_period * wave_duty_percent;
+            let sample_in_period = sample_rate / description.frequency;
+            let high_part_max = sample_in_period * description.wave_duty_percent;
 
-            let volume_envelope = initial_volume_envelope;
+            let volume_envelope = description.initial_volume_envelope;
 
             let mut next_value = move || {
                 sample_clock = (sample_clock + 1.0) % sample_rate; // 0..44099

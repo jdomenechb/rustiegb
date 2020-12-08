@@ -1,5 +1,6 @@
 pub mod audio_unit_output;
 
+use crate::audio::audio_unit_output::PulseDescription;
 use crate::memory::memory::Memory;
 use crate::Word;
 use audio_unit_output::AudioUnitOutput;
@@ -67,7 +68,7 @@ impl AudioUnit {
 
     fn read_pulse(
         &mut self,
-        wave_n: u8,
+        pulse_n: u8,
         control_addr: Word,
         frequency_addr: Word,
         volume_addr: Word,
@@ -108,15 +109,16 @@ impl AudioUnit {
             _ => panic!("Invalid Wave Duty"),
         };
 
-        let initial_envelope_vol = (volume_reg >> 4) & 0xF;
-        let envelope_direction = VolumeEnvelopeDirection::from(volume_reg & 0b1000 == 0b1000);
+        let initial_volume_envelope = (volume_reg >> 4) & 0xF;
+        let volume_envelope_direction =
+            VolumeEnvelopeDirection::from(volume_reg & 0b1000 == 0b1000);
 
-        self.auo.play_pulse(
-            wave_n,
+        self.auo.play_pulse(PulseDescription {
+            pulse_n,
             frequency,
             wave_duty_percent,
-            initial_envelope_vol,
-            envelope_direction,
-        );
+            initial_volume_envelope,
+            volume_envelope_direction,
+        });
     }
 }
