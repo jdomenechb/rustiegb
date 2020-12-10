@@ -1,13 +1,13 @@
 pub mod audio_unit_output;
 
-use crate::audio::audio_unit_output::PulseDescription;
 use crate::memory::memory::Memory;
-use crate::Word;
+use crate::{Byte, Word};
 use audio_unit_output::AudioUnitOutput;
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Device, Stream, SupportedStreamConfig};
 use std::cell::RefCell;
 use std::rc::Rc;
+
+const CYCLES_1_256_SEC: u16 = 16384;
+const CYCLES_1_64_SEC: u32 = 16384 * 4;
 
 pub enum VolumeEnvelopeDirection {
     UP,
@@ -23,17 +23,66 @@ impl From<bool> for VolumeEnvelopeDirection {
     }
 }
 
+pub struct PulseDescription {
+    pub pulse_n: u8,
+    pub frequency: f32,
+    pub wave_duty_percent: f32,
+    pub volume_envelope: Byte,
+    pub volume_envelope_direction: VolumeEnvelopeDirection,
+    pub volume_envelope_duration_in_1_64_s: u8,
+    pub remaining_volume_envelope_duration_in_1_64_s: u8,
+}
+
+impl PulseDescription {
+    fn step_64(&mut self) {
+        if self.volume_envelope_duration_in_1_64_s > 0 {
+            match self.volume_envelope_direction {
+                VolumeEnvelopeDirection::UP => {
+                    if self.volume_envelope < 0xF {
+                        self.volume_envelope += 1;
+                    }
+                }
+                VolumeEnvelopeDirection::DOWN => {
+                    if self.volume_envelope > 0 {
+                        self.volume_envelope -= 1;
+                    }
+                }
+            }
+
+            self.remaining_volume_envelope_duration_in_1_64_s -= 1;
+
+            if self.remaining_volume_envelope_duration_in_1_64_s == 0 {
+                self.remaining_volume_envelope_duration_in_1_64_s =
+                    self.volume_envelope_duration_in_1_64_s;
+            }
+        }
+    }
+}
+
 pub struct AudioUnit {
     auo: Box<dyn AudioUnitOutput>,
     memory: Rc<RefCell<Memory>>,
+
+    audio_status_1: Option<PulseDescription>,
+    audio_status_2: Option<PulseDescription>,
+
+    cycle_count: u16,
+    cycle_64_count: u32,
 }
 
 impl AudioUnit {
     pub fn new(au: Box<dyn AudioUnitOutput>, memory: Rc<RefCell<Memory>>) -> Self {
-        Self { auo: au, memory }
+        Self {
+            auo: au,
+            memory,
+            audio_status_1: None,
+            audio_status_2: None,
+            cycle_count: 0,
+            cycle_64_count: 0,
+        }
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self, last_instruction_cycles: u8) {
         let nr52;
         let audio_triggers;
 
@@ -44,12 +93,31 @@ impl AudioUnit {
             audio_triggers = memory.audio_has_been_trigerred();
         }
 
+        self.cycle_count += last_instruction_cycles as u16;
+        self.cycle_64_count += last_instruction_cycles as u32;
+
+        if self.cycle_count > CYCLES_1_256_SEC {
+            self.cycle_count -= CYCLES_1_256_SEC;
+
+            // TODO
+        }
+
+        if self.cycle_64_count > CYCLES_1_64_SEC {
+            self.cycle_64_count -= CYCLES_1_64_SEC;
+
+            if self.audio_status_1.is_some() {
+                self.audio_status_1.as_mut().unwrap().step_64();
+            }
+
+            if self.audio_status_2.is_some() {
+                self.audio_status_2.as_mut().unwrap().step_64();
+            }
+        }
+
         let all_sound_trigger = nr52 & 0b10000000 == 0b10000000;
 
         if !all_sound_trigger {
-            self.auo.stop_all();
-
-            // FIXME: Might need to restart control registers
+            self.stop_all();
             return;
         }
 
@@ -64,6 +132,12 @@ impl AudioUnit {
         if audio_triggers.1 {
             self.read_pulse(2, 0xFF19, 0xFF18, 0xFF17, 0xFF16, None);
         }
+    }
+
+    fn stop_all(&mut self) {
+        self.auo.stop_all();
+        self.audio_status_1 = None;
+        self.audio_status_2 = None;
     }
 
     fn read_pulse(
@@ -113,12 +187,24 @@ impl AudioUnit {
         let volume_envelope_direction =
             VolumeEnvelopeDirection::from(volume_reg & 0b1000 == 0b1000);
 
-        self.auo.play_pulse(PulseDescription {
+        let volume_envelope_duration_in_1_64_s = volume_reg & 0b111;
+
+        let pulse_description = PulseDescription {
             pulse_n,
             frequency,
             wave_duty_percent,
-            initial_volume_envelope,
+            volume_envelope: initial_volume_envelope,
             volume_envelope_direction,
-        });
+            volume_envelope_duration_in_1_64_s,
+            remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
+        };
+
+        self.auo.play_pulse(&pulse_description);
+
+        match pulse_n {
+            1 => self.audio_status_1 = Some(pulse_description),
+            2 => self.audio_status_2 = Some(pulse_description),
+            _ => {}
+        }
     }
 }

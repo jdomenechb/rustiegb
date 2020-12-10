@@ -172,7 +172,7 @@ fn main() {
             while cpu.has_available_ccycles() {
                 cpu.step();
                 gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
-                audio_unit.step();
+                audio_unit.step(cpu.get_last_instruction_ccycles());
 
                 if cpu.are_interrupts_enabled() {
                     let check_vblank;
