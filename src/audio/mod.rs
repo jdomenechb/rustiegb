@@ -34,8 +34,12 @@ pub struct PulseDescription {
 }
 
 impl PulseDescription {
-    fn step_64(&mut self) {
-        if self.volume_envelope_duration_in_1_64_s > 0 {
+    fn step_64(&mut self) -> bool {
+        if self.volume_envelope_duration_in_1_64_s == 0 {
+            return false;
+        }
+
+        if self.remaining_volume_envelope_duration_in_1_64_s == 0 {
             match self.volume_envelope_direction {
                 VolumeEnvelopeDirection::UP => {
                     if self.volume_envelope < 0xF {
@@ -49,13 +53,15 @@ impl PulseDescription {
                 }
             }
 
-            self.remaining_volume_envelope_duration_in_1_64_s -= 1;
+            self.remaining_volume_envelope_duration_in_1_64_s =
+                self.volume_envelope_duration_in_1_64_s;
 
-            if self.remaining_volume_envelope_duration_in_1_64_s == 0 {
-                self.remaining_volume_envelope_duration_in_1_64_s =
-                    self.volume_envelope_duration_in_1_64_s;
-            }
+            return true;
         }
+
+        self.remaining_volume_envelope_duration_in_1_64_s -= 1;
+
+        return false;
     }
 }
 
@@ -106,11 +112,19 @@ impl AudioUnit {
             self.cycle_64_count -= CYCLES_1_64_SEC;
 
             if self.audio_status_1.is_some() {
-                self.audio_status_1.as_mut().unwrap().step_64();
+                let changed = self.audio_status_1.as_mut().unwrap().step_64();
+
+                if changed {
+                    self.auo.update_pulse(self.audio_status_1.as_ref().unwrap());
+                }
             }
 
             if self.audio_status_2.is_some() {
-                self.audio_status_2.as_mut().unwrap().step_64();
+                let changed = self.audio_status_2.as_mut().unwrap().step_64();
+
+                if changed {
+                    self.auo.update_pulse(self.audio_status_2.as_ref().unwrap());
+                }
             }
         }
 
