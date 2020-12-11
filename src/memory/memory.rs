@@ -114,7 +114,8 @@ pub struct Memory {
     interrupt_enable: InterruptFlag,
 
     // -- Other
-    remaining_instruction_cycles: u32,
+    remaining_timer_cycles: u32,
+    remaining_div_cycles: u32,
 
     // Audio
     audio_1_triggered: bool,
@@ -199,7 +200,8 @@ impl Memory {
             internal_ram: InternalRamMemorySector::default(),
             interrupt_enable: InterruptFlag::new(),
             oam_ram: OamMemorySector::default(),
-            remaining_instruction_cycles: 0,
+            remaining_timer_cycles: 0,
+            remaining_div_cycles: 0,
             audio_1_triggered: false,
             audio_2_triggered: false,
             audio_3_triggered: false,
@@ -946,22 +948,29 @@ impl Memory {
     }
 
     pub fn step(&mut self, last_instruction_cycles: i16) {
+        self.remaining_div_cycles += last_instruction_cycles as u32;
+
+        while self.remaining_div_cycles as i16 - 256 as i16 > 0 {
+            self.div = self.div.wrapping_add(1);
+            self.remaining_div_cycles -= 256 as u32;
+        }
+
         if !self.timer_control.started {
-            self.remaining_instruction_cycles = 0;
+            self.remaining_timer_cycles = 0;
             return;
         }
 
-        self.remaining_instruction_cycles += last_instruction_cycles as u32 * 64;
+        self.remaining_timer_cycles += last_instruction_cycles as u32;
 
         let divider: u16 = match self.timer_control.input_clock_select {
-            0 => 64,
-            1 => 1,
-            2 => 4,
-            3 => 16,
+            0 => 1024,
+            1 => 16,
+            2 => 64,
+            3 => 256,
             _ => panic!("Invalid input clock select"),
         };
 
-        while self.remaining_instruction_cycles as i16 - divider as i16 > 0 {
+        while self.remaining_timer_cycles as i16 - divider as i16 > 0 {
             let result = self.tima.overflowing_add(1);
             self.tima = result.0;
 
@@ -970,7 +979,7 @@ impl Memory {
                 self.tima = self.tma;
             }
 
-            self.remaining_instruction_cycles -= divider as u32;
+            self.remaining_timer_cycles -= divider as u32;
         }
     }
 
