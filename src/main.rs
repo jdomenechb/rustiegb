@@ -1,11 +1,16 @@
+mod audio;
 mod cpu;
 mod gpu;
 mod math;
 mod memory;
 
+extern crate anyhow;
+extern crate cpal;
 extern crate image;
 extern crate piston_window;
 
+use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput, DebugAudioUnitOutput};
+use crate::audio::AudioUnit;
 use clap::{App, Arg};
 use cpu::cpu::CPU;
 use gpu::gpu::GPU;
@@ -35,6 +40,11 @@ fn main() {
                 .help("Prints CPU instructions on command line"),
         )
         .arg(
+            Arg::with_name("debug-audio")
+                .long("debug-audio")
+                .help("Prints audio triggered on command line"),
+        )
+        .arg(
             Arg::with_name("bootstrap")
                 .long("bootstrap")
                 .help("Uses bootstrap ROM"),
@@ -43,6 +53,7 @@ fn main() {
 
     // --- Other vars
     let debug_cpu: bool = matches.is_present("debug-cpu");
+    let debug_audio: bool = matches.is_present("debug-audio");
     let bootstrap = matches.is_present("bootstrap");
 
     // --- Setting up GB components
@@ -52,6 +63,16 @@ fn main() {
     )));
     let mut cpu = CPU::new(memory.clone(), debug_cpu, bootstrap);
     let mut gpu = GPU::new(memory.clone());
+
+    let audio_unit_output: Box<dyn AudioUnitOutput>;
+
+    if debug_audio {
+        audio_unit_output = Box::new(DebugAudioUnitOutput {});
+    } else {
+        audio_unit_output = Box::new(CpalAudioUnitOutput::new());
+    }
+
+    let mut audio_unit = AudioUnit::new(audio_unit_output, memory.clone());
 
     // --- Seting up window
     let mut window: PistonWindow = WindowSettings::new(APP_NAME, [640, 576])
@@ -151,6 +172,7 @@ fn main() {
             while cpu.has_available_ccycles() {
                 cpu.step();
                 gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
+                audio_unit.step(cpu.get_last_instruction_ccycles());
 
                 if cpu.are_interrupts_enabled() {
                     let check_vblank;

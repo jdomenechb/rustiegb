@@ -48,7 +48,7 @@ pub struct Memory {
     // FF12
     nr12: Byte,
     // FF13
-    nr13: Byte,
+    pub nr13: Byte,
     // FF14
     nr14: Byte,
     // FF16
@@ -115,6 +115,12 @@ pub struct Memory {
 
     // -- Other
     remaining_instruction_cycles: u32,
+
+    // Audio
+    audio_1_triggered: bool,
+    audio_2_triggered: bool,
+    audio_3_triggered: bool,
+    audio_4_triggered: bool,
 }
 
 impl Memory {
@@ -194,257 +200,285 @@ impl Memory {
             interrupt_enable: InterruptFlag::new(),
             oam_ram: OamMemorySector::default(),
             remaining_instruction_cycles: 0,
+            audio_1_triggered: false,
+            audio_2_triggered: false,
+            audio_3_triggered: false,
+            audio_4_triggered: false,
         };
     }
 
     pub fn read_byte(&self, position: Word) -> Byte {
+        let byte = match position {
+            0xFF13 => None,
+            0xFF18 => None,
+            0xFF1D => None,
+            _ => self.internally_read_byte(position),
+        };
+
+        if byte.is_none() {
+            panic!("ERROR: Memory address {:X} not readable", position);
+        }
+
+        byte.unwrap()
+    }
+
+    pub fn internally_read_byte(&self, position: Word) -> Option<Byte> {
         // Bootstrap rom
         if self.bootstrap_rom.is_some() && position < 0x100 {
-            return self.bootstrap_rom.as_ref().unwrap().read_byte(position);
+            return Some(self.bootstrap_rom.as_ref().unwrap().read_byte(position));
         }
 
         // ROM
         if position < 0x8000 {
-            return self.rom.read_byte(position);
+            return Some(self.rom.read_byte(position));
         }
 
         // Video RAM
         if position >= 0x8000 && position < 0xA000 {
-            return self.video_ram.read_byte(position - 0x8000);
+            return Some(self.video_ram.read_byte(position - 0x8000));
         }
 
         // 8k switchable RAM bank
         if position >= 0xA000 && position < 0xC000 {
-            return self.switchable_ram_bank.read_byte(position - 0xA000);
+            return Some(self.switchable_ram_bank.read_byte(position - 0xA000));
         }
 
         // Internal RAM 8k
         if position >= 0xC000 && position < 0xE000 {
-            return self.internal_ram_8k.read_byte(position - 0xC000);
+            return Some(self.internal_ram_8k.read_byte(position - 0xC000));
         }
 
         // Echo of Internal RAM
         if position >= 0xE000 && position < 0xFE00 {
-            return self.internal_ram_8k.read_byte(position - 0xE000);
+            return Some(self.internal_ram_8k.read_byte(position - 0xE000));
         }
 
         // OAM Ram
         if position >= 0xFE00 && position < 0xFEA0 {
-            return self.oam_ram.read_byte(position - 0xFE00);
+            return Some(self.oam_ram.read_byte(position - 0xFE00));
         }
 
         // P1
         if position == 0xFF00 {
-            return self.p1.to_byte();
+            return Some(self.p1.to_byte());
         }
 
         // Serial transfer data
         if position == 0xFF01 {
-            return self.serial_transfer_data;
+            return Some(self.serial_transfer_data);
         }
 
         // SIO control
         if position == 0xFF02 {
-            return self.sio_control;
+            return Some(self.sio_control);
         }
 
         // DIV register
         if position == 0xFF04 {
-            return self.div;
+            return Some(self.div);
         }
 
         // TIMA
         if position == 0xFF05 {
-            return self.tima;
+            return Some(self.tima);
         }
 
         // TMA
         if position == 0xFF06 {
-            return self.tma;
+            return Some(self.tma);
         }
 
         // Interrupt flag
         if position == 0xFF0F {
-            return (&self.interrupt_flag).into();
+            return Some((&self.interrupt_flag).into());
         }
 
         // NR10
         if position == 0xFF10 {
-            return self.nr10;
+            return Some(self.nr10);
         }
 
         // NR11
         if position == 0xFF11 {
-            return self.nr11;
+            return Some(self.nr11);
         }
 
         // NR12
         if position == 0xFF12 {
-            return self.nr12;
+            return Some(self.nr12);
         }
 
-        // NR13 is not readable
+        // NR13
+        if position == 0xFF13 {
+            return Some(self.nr13);
+        }
 
         // NR14
         if position == 0xFF14 {
-            return self.nr14;
+            return Some(self.nr14);
         }
 
         // NR21
         if position == 0xFF16 {
-            return self.nr21;
+            return Some(self.nr21);
         }
 
         // NR22
         if position == 0xFF17 {
-            return self.nr22;
+            return Some(self.nr22);
         }
 
-        // NR23 is not readable
+        // NR22
+        if position == 0xFF18 {
+            return Some(self.nr23);
+        }
 
         // NR24
         if position == 0xFF19 {
-            return self.nr24;
+            return Some(self.nr24);
         }
 
         // NR30
         if position == 0xFF1A {
-            return self.nr30;
+            return Some(self.nr30);
         }
 
         // NR31
         if position == 0xFF1B {
-            return self.nr31;
+            return Some(self.nr31);
         }
 
         // NR32
         if position == 0xFF1C {
-            return self.nr32;
+            return Some(self.nr32);
         }
 
-        // NR33 is not readable
+        // NR33
+        if position == 0xFF1D {
+            return Some(self.nr33);
+        }
 
         // NR34
         if position == 0xFF1E {
-            return self.nr34;
+            return Some(self.nr34);
         }
 
         // NR41
         if position == 0xFF20 {
-            return self.nr41;
+            return Some(self.nr41);
         }
 
         // NR42
         if position == 0xFF21 {
-            return self.nr42;
+            return Some(self.nr42);
         }
 
         // NR43
         if position == 0xFF22 {
-            return self.nr43;
+            return Some(self.nr43);
         }
 
         // NR44
         if position == 0xFF23 {
-            return self.nr44;
+            return Some(self.nr44);
         }
 
         // NR50
         if position == 0xFF24 {
-            return self.nr50;
+            return Some(self.nr50);
         }
 
         // NR51
         if position == 0xFF25 {
-            return self.nr51;
+            return Some(self.nr51);
         }
 
         // NR52
         if position == 0xFF26 {
-            return self.nr52;
+            return Some(self.nr52);
         }
 
         // Wave pattern RAM
         if position >= 0xFF30 && position < 0xFF40 {
-            return self.wave_pattern_ram.read_byte(position - 0xFF30);
+            return Some(self.wave_pattern_ram.read_byte(position - 0xFF30));
         }
 
         // LCDC
         if position == 0xFF40 {
-            return (&self.lcdc).into();
+            return Some((&self.lcdc).into());
         }
 
         // STAT
         if position == 0xFF41 {
-            return (&self.stat).into();
+            return Some((&self.stat).into());
         }
 
         // SCY
         if position == 0xFF42 {
-            return self.scy;
+            return Some(self.scy);
         }
 
         // SCX
         if position == 0xFF43 {
-            return self.scx;
+            return Some(self.scx);
         }
 
         // LY
         if position == 0xFF44 {
-            return self.ly.clone().into();
+            return Some(self.ly.clone().into());
         }
 
         // LYC
         if position == 0xFF45 {
-            return self.lyc;
+            return Some(self.lyc);
         }
 
         // DMA
         if position == 0xFF46 {
-            return self.dma;
+            return Some(self.dma);
         }
 
         // BGP
         if position == 0xFF47 {
-            return self.bgp;
+            return Some(self.bgp);
         }
 
         // OBP1
         if position == 0xFF48 {
-            return self.obp1;
+            return Some(self.obp1);
         }
 
         // OBP2
         if position == 0xFF49 {
-            return self.obp2;
+            return Some(self.obp2);
         }
 
         // Window Y
         if position == 0xFF4A {
-            return self.wy;
+            return Some(self.wy);
         }
 
         // Window X
         if position == 0xFF4B {
-            return self.wx;
+            return Some(self.wx);
         }
 
         // KEY 1
         if position == 0xFF4D {
-            return self.key1;
+            return Some(self.key1);
         }
 
         // Internal RAM
         if position >= 0xFF80 && position < 0xFFFF {
-            return self.internal_ram.read_byte(position - 0xFF80);
+            return Some(self.internal_ram.read_byte(position - 0xFF80));
         }
 
         // Interrupt enable
         if position == 0xFFFF {
-            return (&self.interrupt_enable).into();
+            return Some((&self.interrupt_enable).into());
         }
 
-        panic!("ERROR: Memory address {:X} not readable", position);
+        None
     }
 
     pub fn read_signed_byte(&self, position: Word) -> SignedByte {
@@ -618,6 +652,10 @@ impl Memory {
 
         // NR14
         if position == 0xFF14 {
+            if value & 0b10000000 == 0b10000000 {
+                self.audio_1_triggered = true;
+            }
+
             self.nr14 = value;
             return;
         }
@@ -642,6 +680,10 @@ impl Memory {
 
         // NR24
         if position == 0xFF19 {
+            if value & 0b10000000 == 0b10000000 {
+                self.audio_2_triggered = true;
+            }
+
             self.nr24 = value;
             return;
         }
@@ -672,6 +714,10 @@ impl Memory {
 
         // NR34
         if position == 0xFF1E {
+            if value & 0b10000000 == 0b10000000 {
+                self.audio_3_triggered = true;
+            }
+
             self.nr34 = value;
             return;
         }
@@ -696,6 +742,10 @@ impl Memory {
 
         // NR44
         if position == 0xFF23 {
+            if value & 0b10000000 == 0b10000000 {
+                self.audio_4_triggered = true;
+            }
+
             self.nr44 = value;
             return;
         }
@@ -1005,5 +1055,21 @@ impl Memory {
                     || (ly != self.lyc && !self.stat.coincidence_flag),
             );
         }
+    }
+
+    pub fn audio_has_been_trigerred(&mut self) -> (bool, bool, bool, bool) {
+        let to_return = (
+            self.audio_1_triggered,
+            self.audio_2_triggered,
+            self.audio_3_triggered,
+            self.audio_4_triggered,
+        );
+
+        self.audio_1_triggered = false;
+        self.audio_2_triggered = false;
+        self.audio_3_triggered = false;
+        self.audio_4_triggered = false;
+
+        to_return
     }
 }
