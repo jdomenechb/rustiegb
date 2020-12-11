@@ -1066,7 +1066,7 @@ impl Memory {
         }
     }
 
-    pub fn audio_has_been_trigerred(&mut self) -> (bool, bool, bool, bool) {
+    pub fn audio_has_been_trigered(&mut self) -> (bool, bool, bool, bool) {
         let to_return = (
             self.audio_1_triggered,
             self.audio_2_triggered,

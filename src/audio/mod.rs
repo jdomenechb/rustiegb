@@ -96,7 +96,7 @@ impl AudioUnit {
             let mut memory = self.memory.borrow_mut();
 
             nr52 = memory.read_byte(0xFF26);
-            audio_triggers = memory.audio_has_been_trigerred();
+            audio_triggers = memory.audio_has_been_trigered();
         }
 
         self.cycle_count += last_instruction_cycles as u16;
