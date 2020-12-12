@@ -1434,7 +1434,7 @@ impl CPU {
             .write_word(&WordRegister::HL, self.alu.dec_nn(value));
 
         self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
+        self.last_instruction_ccycles = 8;
     }
 
     /**
@@ -1454,7 +1454,7 @@ impl CPU {
             .write_word(&WordRegister::HL, self.alu.inc_nn(value));
 
         self.pc_to_increment = 1;
-        self.last_instruction_ccycles = 4;
+        self.last_instruction_ccycles = 8;
     }
 
     fn ld_mrr_r(&mut self, register_to: WordRegister, register_from: ByteRegister) {
@@ -2527,14 +2527,10 @@ impl CPU {
         self.registers.set_flag_h(true);
 
         self.pc_to_increment = 2;
-        self.last_instruction_ccycles = 16;
+        self.last_instruction_ccycles = 12;
     }
 
     // --- INTERRUPTS ----------------------------------------------------------------------------------
-
-    pub fn are_interrupts_enabled(&self) -> bool {
-        self.ime
-    }
 
     pub fn vblank_interrupt(&mut self) {
         if self.ime {
@@ -2627,7 +2623,7 @@ impl CPU {
 
     // --- HALT ------------------------------------------------------------------------------------
 
-    pub fn unhalt(&mut self) {
+    fn unhalt(&mut self) {
         self.halted = false;
     }
 
