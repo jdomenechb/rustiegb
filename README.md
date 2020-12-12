@@ -3,7 +3,7 @@ GB emulator written in Rust
 
 ## Blargg test status
 
-CPU
+### CPU
 - [X] 01: Special
 - [x] 02: Interrupts
 - [x] 03: op sp,hl
