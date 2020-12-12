@@ -3,7 +3,7 @@ GB emulator written in Rust
 
 ## Blargg test status
 - [X] 01: Special
-- [ ] 02: Interrupts
+- [x] 02: Interrupts
 - [x] 03: op sp,hl
 - [x] 04: op r,imm
 - [x] 05: op rp

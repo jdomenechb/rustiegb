@@ -2537,44 +2537,60 @@ impl CPU {
     }
 
     pub fn vblank_interrupt(&mut self) {
-        {
-            self.memory.borrow_mut().interrupt_flag().set_vblank(false);
+        if self.ime {
+            {
+                self.memory.borrow_mut().interrupt_flag().set_vblank(false);
+            }
+
+            self.interrupt_vv(0x40)
         }
 
-        self.interrupt_vv(0x40)
+        self.unhalt()
     }
 
     pub fn lcd_stat_interrupt(&mut self) {
-        {
-            self.memory
-                .borrow_mut()
-                .interrupt_flag()
-                .set_lcd_stat(false);
+        if self.ime {
+            {
+                self.memory
+                    .borrow_mut()
+                    .interrupt_flag()
+                    .set_lcd_stat(false);
+            }
+
+            self.interrupt_vv(0x48)
         }
 
-        self.interrupt_vv(0x48)
+        self.unhalt()
     }
 
     pub fn timer_overflow_interrupt(&mut self) {
-        {
-            self.memory
-                .borrow_mut()
-                .interrupt_flag()
-                .set_timer_overflow(false);
+        if self.ime {
+            {
+                self.memory
+                    .borrow_mut()
+                    .interrupt_flag()
+                    .set_timer_overflow(false);
+            }
+
+            self.interrupt_vv(0x50)
         }
 
-        self.interrupt_vv(0x50)
+        self.unhalt()
     }
 
     pub fn p10_p13_transition_interrupt(&mut self) {
-        {
-            self.memory
-                .borrow_mut()
-                .interrupt_flag()
-                .set_p10_p13_transition(false);
+        if self.ime {
+            {
+                self.memory
+                    .borrow_mut()
+                    .interrupt_flag()
+                    .set_p10_p13_transition(false);
+            }
+
+            self.interrupt_vv(0x60)
         }
 
-        self.interrupt_vv(0x60)
+        self.unhalt();
     }
 
     /**
@@ -2617,10 +2633,9 @@ impl CPU {
 
     fn halt(&mut self) {
         self.last_executed_instruction = "HALT".to_string();
+        self.halted = true;
 
         if self.ime {
-            self.halted = true;
-
             self.pc_to_increment = 1;
             self.last_instruction_ccycles = 4;
         } else {

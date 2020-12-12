@@ -174,57 +174,51 @@ fn main() {
                 gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
                 audio_unit.step(cpu.get_last_instruction_ccycles());
 
-                if cpu.are_interrupts_enabled() {
-                    let check_vblank;
-                    let check_lcd_stat;
-                    let check_timer_overflow;
-                    let check_joystick;
+                let check_vblank;
+                let check_lcd_stat;
+                let check_timer_overflow;
+                let check_joystick;
 
-                    {
-                        let mut memory = memory.borrow_mut();
+                {
+                    let mut memory = memory.borrow_mut();
 
-                        check_vblank = memory.interrupt_enable().is_vblank()
-                            && memory.interrupt_flag().is_vblank();
+                    check_vblank = memory.interrupt_enable().is_vblank()
+                        && memory.interrupt_flag().is_vblank();
 
-                        check_lcd_stat = memory.interrupt_enable().is_lcd_stat()
-                            && memory.interrupt_flag().is_lcd_stat();
+                    check_lcd_stat = memory.interrupt_enable().is_lcd_stat()
+                        && memory.interrupt_flag().is_lcd_stat();
 
-                        check_timer_overflow = memory.interrupt_enable().is_timer_overflow()
-                            && memory.interrupt_flag().is_timer_overflow();
+                    check_timer_overflow = memory.interrupt_enable().is_timer_overflow()
+                        && memory.interrupt_flag().is_timer_overflow();
 
-                        check_joystick = memory.interrupt_enable().is_p10_p13_transition()
-                            && memory.interrupt_flag().is_p10_p13_transition();
-                    }
+                    check_joystick = memory.interrupt_enable().is_p10_p13_transition()
+                        && memory.interrupt_flag().is_p10_p13_transition();
+                }
 
-                    if check_vblank {
-                        cpu.vblank_interrupt();
-                        cpu.unhalt();
+                if check_vblank {
+                    cpu.vblank_interrupt();
 
-                        continue;
-                    }
+                    continue;
+                }
 
-                    if check_lcd_stat {
-                        cpu.lcd_stat_interrupt();
-                        cpu.unhalt();
+                if check_lcd_stat {
+                    cpu.lcd_stat_interrupt();
 
-                        continue;
-                    }
+                    continue;
+                }
 
-                    if check_timer_overflow {
-                        cpu.timer_overflow_interrupt();
-                        cpu.unhalt();
+                if check_timer_overflow {
+                    cpu.timer_overflow_interrupt();
 
-                        continue;
-                    }
+                    continue;
+                }
 
-                    // TODO: Serial transfer
+                // TODO: Serial transfer
 
-                    if check_joystick {
-                        cpu.p10_p13_transition_interrupt();
-                        cpu.unhalt();
+                if check_joystick {
+                    cpu.p10_p13_transition_interrupt();
 
-                        continue;
-                    }
+                    continue;
                 }
             }
         });
