@@ -15,7 +15,7 @@ impl LY {
     }
 
     pub fn has_reached_end_of_screen(&self) -> bool {
-        self.ly == 143
+        self.ly >= 143
     }
 
     pub fn has_reached_end_of_vblank(&self) -> bool {

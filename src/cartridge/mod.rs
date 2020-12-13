@@ -144,11 +144,14 @@ pub struct CartridgeHeader {
 
 impl CartridgeHeader {
     fn new_from_data(data: &Vec<Byte>) -> Self {
+        let mut title = String::from_utf8((&data[0x134..0x144]).to_vec());
+
+        if title.is_err() {
+            title = String::from_utf8((&data[0x134..0x144]).to_vec());
+        }
+
         Self {
-            title: String::from_utf8((&data[0x134..0x144]).to_vec())
-                .unwrap()
-                .trim_end_matches("\0")
-                .to_string(),
+            title: title.unwrap().trim_end_matches("\0").to_string(),
             cartridge_type: data[0x147].into(),
             rom_size: data[0x148].into(),
             ram_size: data[0x149].into(),
@@ -275,7 +278,6 @@ impl WriteMemory for Cartridge {
             }
             CartridgeType::Mbc1(_, _) => {
                 if position >= 0x2000 && position < 0x4000 {
-                    println!("{:X}", value);
                     self.selected_rom_bank = if value != 0 { value & 0b11111 } else { 1 };
                     return;
                 }
