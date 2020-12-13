@@ -1,4 +1,5 @@
 mod audio;
+mod cartridge;
 mod cpu;
 mod gpu;
 mod math;
@@ -11,6 +12,7 @@ extern crate piston_window;
 
 use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput, DebugAudioUnitOutput};
 use crate::audio::AudioUnit;
+use crate::cartridge::Cartridge;
 use clap::{App, Arg};
 use cpu::cpu::CPU;
 use gpu::gpu::GPU;
@@ -56,11 +58,13 @@ fn main() {
     let debug_audio: bool = matches.is_present("debug-audio");
     let bootstrap = matches.is_present("bootstrap");
 
+    // --- Read ROM
+    let cartridge = Cartridge::new_from_path(matches.value_of("ROMFILE").unwrap());
+
+    let window_title = format!("{} - {}", cartridge.header.title, APP_NAME);
+
     // --- Setting up GB components
-    let memory = Rc::new(RefCell::new(Memory::new(
-        matches.value_of("ROMFILE").unwrap(),
-        bootstrap,
-    )));
+    let memory = Rc::new(RefCell::new(Memory::new(cartridge, bootstrap)));
     let mut cpu = CPU::new(memory.clone(), debug_cpu, bootstrap);
     let mut gpu = GPU::new(memory.clone());
 
@@ -75,7 +79,7 @@ fn main() {
     let mut audio_unit = AudioUnit::new(audio_unit_output, memory.clone());
 
     // --- Seting up window
-    let mut window: PistonWindow = WindowSettings::new(APP_NAME, [640, 576])
+    let mut window: PistonWindow = WindowSettings::new(window_title, [640, 576])
         .exit_on_esc(true)
         .resizable(false)
         .build()

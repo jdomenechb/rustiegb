@@ -6,6 +6,7 @@ use super::read_only_memory_sector::ReadOnlyMemorySector;
 use super::stat::STAT;
 use super::timer_control::TimerControl;
 use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
+use crate::cartridge::Cartridge;
 use crate::memory::joypad::Joypad;
 use crate::memory::ly::LY;
 use crate::memory::memory_sector::ReadMemory;
@@ -125,13 +126,7 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(rom_path: &str, bootstrap: bool) -> Memory {
-        let mut data: Vec<Byte> = Vec::with_capacity(0x8000);
-        let mut rom_file = File::open(rom_path).expect("file not found");
-        rom_file
-            .read_to_end(&mut data)
-            .expect("Error on reading ROM contents");
-
+    pub fn new(cartridge: Cartridge, bootstrap: bool) -> Memory {
         let bootstrap_rom;
 
         if bootstrap {
@@ -143,14 +138,14 @@ impl Memory {
                 .read_to_end(&mut bootstrap_data)
                 .expect("Error on reading ROM contents");
 
-            bootstrap_rom = Some(ReadOnlyMemorySector::new(bootstrap_data));
+            bootstrap_rom = Some(ReadOnlyMemorySector::new(&bootstrap_data));
         } else {
             bootstrap_rom = None;
         }
 
         return Memory {
             bootstrap_rom,
-            rom: ReadOnlyMemorySector::new(data),
+            rom: ReadOnlyMemorySector::new(&cartridge.data),
             video_ram: VideoRam8kMemorySector::default(),
             switchable_ram_bank: InternalRam8kMemorySector::default(),
             internal_ram_8k: InternalRam8kMemorySector::default(),

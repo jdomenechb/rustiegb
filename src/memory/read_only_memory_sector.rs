@@ -1,14 +1,15 @@
 use crate::memory::memory_sector::{MemorySector, ReadMemory};
 use crate::{Byte, Word};
+use std::cmp::min;
 
 pub struct ReadOnlyMemorySector {
     pub data: MemorySector,
 }
 
 impl ReadOnlyMemorySector {
-    pub fn new(data: Vec<Byte>) -> Self {
+    pub fn new(data: &Vec<Byte>) -> Self {
         Self {
-            data: MemorySector::with_data(data),
+            data: MemorySector::with_data((&data[0x0..min(0x8000, data.len())]).to_vec()),
         }
     }
 }
