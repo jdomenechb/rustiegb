@@ -15,7 +15,9 @@ type DisplayPixel = [Byte; 4];
 
 pub struct GPU {
     cycles_acumulated: u16,
-    sprites_to_be_drawn: Vec<OamEntry>,
+
+    sprites_to_be_drawn_with_priority: Vec<OamEntry>,
+    sprites_to_be_drawn_without_priority: Vec<OamEntry>,
 
     memory: Rc<RefCell<Memory>>,
 
@@ -34,7 +36,8 @@ impl GPU {
     pub fn new(memory: Rc<RefCell<Memory>>) -> GPU {
         return GPU {
             cycles_acumulated: 0,
-            sprites_to_be_drawn: Vec::with_capacity(10),
+            sprites_to_be_drawn_with_priority: Vec::with_capacity(10),
+            sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
             tile_row_cache: RefCell::new(HashMap::new()),
         };
@@ -96,7 +99,8 @@ impl GPU {
                     let mut memory = self.memory.borrow_mut();
                     memory.set_stat_mode(STATMode::LCDTransfer);
 
-                    self.sprites_to_be_drawn.clear();
+                    self.sprites_to_be_drawn_with_priority.clear();
+                    self.sprites_to_be_drawn_without_priority.clear();
 
                     let lcdc = &memory.lcdc;
 
@@ -112,7 +116,11 @@ impl GPU {
                             && ly + 16 >= oam_entry.y()
                             && ly + 16 < oam_entry.y() + sprite_size
                         {
-                            self.sprites_to_be_drawn.push(oam_entry);
+                            if oam_entry.priority() {
+                                self.sprites_to_be_drawn_with_priority.push(oam_entry);
+                            } else {
+                                self.sprites_to_be_drawn_without_priority.push(oam_entry);
+                            }
                         }
                     }
                 }
@@ -298,14 +306,19 @@ impl GPU {
     ) -> Option<DisplayPixel> {
         const SPRITE_TILES_ADDR_START: u16 = 0x8000;
 
-        if self.sprites_to_be_drawn.is_empty() {
+        let sprites_to_be_drawn = match priority {
+            true => &self.sprites_to_be_drawn_with_priority,
+            false => &self.sprites_to_be_drawn_without_priority,
+        };
+
+        if sprites_to_be_drawn.is_empty() {
             return None;
         }
 
         let mut pixel_to_write = None;
         let mut last_drawn: Option<&OamEntry> = None;
 
-        for sprite in &self.sprites_to_be_drawn {
+        for sprite in sprites_to_be_drawn {
             if priority != sprite.priority() {
                 continue;
             }
