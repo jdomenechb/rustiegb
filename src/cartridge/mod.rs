@@ -1,4 +1,8 @@
-use crate::Byte;
+mod cartridge_memory_sector;
+
+use crate::cartridge::cartridge_memory_sector::{CartridgeMemorySector, ReadCartridgeMemory};
+use crate::memory::memory_sector::{ReadMemory, WriteMemory};
+use crate::{Byte, Word};
 use std::fs::File;
 use std::io::Read;
 
@@ -152,10 +156,22 @@ impl CartridgeHeader {
     }
 }
 
+impl Default for CartridgeHeader {
+    fn default() -> Self {
+        Self {
+            title: "EMPTY TITLE".to_string(),
+            cartridge_type: CartridgeType::Rom(false, false),
+            rom_size: RomSize::Kb32,
+            ram_size: RamSize::None,
+        }
+    }
+}
+
 #[readonly::make]
 pub struct Cartridge {
-    pub data: Vec<u8>,
+    pub data: CartridgeMemorySector,
     pub header: CartridgeHeader,
+    selected_rom_bank: u8,
 }
 
 impl Cartridge {
@@ -168,6 +184,133 @@ impl Cartridge {
 
         let header = CartridgeHeader::new_from_data(&data);
 
-        Self { data, header }
+        Self {
+            data: CartridgeMemorySector::with_data(data),
+            header,
+            selected_rom_bank: 1,
+        }
+    }
+}
+
+impl Default for Cartridge {
+    fn default() -> Self {
+        Self {
+            data: CartridgeMemorySector::with_size(0),
+            header: CartridgeHeader::default(),
+            selected_rom_bank: 1,
+        }
+    }
+}
+
+impl ReadMemory for Cartridge {
+    fn read_byte(&self, position: Word) -> Byte {
+        match self.header.cartridge_type {
+            CartridgeType::Rom(false, false) => self.data.read_byte(position as usize),
+            CartridgeType::Mbc1(_, _) => {
+                if position < 0x4000 {
+                    return self.data.read_byte(position as usize);
+                }
+
+                if position >= 0x4000 && position < 0x8000 {
+                    return self.data.read_byte(
+                        position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize,
+                    );
+                }
+
+                panic!(
+                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
+            _ => {
+                panic!(
+                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
+        }
+    }
+
+    fn read_word(&self, position: Word) -> Word {
+        match self.header.cartridge_type {
+            CartridgeType::Rom(false, false) => self.data.read_word(position as usize),
+            CartridgeType::Mbc1(_, _) => {
+                if position < 0x4000 {
+                    return self.data.read_word(position as usize);
+                }
+
+                if position >= 0x4000 && position < 0x8000 {
+                    return self.data.read_word(
+                        position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize,
+                    );
+                }
+
+                panic!(
+                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
+            _ => {
+                panic!(
+                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
+        }
+    }
+}
+
+impl WriteMemory for Cartridge {
+    fn write_byte(&mut self, position: u16, value: u8) {
+        match self.header.cartridge_type {
+            CartridgeType::Rom(false, false) => {
+                println!(
+                    "Attempt to write at Memory {:X}. ROM is not writable!!!",
+                    position
+                );
+            }
+            CartridgeType::Mbc1(_, _) => {
+                if position >= 0x2000 && position < 0x4000 {
+                    println!("{:X}", value);
+                    self.selected_rom_bank = if value != 0 { value & 0b11111 } else { 1 };
+                    return;
+                }
+
+                panic!(
+                    "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
+            _ => {
+                panic!(
+                    "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
+        }
+    }
+
+    fn write_word(&mut self, position: u16, value: u16) {
+        match self.header.cartridge_type {
+            CartridgeType::Rom(false, false) => {
+                println!(
+                    "Attempt to write at Memory {:X}. ROM is not writable!!!",
+                    position
+                );
+            }
+            _ => {
+                panic!(
+                    "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
+        }
     }
 }

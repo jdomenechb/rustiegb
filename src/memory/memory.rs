@@ -21,7 +21,9 @@ use std::io::Read;
 #[derive(Default)]
 pub struct Memory {
     bootstrap_rom: Option<ReadOnlyMemorySector>,
-    rom: ReadOnlyMemorySector,
+
+    cartridge: Cartridge,
+
     video_ram: VideoRam8kMemorySector,
     switchable_ram_bank: InternalRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
@@ -145,7 +147,7 @@ impl Memory {
 
         return Memory {
             bootstrap_rom,
-            rom: ReadOnlyMemorySector::new(&cartridge.data),
+            cartridge,
             video_ram: VideoRam8kMemorySector::default(),
             switchable_ram_bank: InternalRam8kMemorySector::default(),
             internal_ram_8k: InternalRam8kMemorySector::default(),
@@ -227,7 +229,7 @@ impl Memory {
 
         // ROM
         if position < 0x8000 {
-            return Some(self.rom.read_byte(position));
+            return Some(self.cartridge.read_byte(position));
         }
 
         // Video RAM
@@ -490,7 +492,7 @@ impl Memory {
 
         // ROM
         if position < 0x8000 {
-            return self.rom.read_word(position);
+            return self.cartridge.read_word(position);
         }
 
         // Video RAM
@@ -533,10 +535,7 @@ impl Memory {
     pub fn write_byte(&mut self, position: Word, value: Byte) {
         // ROM
         if position < 0x8000 {
-            println!(
-                "Attempt to write at Memory {:X}. ROM is not writable!!!",
-                position
-            );
+            self.cartridge.write_byte(position, value);
             return;
         }
 
@@ -888,10 +887,7 @@ impl Memory {
     pub fn write_word(&mut self, position: Word, value: Word) {
         // ROM
         if position < 0x8000 {
-            println!(
-                "Attempt to write at Memory {:X}. ROM is not writable!!!",
-                position
-            );
+            self.cartridge.write_word(position, value);
             return;
         }
 
