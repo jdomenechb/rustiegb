@@ -2,6 +2,7 @@ use crate::Byte;
 use std::fs::File;
 use std::io::Read;
 
+#[derive(Debug)]
 enum CartridgeType {
     // ROM + RAM + Battery
     Rom(bool, bool),
@@ -68,6 +69,7 @@ impl From<Byte> for CartridgeType {
     }
 }
 
+#[derive(Debug)]
 enum RomSize {
     Kb32,
     Kb64,
@@ -103,6 +105,7 @@ impl From<Byte> for RomSize {
     }
 }
 
+#[derive(Debug)]
 enum RamSize {
     None,
     Kb2,
@@ -127,6 +130,7 @@ impl From<Byte> for RamSize {
 }
 
 #[readonly::make]
+#[derive(Debug)]
 pub struct CartridgeHeader {
     pub title: String,
     cartridge_type: CartridgeType,

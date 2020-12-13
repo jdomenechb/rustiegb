@@ -47,6 +47,11 @@ fn main() {
                 .help("Prints audio triggered on command line"),
         )
         .arg(
+            Arg::with_name("debug-header")
+                .long("debug-header")
+                .help("Prints the parsed cartridge header"),
+        )
+        .arg(
             Arg::with_name("bootstrap")
                 .long("bootstrap")
                 .help("Uses bootstrap ROM"),
@@ -56,10 +61,15 @@ fn main() {
     // --- Other vars
     let debug_cpu: bool = matches.is_present("debug-cpu");
     let debug_audio: bool = matches.is_present("debug-audio");
+    let debug_header: bool = matches.is_present("debug-header");
     let bootstrap = matches.is_present("bootstrap");
 
     // --- Read ROM
     let cartridge = Cartridge::new_from_path(matches.value_of("ROMFILE").unwrap());
+
+    if debug_header {
+        println!("{:?}", cartridge.header);
+    }
 
     let window_title = format!("{} - {}", cartridge.header.title, APP_NAME);
 
