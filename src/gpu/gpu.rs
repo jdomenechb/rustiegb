@@ -3,7 +3,7 @@ use crate::math::word_to_two_bytes;
 use crate::memory::memory::Memory;
 use crate::memory::oam_entry::OamEntry;
 use crate::memory::stat::STATMode;
-use crate::{Byte, Word};
+use crate::{Byte, SignedByte, Word};
 use ::image::{Rgba, RgbaImage};
 use gfx_device_gl::{CommandBuffer, Factory, Resources};
 use piston_window::*;
@@ -204,9 +204,24 @@ impl GPU {
                                 + (screen_x_with_offset / GPU::PIXELS_PER_TILE);
 
                             if previous_bg_tile_map_location != bg_tile_map_location {
-                                let bg_data_location = bg_data_start_location
-                                    + memory.read_byte(bg_tile_map_location) as Word
-                                        * GPU::TILE_SIZE_BYTES as Word;
+                                let bg_data_location = match lcdc.bg_and_window_tile_data_select() {
+                                    true => {
+                                        0x8000
+                                            + memory.read_byte(bg_tile_map_location) as Word
+                                                * GPU::TILE_SIZE_BYTES as Word
+                                    }
+                                    false => {
+                                        let mut rel_address =
+                                            memory.read_byte(bg_tile_map_location);
+
+                                        (if rel_address >= 0b10000000 {
+                                            0x8800
+                                        } else {
+                                            0x9000
+                                        }) + (rel_address & 0b01111111) as Word
+                                            * GPU::TILE_SIZE_BYTES as Word
+                                    }
+                                };
 
                                 tile_bytes = self.read_tile_row(bg_data_location, tile_row);
 
