@@ -334,7 +334,7 @@ impl GPU {
                 SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * GPU::TILE_SIZE_BYTES as u16;
 
             let row = if sprite.flip_y() {
-                7 - current_pixel_y
+                sprite_size - 1 - current_pixel_y
             } else {
                 current_pixel_y
             } as Word;
