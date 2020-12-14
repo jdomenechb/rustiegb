@@ -18,6 +18,7 @@ use crate::{Byte, SignedByte, Word};
 use std::fs::File;
 use std::io::Read;
 
+#[readonly::make]
 #[derive(Default)]
 pub struct Memory {
     bootstrap_rom: Option<ReadOnlyMemorySector>,
@@ -51,7 +52,7 @@ pub struct Memory {
     // FF12
     nr12: Byte,
     // FF13
-    pub nr13: Byte,
+    nr13: Byte,
     // FF14
     nr14: Byte,
     // FF16
@@ -106,8 +107,8 @@ pub struct Memory {
     obp1: Byte,
     obp2: Byte,
     // FF4A - FF4B
-    wy: Byte,
-    wx: Byte,
+    pub wy: Byte,
+    pub wx: Byte,
     // FF4D - CGB ONLY
     key1: Byte,
 

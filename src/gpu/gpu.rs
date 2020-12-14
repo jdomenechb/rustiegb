@@ -3,7 +3,7 @@ use crate::math::word_to_two_bytes;
 use crate::memory::memory::Memory;
 use crate::memory::oam_entry::OamEntry;
 use crate::memory::stat::STATMode;
-use crate::{Byte, SignedByte, Word};
+use crate::{Byte, Word};
 use ::image::{Rgba, RgbaImage};
 use gfx_device_gl::{CommandBuffer, Factory, Resources};
 use piston_window::*;
@@ -22,6 +22,9 @@ pub struct GPU {
     memory: Rc<RefCell<Memory>>,
 
     tile_row_cache: RefCell<HashMap<(Word, u16), (Byte, Byte)>>,
+
+    last_window_rendered_position_x: u16,
+    last_window_rendered_position_y: u16,
 }
 
 impl GPU {
@@ -40,6 +43,8 @@ impl GPU {
             sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
             tile_row_cache: RefCell::new(HashMap::new()),
+            last_window_rendered_position_x: 0,
+            last_window_rendered_position_y: 0,
         };
     }
 
@@ -76,6 +81,10 @@ impl GPU {
             STATMode::VBlank => {
                 if self.cycles_acumulated >= 456 {
                     self.cycles_acumulated = 0;
+
+                    self.last_window_rendered_position_x = 0;
+                    self.last_window_rendered_position_y = 0;
+
                     {
                         let mut memory = self.memory.borrow_mut();
                         memory.ly_increment();
@@ -151,6 +160,12 @@ impl GPU {
                         0x9800
                     };
 
+                    let window_tile_map_start_location = if lcdc.window_tile_map_display_select() {
+                        0x9C00
+                    } else {
+                        0x9800
+                    };
+
                     let scx = memory.scx();
                     let scy = memory.scy();
                     let bgp = memory.bgp();
@@ -171,92 +186,121 @@ impl GPU {
                         8i16
                     };
 
+                    let mut any_window_rendered = false;
+
                     for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
                         let mut pixel_to_write: Option<DisplayPixel> = None;
                         let screen_x_with_offset = scx as u16 + screen_x;
-                        let tile_x = screen_x_with_offset % 8;
+                        let tile_x;
 
-                        // Sprites with high priority
-                        if lcdc.obj_sprite_display() {
-                            pixel_to_write = self.draw_sprites(
-                                true,
-                                screen_x,
-                                screen_y,
-                                sprite_palette0,
-                                sprite_palette1,
-                                sprite_size,
-                            );
-                        }
+                        if pixel_to_write.is_none() {
+                            // Sprites with high priority
+                            if lcdc.obj_sprite_display() {
+                                pixel_to_write = self.draw_sprites(
+                                    true,
+                                    screen_x,
+                                    screen_y,
+                                    sprite_palette0,
+                                    sprite_palette1,
+                                    sprite_size,
+                                );
+                            }
 
-                        if lcdc.bg_display() {
-                            // Background
-                            let bg_tile_map_location = bg_tile_map_start_location
-                                + (((screen_y_with_offset / GPU::PIXELS_PER_TILE)
-                                    * GPU::BACKGROUND_MAP_TILE_SIZE_X)
-                                    % (GPU::BACKGROUND_MAP_TILE_SIZE_X
-                                        * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
-                                + (screen_x_with_offset / GPU::PIXELS_PER_TILE);
+                            if lcdc.bg_display() {
+                                let bg_tile_map_location;
 
-                            if previous_bg_tile_map_location != bg_tile_map_location {
-                                let bg_data_location = match lcdc.bg_and_window_tile_data_select() {
-                                    true => {
-                                        0x8000
-                                            + memory.read_byte(bg_tile_map_location) as Word
-                                                * GPU::TILE_SIZE_BYTES as Word
-                                    }
-                                    false => {
-                                        let mut rel_address =
-                                            memory.read_byte(bg_tile_map_location);
+                                // Window
+                                if lcdc.window_display()
+                                    && memory.wy <= screen_y as Byte
+                                    && memory.wx - 7 <= screen_x as Byte
+                                {
+                                    bg_tile_map_location = window_tile_map_start_location
+                                        + (((self.last_window_rendered_position_y
+                                            / GPU::PIXELS_PER_TILE)
+                                            * GPU::BACKGROUND_MAP_TILE_SIZE_X)
+                                            % (GPU::BACKGROUND_MAP_TILE_SIZE_X
+                                                * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
+                                        + (self.last_window_rendered_position_x
+                                            / GPU::PIXELS_PER_TILE);
 
-                                        (if rel_address >= 0b10000000 {
-                                            0x8800
-                                        } else {
-                                            0x9000
-                                        }) + (rel_address & 0b01111111) as Word
-                                            * GPU::TILE_SIZE_BYTES as Word
-                                    }
+                                    tile_x = self.last_window_rendered_position_x % 8;
+
+                                    self.last_window_rendered_position_x += 1;
+                                    any_window_rendered = true;
+                                } else {
+                                    // Background
+                                    bg_tile_map_location = bg_tile_map_start_location
+                                        + (((screen_y_with_offset / GPU::PIXELS_PER_TILE)
+                                            * GPU::BACKGROUND_MAP_TILE_SIZE_X)
+                                            % (GPU::BACKGROUND_MAP_TILE_SIZE_X
+                                                * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
+                                        + (screen_x_with_offset / GPU::PIXELS_PER_TILE);
+
+                                    tile_x = screen_x_with_offset % 8;
+                                }
+
+                                if previous_bg_tile_map_location != bg_tile_map_location {
+                                    let bg_data_location =
+                                        match lcdc.bg_and_window_tile_data_select() {
+                                            true => {
+                                                0x8000
+                                                    + memory.read_byte(bg_tile_map_location) as Word
+                                                        * GPU::TILE_SIZE_BYTES as Word
+                                            }
+                                            false => {
+                                                let rel_address =
+                                                    memory.read_byte(bg_tile_map_location);
+
+                                                (if rel_address >= 0b10000000 {
+                                                    0x8800
+                                                } else {
+                                                    0x9000
+                                                }) + (rel_address & 0b01111111) as Word
+                                                    * GPU::TILE_SIZE_BYTES as Word
+                                            }
+                                        };
+
+                                    tile_bytes = self.read_tile_row(bg_data_location, tile_row);
+
+                                    previous_bg_tile_map_location = bg_tile_map_location;
+                                }
+
+                                let pixel = self.read_pixel_from_tile(tile_x, tile_bytes);
+                                let pixel_color = match pixel {
+                                    0b11 => bgp >> 6,
+                                    0b10 => bgp >> 4,
+                                    0b01 => bgp >> 2,
+                                    0b00 => bgp >> 0,
+                                    _ => panic!("Unrecognised color"),
+                                } & 0b11;
+
+                                let color = match pixel_color {
+                                    0b00 => Color::white(),
+                                    0b01 => Color::dark_grey(),
+                                    0b10 => Color::light_grey(),
+                                    0b11 => Color::black(),
+                                    _ => panic!("Unrecognised color"),
                                 };
 
-                                tile_bytes = self.read_tile_row(bg_data_location, tile_row);
-
-                                previous_bg_tile_map_location = bg_tile_map_location;
+                                if pixel != 0x0 || pixel_to_write.is_none() {
+                                    pixel_to_write = Some(color.to_rgba());
+                                }
                             }
 
-                            let pixel = self.read_pixel_from_tile(tile_x, tile_bytes);
-                            let pixel_color = match pixel {
-                                0b11 => bgp >> 6,
-                                0b10 => bgp >> 4,
-                                0b01 => bgp >> 2,
-                                0b00 => bgp >> 0,
-                                _ => panic!("Unrecognised color"),
-                            } & 0b11;
+                            // Sprites with high priority
+                            if lcdc.obj_sprite_display() {
+                                let tmp = self.draw_sprites(
+                                    false,
+                                    screen_x,
+                                    screen_y,
+                                    sprite_palette0,
+                                    sprite_palette1,
+                                    sprite_size,
+                                );
 
-                            let color = match pixel_color {
-                                0b00 => Color::white(),
-                                0b01 => Color::dark_grey(),
-                                0b10 => Color::light_grey(),
-                                0b11 => Color::black(),
-                                _ => panic!("Unrecognised color"),
-                            };
-
-                            if pixel != 0x0 || pixel_to_write.is_none() {
-                                pixel_to_write = Some(color.to_rgba());
-                            }
-                        }
-
-                        // Sprites with high priority
-                        if lcdc.obj_sprite_display() {
-                            let tmp = self.draw_sprites(
-                                false,
-                                screen_x,
-                                screen_y,
-                                sprite_palette0,
-                                sprite_palette1,
-                                sprite_size,
-                            );
-
-                            if tmp.is_some() {
-                                pixel_to_write = tmp;
+                                if tmp.is_some() {
+                                    pixel_to_write = tmp;
+                                }
                             }
                         }
 
@@ -267,6 +311,11 @@ impl GPU {
                                 Rgba(pixel_to_write.unwrap()),
                             );
                         }
+                    }
+                    self.last_window_rendered_position_x = 0;
+
+                    if any_window_rendered {
+                        self.last_window_rendered_position_y += 1;
                     }
                 }
             }
