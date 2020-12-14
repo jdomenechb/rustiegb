@@ -151,12 +151,6 @@ impl GPU {
                         0x9800
                     };
 
-                    let bg_data_start_location = if lcdc.bg_and_window_tile_data_select() {
-                        0x8000
-                    } else {
-                        0x8800
-                    };
-
                     let scx = memory.scx();
                     let scy = memory.scy();
                     let bgp = memory.bgp();
@@ -382,7 +376,7 @@ impl GPU {
                 continue;
             }
 
-            let palette = if sprite.palette() == 0 {
+            let palette = if !sprite.palette() {
                 palette0
             } else {
                 palette1
@@ -392,7 +386,7 @@ impl GPU {
                 0b11 => palette >> 6,
                 0b10 => palette >> 4,
                 0b01 => palette >> 2,
-                0b00 => palette >> 0,
+                0b00 => palette,
                 _ => panic!("Unrecognised color"),
             } & 0b11;
 

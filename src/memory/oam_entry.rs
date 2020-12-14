@@ -38,8 +38,8 @@ impl OamEntry {
         self.tile_number
     }
 
-    pub fn palette(&self) -> Byte {
-        self.flags & 0b10000
+    pub fn palette(&self) -> bool {
+        self.flags & 0b10000 == 0b10000
     }
 
     pub fn flip_y(&self) -> bool {
