@@ -278,8 +278,8 @@ impl GPU {
 
                                 let color = match pixel_color {
                                     0b00 => Color::white(),
-                                    0b01 => Color::dark_grey(),
-                                    0b10 => Color::light_grey(),
+                                    0b01 => Color::light_grey(),
+                                    0b10 => Color::dark_grey(),
                                     0b11 => Color::black(),
                                     _ => panic!("Unrecognised color"),
                                 };
@@ -348,11 +348,9 @@ impl GPU {
         let word = memory.read_word(tile_address + row * 2);
         let bytes = word_to_two_bytes(word);
 
-        let to_return = (bytes.1, bytes.0);
+        cache.insert((tile_address, row), bytes);
 
-        cache.insert((tile_address, row), to_return);
-
-        to_return
+        bytes
     }
 
     fn draw_sprites(
@@ -379,10 +377,6 @@ impl GPU {
         let mut last_drawn: Option<&OamEntry> = None;
 
         for sprite in sprites_to_be_drawn {
-            if priority != sprite.priority() {
-                continue;
-            }
-
             if last_drawn.is_some() && last_drawn.unwrap().x() < sprite.x() {
                 continue;
             }
@@ -437,14 +431,13 @@ impl GPU {
                 0b11 => palette >> 6,
                 0b10 => palette >> 4,
                 0b01 => palette >> 2,
-                0b00 => palette,
                 _ => panic!("Unrecognised color"),
             } & 0b11;
 
             let color = match pixel_color {
                 0b00 => Color::white(),
-                0b01 => Color::dark_grey(),
-                0b10 => Color::light_grey(),
+                0b01 => Color::light_grey(),
+                0b10 => Color::dark_grey(),
                 0b11 => Color::black(),
                 _ => panic!("Unrecognised color"),
             };
