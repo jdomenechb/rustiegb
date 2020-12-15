@@ -172,7 +172,6 @@ impl GPU {
 
                     let screen_y = Byte::from(memory.ly.clone()) as u16;
                     let screen_y_with_offset = scy as u16 + screen_y;
-                    let tile_row = screen_y_with_offset as u16 % 8;
 
                     let mut previous_bg_tile_map_location = 0u16;
                     let mut tile_bytes = (0, 0);
@@ -208,6 +207,7 @@ impl GPU {
 
                             if lcdc.bg_display() {
                                 let bg_tile_map_location;
+                                let tile_row;
 
                                 // Window
                                 if lcdc.window_display()
@@ -224,6 +224,7 @@ impl GPU {
                                             / GPU::PIXELS_PER_TILE);
 
                                     tile_x = self.last_window_rendered_position_x % 8;
+                                    tile_row = self.last_window_rendered_position_y % 8;
 
                                     self.last_window_rendered_position_x += 1;
                                     any_window_rendered = true;
@@ -237,6 +238,7 @@ impl GPU {
                                         + (screen_x_with_offset / GPU::PIXELS_PER_TILE);
 
                                     tile_x = screen_x_with_offset % 8;
+                                    tile_row = screen_y_with_offset as u16 % 8;
                                 }
 
                                 if previous_bg_tile_map_location != bg_tile_map_location {
