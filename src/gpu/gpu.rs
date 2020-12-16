@@ -189,7 +189,7 @@ impl GPU {
 
                     for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
                         let mut pixel_to_write: Option<DisplayPixel> = None;
-                        let screen_x_with_offset = scx as u16 + screen_x;
+                        let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
                         let tile_x;
 
                         if pixel_to_write.is_none() {
