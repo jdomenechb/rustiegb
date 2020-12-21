@@ -26,7 +26,6 @@ pub struct Memory {
     cartridge: Cartridge,
 
     video_ram: VideoRam8kMemorySector,
-    switchable_ram_bank: InternalRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
     oam_ram: OamMemorySector,
     // FF00
@@ -150,7 +149,6 @@ impl Memory {
             bootstrap_rom,
             cartridge,
             video_ram: VideoRam8kMemorySector::default(),
-            switchable_ram_bank: InternalRam8kMemorySector::default(),
             internal_ram_8k: InternalRam8kMemorySector::default(),
             p1: Joypad::new(),
             serial_transfer_data: 0,
@@ -240,7 +238,7 @@ impl Memory {
 
         // 8k switchable RAM bank
         if position >= 0xA000 && position < 0xC000 {
-            return Some(self.switchable_ram_bank.read_byte(position - 0xA000));
+            return Some(self.cartridge.read_byte(position));
         }
 
         // Internal RAM 8k
@@ -503,7 +501,7 @@ impl Memory {
 
         // 8k switchable RAM bank
         if position >= 0xA000 && position < 0xC000 {
-            return self.switchable_ram_bank.read_word(position - 0xA000);
+            return self.cartridge.read_word(position);
         }
 
         // Internal RAM 8k
@@ -548,9 +546,7 @@ impl Memory {
 
         // 8k switchable RAM bank
         if position >= 0xA000 && position < 0xC000 {
-            self.switchable_ram_bank
-                .write_byte(position - 0xA000, value);
-            return;
+            return self.cartridge.write_byte(position, value);
         }
 
         // Internal RAM 8k
@@ -898,9 +894,7 @@ impl Memory {
 
         // Internal RAM 8k
         if position >= 0xA000 && position < 0xC000 {
-            return self
-                .switchable_ram_bank
-                .write_word(position - 0xA000, value);
+            return self.cartridge.write_word(position, value);
         }
 
         // Internal RAM 8k

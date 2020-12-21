@@ -1,7 +1,8 @@
 mod cartridge_memory_sector;
 
 use crate::cartridge::cartridge_memory_sector::{CartridgeMemorySector, ReadCartridgeMemory};
-use crate::memory::memory_sector::{ReadMemory, WriteMemory};
+use crate::math::{two_bytes_to_word, word_to_two_bytes};
+use crate::memory::memory_sector::{MemorySector, ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 use std::fs::File;
 use std::io::Read;
@@ -133,6 +134,20 @@ impl From<Byte> for RamSize {
     }
 }
 
+impl From<&RamSize> for MemorySector {
+    fn from(value: &RamSize) -> Self {
+        MemorySector::with_size(match value {
+            RamSize::None => 0,
+            RamSize::Kb2 => 2 * 1024,
+            RamSize::Kb8 => 8 * 1024,
+            RamSize::Kb32 => 32 * 1024,
+            RamSize::Kb128 => 128 * 1024,
+            RamSize::Kb64 => 64 * 1024,
+            _ => panic!("Invalid RAM size"),
+        })
+    }
+}
+
 #[readonly::make]
 #[derive(Debug)]
 pub struct CartridgeHeader {
@@ -175,6 +190,10 @@ pub struct Cartridge {
     pub data: CartridgeMemorySector,
     pub header: CartridgeHeader,
     selected_rom_bank: u8,
+    selected_ram_bank: u8,
+    ram: MemorySector,
+    ram_enabled: bool,
+    ram_banking_mode: bool,
 }
 
 impl Cartridge {
@@ -186,11 +205,16 @@ impl Cartridge {
             .expect("Error on reading ROM contents");
 
         let header = CartridgeHeader::new_from_data(&data);
+        let ram = (&header.ram_size).into();
 
         Self {
             data: CartridgeMemorySector::with_data(data),
             header,
             selected_rom_bank: 1,
+            selected_ram_bank: 0,
+            ram,
+            ram_enabled: false,
+            ram_banking_mode: false,
         }
     }
 }
@@ -201,6 +225,10 @@ impl Default for Cartridge {
             data: CartridgeMemorySector::with_size(0),
             header: CartridgeHeader::default(),
             selected_rom_bank: 1,
+            selected_ram_bank: 0,
+            ram: MemorySector::with_size(0),
+            ram_enabled: false,
+            ram_banking_mode: false,
         }
     }
 }
@@ -217,6 +245,16 @@ impl ReadMemory for Cartridge {
                 if position >= 0x4000 && position < 0x8000 {
                     return self.data.read_byte(
                         position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize,
+                    );
+                }
+
+                if position >= 0xA000 && position < 0xBFFF {
+                    if !self.ram_enabled {
+                        return 0xFF;
+                    }
+
+                    return self.ram.read_byte(
+                        position as u16 - 0xA000 + 0xA000 * self.selected_ram_bank as u16,
                     );
                 }
 
@@ -237,33 +275,10 @@ impl ReadMemory for Cartridge {
     }
 
     fn read_word(&self, position: Word) -> Word {
-        match self.header.cartridge_type {
-            CartridgeType::Rom(false, false) => self.data.read_word(position as usize),
-            CartridgeType::Mbc1(_, _) => {
-                if position < 0x4000 {
-                    return self.data.read_word(position as usize);
-                }
+        let value1 = self.read_byte(position);
+        let value2 = self.read_byte(position + 1);
 
-                if position >= 0x4000 && position < 0x8000 {
-                    return self.data.read_word(
-                        position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize,
-                    );
-                }
-
-                panic!(
-                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
-            }
-            _ => {
-                panic!(
-                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
-            }
-        }
+        two_bytes_to_word(value2, value1)
     }
 }
 
@@ -276,9 +291,30 @@ impl WriteMemory for Cartridge {
                     position
                 );
             }
+
             CartridgeType::Mbc1(_, _) => {
+                if position < 0x2000 {
+                    self.ram_enabled = value & 0xA == 0xA;
+                    return;
+                }
+
                 if position >= 0x2000 && position < 0x4000 {
                     self.selected_rom_bank = if value != 0 { value & 0b11111 } else { 1 };
+                    return;
+                }
+
+                if position >= 0x6000 && position < 0x8000 {
+                    self.ram_banking_mode = value != 0;
+                    return;
+                }
+
+                if position >= 0xA000 && position < 0xC000 {
+                    if self.ram_enabled {
+                        self.ram.write_byte(
+                            position - 0xA000 + 0x2000 * self.selected_ram_bank as u16,
+                            value,
+                        );
+                    }
                     return;
                 }
 
@@ -288,6 +324,7 @@ impl WriteMemory for Cartridge {
                     self.header.cartridge_type
                 );
             }
+
             _ => {
                 panic!(
                     "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
@@ -299,20 +336,9 @@ impl WriteMemory for Cartridge {
     }
 
     fn write_word(&mut self, position: u16, value: u16) {
-        match self.header.cartridge_type {
-            CartridgeType::Rom(false, false) => {
-                println!(
-                    "Attempt to write at Memory {:X}. ROM is not writable!!!",
-                    position
-                );
-            }
-            _ => {
-                panic!(
-                    "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
-            }
-        }
+        let bytes = word_to_two_bytes(value);
+
+        self.write_byte(position, bytes.1);
+        self.write_byte(position + 1, bytes.0);
     }
 }
