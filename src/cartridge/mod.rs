@@ -163,6 +163,10 @@ impl CartridgeHeader {
 
         if title.is_err() {
             title = String::from_utf8((&data[0x134..0x144]).to_vec());
+
+            if title.is_err() {
+                title = Ok("".to_string());
+            }
         }
 
         Self {
