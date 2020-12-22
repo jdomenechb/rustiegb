@@ -52,6 +52,12 @@ fn main() {
                 .help("Prints the parsed cartridge header"),
         )
         .arg(
+            Arg::with_name("turbo")
+                .long("turbo")
+                .help("Speed up execution (example: --turbo=2)")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("bootstrap")
                 .long("bootstrap")
                 .help("Uses bootstrap ROM"),
@@ -75,7 +81,12 @@ fn main() {
 
     // --- Setting up GB components
     let memory = Rc::new(RefCell::new(Memory::new(cartridge, bootstrap)));
-    let mut cpu = CPU::new(memory.clone(), debug_cpu, bootstrap);
+    let mut cpu = CPU::new(
+        memory.clone(),
+        debug_cpu,
+        bootstrap,
+        str::parse::<u8>(matches.value_of("turbo").unwrap_or("1")).unwrap(),
+    );
     let mut gpu = GPU::new(memory.clone());
 
     let audio_unit_output: Box<dyn AudioUnitOutput>;

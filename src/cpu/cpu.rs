@@ -19,18 +19,24 @@ pub struct CPU {
     last_executed_instruction: String,
     ime: bool,
     halted: bool,
+    turbo_multiplier: u8,
 }
 
 impl CPU {
     const AVAILABLE_CCYCLES_PER_FRAME: i32 = 70221;
 
-    pub fn new(memory: Rc<RefCell<Memory>>, debug: bool, bootstrap: bool) -> CPU {
-        return CPU {
+    pub fn new(
+        memory: Rc<RefCell<Memory>>,
+        debug: bool,
+        bootstrap: bool,
+        turbo_multiplier: u8,
+    ) -> CPU {
+        let mut cpu = CPU {
             memory,
 
             registers: CPURegisters::new(bootstrap),
             alu: ALU {},
-            available_cycles: CPU::AVAILABLE_CCYCLES_PER_FRAME,
+            available_cycles: 0,
 
             pc_to_increment: -1,
             last_instruction_ccycles: -1,
@@ -38,11 +44,16 @@ impl CPU {
             last_executed_instruction: String::new(),
             ime: false,
             halted: false,
+            turbo_multiplier,
         };
+
+        cpu.reset_available_ccycles();
+
+        cpu
     }
 
     pub fn reset_available_ccycles(&mut self) {
-        self.available_cycles = CPU::AVAILABLE_CCYCLES_PER_FRAME;
+        self.available_cycles = CPU::AVAILABLE_CCYCLES_PER_FRAME * self.turbo_multiplier as i32;
     }
 
     pub fn has_available_ccycles(&self) -> bool {
