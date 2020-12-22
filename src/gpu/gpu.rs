@@ -212,7 +212,7 @@ impl GPU {
                                 // Window
                                 if lcdc.window_display()
                                     && memory.wy <= screen_y as Byte
-                                    && memory.wx - 7 <= screen_x as Byte
+                                    && memory.wx as i16 - 7 <= screen_x as i16
                                 {
                                     bg_tile_map_location = window_tile_map_start_location
                                         + (((self.last_window_rendered_position_y
