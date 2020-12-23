@@ -307,6 +307,19 @@ impl WriteMemory for Cartridge {
                     return;
                 }
 
+                if position >= 0x4000 && position < 0x6000 {
+                    let new_value = value & 0b11;
+
+                    if !self.ram_banking_mode {
+                        self.selected_rom_bank =
+                            new_value >> 5 | (self.selected_rom_bank & 0b11111);
+                    } else {
+                        self.selected_ram_bank = new_value;
+                    }
+
+                    return;
+                }
+
                 if position >= 0x6000 && position < 0x8000 {
                     self.ram_banking_mode = value != 0;
                     return;
