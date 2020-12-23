@@ -1005,7 +1005,7 @@ impl Memory {
         &mut self.oam_ram
     }
 
-    pub fn set_stat_mode(&mut self, mode: STATMode) {
+    pub fn set_stat_mode(&mut self, mode: STATMode, lcd_enabled: bool) {
         match mode {
             STATMode::HBlank => {
                 if self.stat.mode_0 {
@@ -1018,8 +1018,11 @@ impl Memory {
                     self.interrupt_flag.set_lcd_stat(true);
                 }
 
-                self.interrupt_flag().set_vblank(true);
+                if lcd_enabled {
+                    self.interrupt_flag().set_vblank(true);
+                }
             }
+
             STATMode::SearchOamRam => {
                 if self.stat.mode_2 {
                     self.interrupt_flag.set_lcd_stat(true);

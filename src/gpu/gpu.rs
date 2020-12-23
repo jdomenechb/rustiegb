@@ -50,10 +50,12 @@ impl GPU {
 
     pub fn step(&mut self, last_instruction_cycles: u8, canvas: &mut RgbaImage) {
         let mode;
+        let lcd_enabled;
 
         {
             let memory = self.memory.borrow();
             mode = memory.stat.mode();
+            lcd_enabled = memory.lcdc.lcd_control_operation();
         }
 
         self.cycles_acumulated += last_instruction_cycles as u16;
@@ -69,9 +71,9 @@ impl GPU {
                         memory.ly_increment();
 
                         if memory.ly.has_reached_end_of_screen() {
-                            memory.set_stat_mode(STATMode::VBlank);
+                            memory.set_stat_mode(STATMode::VBlank, lcd_enabled);
                         } else {
-                            memory.set_stat_mode(STATMode::SearchOamRam);
+                            memory.set_stat_mode(STATMode::SearchOamRam, lcd_enabled);
                         }
                     }
                 }
@@ -91,7 +93,7 @@ impl GPU {
 
                         if memory.ly.has_reached_end_of_vblank() {
                             // Enter Searching OAM-RAM mode
-                            memory.set_stat_mode(STATMode::SearchOamRam);
+                            memory.set_stat_mode(STATMode::SearchOamRam, lcd_enabled);
                             memory.ly_reset();
                             self.tile_row_cache.borrow_mut().clear();
                         }
@@ -106,7 +108,7 @@ impl GPU {
                     self.cycles_acumulated = 0;
 
                     let mut memory = self.memory.borrow_mut();
-                    memory.set_stat_mode(STATMode::LCDTransfer);
+                    memory.set_stat_mode(STATMode::LCDTransfer, lcd_enabled);
 
                     self.sprites_to_be_drawn_with_priority.clear();
                     self.sprites_to_be_drawn_without_priority.clear();
@@ -142,7 +144,7 @@ impl GPU {
 
                     {
                         let mut memory = self.memory.borrow_mut();
-                        memory.set_stat_mode(STATMode::HBlank);
+                        memory.set_stat_mode(STATMode::HBlank, lcd_enabled);
                     }
 
                     let memory = self.memory.borrow();
@@ -150,7 +152,7 @@ impl GPU {
                     // Draw pixel line
                     let lcdc = &memory.lcdc;
 
-                    if !lcdc.lcd_control_operation() {
+                    if !lcd_enabled {
                         return;
                     }
 
