@@ -281,7 +281,7 @@ impl WriteMemory for Cartridge {
             }
             CartridgeType::Mbc1(_, _) => {
                 // Enable / disable RAM
-                if position >= 0x0000 && position < 0x2000 {
+                if position < 0x2000 {
                     self.ram_enabled = if value & 0x0A == 0x0A { true } else {false};
                     return;
                 }
