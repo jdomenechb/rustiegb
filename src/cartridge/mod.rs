@@ -175,6 +175,7 @@ pub struct Cartridge {
     pub data: CartridgeMemorySector,
     pub header: CartridgeHeader,
     selected_rom_bank: u8,
+    ram_enabled: bool,
 }
 
 impl Cartridge {
@@ -191,6 +192,7 @@ impl Cartridge {
             data: CartridgeMemorySector::with_data(data),
             header,
             selected_rom_bank: 1,
+            ram_enabled: false,
         }
     }
 }
@@ -201,6 +203,7 @@ impl Default for Cartridge {
             data: CartridgeMemorySector::with_size(0),
             header: CartridgeHeader::default(),
             selected_rom_bank: 1,
+            ram_enabled: false,
         }
     }
 }
@@ -277,6 +280,13 @@ impl WriteMemory for Cartridge {
                 );
             }
             CartridgeType::Mbc1(_, _) => {
+                // Enable / disable RAM
+                if position >= 0x0000 && position < 0x2000 {
+                    self.ram_enabled = if value & 0x0A == 0x0A { true } else {false};
+                    return;
+                }
+
+                // Select ROM Bank Number
                 if position >= 0x2000 && position < 0x4000 {
                     self.selected_rom_bank = if value != 0 { value & 0b11111 } else { 1 };
                     return;
