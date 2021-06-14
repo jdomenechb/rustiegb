@@ -133,6 +133,21 @@ impl From<Byte> for RamSize {
     }
 }
 
+impl RamSize {
+    fn size(&self) -> usize {
+        let mul = match self {
+            Self::None => 0,
+            Self::Kb2 => 2,
+            Self::Kb8 => 8,
+            Self::Kb32 => 32,
+            Self::Kb128 => 128,
+            Self::Kb64 => 64,
+        };
+
+        mul * 1024
+    }
+}
+
 #[readonly::make]
 #[derive(Debug)]
 pub struct CartridgeHeader {
@@ -174,8 +189,10 @@ impl Default for CartridgeHeader {
 pub struct Cartridge {
     pub data: CartridgeMemorySector,
     pub header: CartridgeHeader,
-    selected_rom_bank: u8,
+    selected_rom_bank: u16,
     ram_enabled: bool,
+    selected_ram_bank: u8,
+    ram: CartridgeMemorySector,
 }
 
 impl Cartridge {
@@ -188,11 +205,15 @@ impl Cartridge {
 
         let header = CartridgeHeader::new_from_data(&data);
 
+        let ram_size_in_bytes = header.ram_size.size();
+
         Self {
             data: CartridgeMemorySector::with_data(data),
             header,
             selected_rom_bank: 1,
             ram_enabled: false,
+            selected_ram_bank: 1,
+            ram: CartridgeMemorySector::with_size(ram_size_in_bytes),
         }
     }
 }
@@ -204,6 +225,8 @@ impl Default for Cartridge {
             header: CartridgeHeader::default(),
             selected_rom_bank: 1,
             ram_enabled: false,
+            selected_ram_bank: 1,
+            ram: CartridgeMemorySector::with_size(0),
         }
     }
 }
@@ -214,29 +237,22 @@ impl ReadMemory for Cartridge {
             return self.data.read_byte(position as usize);
         }
 
-        match self.header.cartridge_type {
-            CartridgeType::Rom(false, false) => self.data.read_byte(position as usize),
-            CartridgeType::Mbc1(_, _) => {
-                if position >= 0x4000 && position < 0x8000 {
-                    return self.data.read_byte(
-                        position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize,
-                    );
-                }
-
-                panic!(
-                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
-            }
-            _ => {
-                panic!(
-                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
-            }
+        if position >= 0x4000 && position < 0x8000 {
+            return self
+                .data
+                .read_byte(position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize);
         }
+
+        match self.header.cartridge_type {
+            CartridgeType::Rom(false, false) => return self.data.read_byte(position as usize),
+            CartridgeType::Mbc1(_, _) => {}
+            _ => {}
+        }
+
+        panic!(
+            "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
+            position, self.header.cartridge_type
+        );
     }
 
     fn read_word(&self, position: Word) -> Word {
@@ -244,29 +260,22 @@ impl ReadMemory for Cartridge {
             return self.data.read_word(position as usize);
         }
 
-        match self.header.cartridge_type {
-            CartridgeType::Rom(false, false) => self.data.read_word(position as usize),
-            CartridgeType::Mbc1(_, _) => {
-                if position >= 0x4000 && position < 0x8000 {
-                    return self.data.read_word(
-                        position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize,
-                    );
-                }
-
-                panic!(
-                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
-            }
-            _ => {
-                panic!(
-                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
-            }
+        if position >= 0x4000 && position < 0x8000 {
+            return self
+                .data
+                .read_word(position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize);
         }
+
+        match self.header.cartridge_type {
+            CartridgeType::Rom(false, false) => return self.data.read_word(position as usize),
+            CartridgeType::Mbc1(_, _) => {}
+            _ => {}
+        }
+
+        panic!(
+            "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
+            position, self.header.cartridge_type
+        );
     }
 }
 
@@ -278,34 +287,65 @@ impl WriteMemory for Cartridge {
                     "Attempt to write at Memory {:X}. ROM is not writable!!!",
                     position
                 );
+
+                return;
             }
+
             CartridgeType::Mbc1(_, _) => {
-                // Enable / disable RAM
-                if position < 0x2000 {
-                    self.ram_enabled = if value & 0x0A == 0x0A { true } else { false };
+                if self.determine_ram_enable(position, value) {
                     return;
                 }
 
                 // Select ROM Bank Number
                 if position >= 0x2000 && position < 0x4000 {
-                    self.selected_rom_bank = if value != 0 { value & 0b11111 } else { 1 };
+                    self.selected_rom_bank = if value != 0 {
+                        value as u16 & 0b11111
+                    } else {
+                        1
+                    };
+                    return;
+                }
+            }
+
+            CartridgeType::Mbc5(_, _, _) => {
+                if self.determine_ram_enable(position, value) {
                     return;
                 }
 
-                panic!(
-                    "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
+                // Select ROM Bank Number - Low
+                if position >= 0x2000 && position < 0x3000 {
+                    self.selected_rom_bank = value as u16 & 0xFF;
+                    return;
+                }
+
+                // Select ROM Bank Number - High
+                if position >= 0x3000 && position < 0x4000 {
+                    self.selected_rom_bank = (((value & 0x1) as u16) << 8 | self.selected_rom_bank);
+                    return;
+                }
+
+                // Select RAM Bank Number
+                if position >= 0x4000 && position < 0x6000 {
+                    self.selected_ram_bank = value & 0xF;
+                    return;
+                }
+
+                if position >= 0x6000 && position < 0xA000 {
+                    println!(
+                        "Attempt to write at Memory {:X}. ROM is not writable!!!",
+                        position
+                    );
+
+                    return;
+                }
             }
-            _ => {
-                panic!(
-                    "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
-            }
+            _ => {}
         }
+
+        panic!(
+            "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
+            position, self.header.cartridge_type
+        );
     }
 
     fn write_word(&mut self, position: u16, value: u16) {
@@ -324,5 +364,16 @@ impl WriteMemory for Cartridge {
                 );
             }
         }
+    }
+}
+
+impl Cartridge {
+    fn determine_ram_enable(&mut self, position: u16, value: u8) -> bool {
+        if position < 0x2000 {
+            self.ram_enabled = if value & 0x0A == 0x0A { true } else { false };
+            return true;
+        }
+
+        false
     }
 }
