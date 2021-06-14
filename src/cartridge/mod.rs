@@ -210,13 +210,13 @@ impl Default for Cartridge {
 
 impl ReadMemory for Cartridge {
     fn read_byte(&self, position: Word) -> Byte {
+        if position < 0x4000 {
+            return self.data.read_byte(position as usize);
+        }
+
         match self.header.cartridge_type {
             CartridgeType::Rom(false, false) => self.data.read_byte(position as usize),
             CartridgeType::Mbc1(_, _) => {
-                if position < 0x4000 {
-                    return self.data.read_byte(position as usize);
-                }
-
                 if position >= 0x4000 && position < 0x8000 {
                     return self.data.read_byte(
                         position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize,
@@ -240,13 +240,13 @@ impl ReadMemory for Cartridge {
     }
 
     fn read_word(&self, position: Word) -> Word {
+        if position < 0x4000 {
+            return self.data.read_word(position as usize);
+        }
+
         match self.header.cartridge_type {
             CartridgeType::Rom(false, false) => self.data.read_word(position as usize),
             CartridgeType::Mbc1(_, _) => {
-                if position < 0x4000 {
-                    return self.data.read_word(position as usize);
-                }
-
                 if position >= 0x4000 && position < 0x8000 {
                     return self.data.read_word(
                         position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize,
@@ -282,7 +282,7 @@ impl WriteMemory for Cartridge {
             CartridgeType::Mbc1(_, _) => {
                 // Enable / disable RAM
                 if position < 0x2000 {
-                    self.ram_enabled = if value & 0x0A == 0x0A { true } else {false};
+                    self.ram_enabled = if value & 0x0A == 0x0A { true } else { false };
                     return;
                 }
 
