@@ -149,6 +149,9 @@ fn main() {
                 Key::M => {
                     audio_unit.toggle_mute();
                 }
+                Key::Space => {
+                    cpu.set_user_speed_multiplier(20);
+                }
                 _ => {}
             };
         }
@@ -165,6 +168,7 @@ fn main() {
                 Key::Right => memory.joypad().right = false,
                 Key::Up => memory.joypad().up = false,
                 Key::Down => memory.joypad().down = false,
+                Key::Space => cpu.set_user_speed_multiplier(1),
                 _ => {}
             }
         };

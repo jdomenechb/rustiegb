@@ -289,7 +289,7 @@ impl GPU {
                                 }
                             }
 
-                            // Sprites with high priority
+                            // Sprites with low priority
                             if lcdc.obj_sprite_display() {
                                 let tmp = self.draw_sprites(
                                     false,
