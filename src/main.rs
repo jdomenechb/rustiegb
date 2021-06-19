@@ -146,7 +146,9 @@ fn main() {
                     memory.joypad().down = true;
                     memory.interrupt_flag().set_p10_p13_transition(true);
                 }
-
+                Key::M => {
+                    audio_unit.toggle_mute();
+                }
                 _ => {}
             };
         }

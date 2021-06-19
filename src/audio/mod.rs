@@ -221,4 +221,8 @@ impl AudioUnit {
             _ => {}
         }
     }
+
+    pub fn toggle_mute(&mut self) {
+        self.auo.toggle_mute();
+    }
 }

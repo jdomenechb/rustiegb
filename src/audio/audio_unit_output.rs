@@ -7,6 +7,7 @@ pub trait AudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription);
     fn update_pulse(&mut self, description: &PulseDescription);
     fn stop_all(&mut self);
+    fn toggle_mute(&mut self);
 }
 
 pub struct DebugAudioUnitOutput {}
@@ -51,6 +52,10 @@ impl AudioUnitOutput for DebugAudioUnitOutput {
 
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
+
+    fn toggle_mute(&mut self) {
+        println!("Mute pressed");
+    }
 }
 
 pub struct CpalAudioUnitOutput {
@@ -63,6 +68,7 @@ pub struct CpalAudioUnitOutput {
 
     volume_envelope_1: Arc<RwLock<u8>>,
     volume_envelope_2: Arc<RwLock<u8>>,
+    muted: bool,
 }
 
 impl CpalAudioUnitOutput {
@@ -82,6 +88,7 @@ impl CpalAudioUnitOutput {
 
             volume_envelope_1: Arc::new(RwLock::new(0)),
             volume_envelope_2: Arc::new(RwLock::new(0)),
+            muted: false,
         }
     }
 
@@ -156,6 +163,10 @@ impl CpalAudioUnitOutput {
 
 impl AudioUnitOutput for CpalAudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription) {
+        if self.muted {
+            return;
+        }
+
         let config = self.device.default_output_config().unwrap();
 
         let stream = match config.sample_format() {
@@ -190,5 +201,10 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         self.stream_2 = None;
         self.stream_3 = None;
         self.stream_4 = None;
+    }
+
+    fn toggle_mute(&mut self) {
+        self.muted = !self.muted;
+        self.stop_all();
     }
 }
