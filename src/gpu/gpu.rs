@@ -395,8 +395,6 @@ impl GPU {
                 continue;
             }
 
-            last_drawn = Some(sprite);
-
             let sprite_addr =
                 SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * GPU::TILE_SIZE_BYTES as u16;
 
@@ -420,6 +418,8 @@ impl GPU {
             if pixel == 0 {
                 continue;
             }
+
+            last_drawn = Some(sprite);
 
             let palette = if !sprite.palette() {
                 palette0
