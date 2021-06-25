@@ -74,76 +74,73 @@ impl GPU {
     }
 
     fn hblank(&mut self) {
-        if self.cycles_accumulated < 204 {
-            return;
-        }
+        if self.cycles_accumulated >= 204 {
+            self.cycles_accumulated = 0;
 
-        self.cycles_accumulated = 0;
+            {
+                let mut memory = self.memory.borrow_mut();
+                memory.ly_increment();
 
-        let mut memory = self.memory.borrow_mut();
-        memory.ly_increment();
-
-        if memory.ly.has_reached_end_of_screen() {
-            memory.set_stat_mode(STATMode::VBlank);
-        } else {
-            memory.set_stat_mode(STATMode::SearchOamRam);
+                if memory.ly.has_reached_end_of_screen() {
+                    memory.set_stat_mode(STATMode::VBlank);
+                } else {
+                    memory.set_stat_mode(STATMode::SearchOamRam);
+                }
+            }
         }
     }
 
     fn vblank(&mut self) {
-        if self.cycles_accumulated < 456 {
-            return;
-        }
+        if self.cycles_accumulated >= 456 {
+            self.cycles_accumulated = 0;
 
-        self.cycles_accumulated = 0;
+            self.last_window_rendered_position_x = 0;
+            self.last_window_rendered_position_y = 0;
 
-        self.last_window_rendered_position_x = 0;
-        self.last_window_rendered_position_y = 0;
+            {
+                let mut memory = self.memory.borrow_mut();
+                memory.ly_increment();
 
-        let mut memory = self.memory.borrow_mut();
-        memory.ly_increment();
-
-        if memory.ly.has_reached_end_of_vblank() {
-            // Enter Searching OAM-RAM mode
-            memory.set_stat_mode(STATMode::SearchOamRam);
-            memory.ly_reset();
-
-            self.tile_row_cache.borrow_mut().clear();
+                if memory.ly.has_reached_end_of_vblank() {
+                    // Enter Searching OAM-RAM mode
+                    memory.set_stat_mode(STATMode::SearchOamRam);
+                    memory.ly_reset();
+                    self.tile_row_cache.borrow_mut().clear();
+                }
+            }
         }
     }
 
     fn search_oam_ram(&mut self) {
-        if self.cycles_accumulated < 80 {
-            return;
-        }
+        if self.cycles_accumulated >= 80 {
+            // Enter transferring data to LCD Driver mode
+            self.cycles_accumulated = 0;
 
-        // Enter transferring data to LCD Driver mode
-        self.cycles_accumulated = 0;
+            let mut memory = self.memory.borrow_mut();
+            memory.set_stat_mode(STATMode::LCDTransfer);
 
-        let mut memory = self.memory.borrow_mut();
-        memory.set_stat_mode(STATMode::LCDTransfer);
+            self.sprites_to_be_drawn_with_priority.clear();
+            self.sprites_to_be_drawn_without_priority.clear();
 
-        self.sprites_to_be_drawn_with_priority.clear();
-        self.sprites_to_be_drawn_without_priority.clear();
+            let lcdc = &memory.lcdc;
 
-        let lcdc = &memory.lcdc;
+            if !lcdc.obj_sprite_display() {
+                return;
+            }
 
-        if !lcdc.obj_sprite_display() {
-            return;
-        }
+            let ly: u8 = memory.ly.clone().into();
+            let sprite_size = if lcdc.obj_sprite_size() { 16 } else { 8 };
 
-        let ly: u8 = memory.ly.clone().into();
-        let sprite_size = if lcdc.obj_sprite_size() { 16 } else { 8 };
-
-        for oam_entry in memory.oam_ram() {
-            if oam_entry.x() != 0
-                && ly + 16 >= oam_entry.y()
-                && ly + 16 < oam_entry.y() + sprite_size
-            {
-                if oam_entry.priority() {
-                    self.sprites_to_be_drawn_with_priority.push(oam_entry);
-                } else {
-                    self.sprites_to_be_drawn_without_priority.push(oam_entry);
+            for oam_entry in memory.oam_ram() {
+                if oam_entry.x() != 0
+                    && ly + 16 >= oam_entry.y()
+                    && ly + 16 < oam_entry.y() + sprite_size
+                {
+                    if oam_entry.priority() {
+                        self.sprites_to_be_drawn_with_priority.push(oam_entry);
+                    } else {
+                        self.sprites_to_be_drawn_without_priority.push(oam_entry);
+                    }
                 }
             }
         }
