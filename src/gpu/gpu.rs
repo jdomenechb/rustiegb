@@ -204,20 +204,37 @@ impl GPU {
             let mut pixel_to_write: Option<DisplayPixel> = None;
             let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
             let tile_x;
+            let mut sprite_written_without_priority = false;
 
-            // Sprites with high priority
+            // Sprites with low priority
             if lcdc.obj_sprite_display() {
                 pixel_to_write = self.draw_sprites(
-                    true,
+                    false,
                     screen_x,
                     screen_y,
                     sprite_palette0,
                     sprite_palette1,
                     sprite_size,
                 );
+
+                sprite_written_without_priority = true;
+
+                // Sprites with high priority
+                if pixel_to_write.is_none() {
+                    pixel_to_write = self.draw_sprites(
+                        true,
+                        screen_x,
+                        screen_y,
+                        sprite_palette0,
+                        sprite_palette1,
+                        sprite_size,
+                    );
+
+                    sprite_written_without_priority = false;
+                }
             }
 
-            if lcdc.bg_display() {
+            if lcdc.bg_display() && !sprite_written_without_priority {
                 let bg_tile_map_location;
                 let tile_row;
 
@@ -291,22 +308,6 @@ impl GPU {
 
                 if pixel != 0x0 || pixel_to_write.is_none() {
                     pixel_to_write = Some(color.to_rgba());
-                }
-            }
-
-            // Sprites with low priority
-            if lcdc.obj_sprite_display() {
-                let tmp = self.draw_sprites(
-                    false,
-                    screen_x,
-                    screen_y,
-                    sprite_palette0,
-                    sprite_palette1,
-                    sprite_size,
-                );
-
-                if tmp.is_some() {
-                    pixel_to_write = tmp;
                 }
             }
 
