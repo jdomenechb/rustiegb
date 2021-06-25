@@ -200,45 +200,29 @@ impl GPU {
 
         let mut any_window_rendered = false;
 
-        let is_obj_sprite_display = lcdc.obj_sprite_display();
-        let is_bg_display = lcdc.bg_display();
-        let is_window_display = lcdc.window_display();
-
         for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
             let mut pixel_to_write: Option<DisplayPixel> = None;
             let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
             let tile_x;
 
-            // Sprites with low priority
-            if is_obj_sprite_display {
+            // Sprites with high priority
+            if lcdc.obj_sprite_display() {
                 pixel_to_write = self.draw_sprites(
-                    false,
+                    true,
                     screen_x,
                     screen_y,
                     sprite_palette0,
                     sprite_palette1,
                     sprite_size,
                 );
-
-                // Sprites with high priority
-                if pixel_to_write.is_none() {
-                    pixel_to_write = self.draw_sprites(
-                        true,
-                        screen_x,
-                        screen_y,
-                        sprite_palette0,
-                        sprite_palette1,
-                        sprite_size,
-                    );
-                }
             }
 
-            if is_bg_display && pixel_to_write.is_none() {
+            if lcdc.bg_display() {
                 let bg_tile_map_location;
                 let tile_row;
 
                 // Window
-                if is_window_display
+                if lcdc.window_display()
                     && memory.wy <= screen_y as Byte
                     && memory.wx <= (screen_x + 7) as Byte
                 {
@@ -305,7 +289,25 @@ impl GPU {
                     _ => panic!("Unrecognised color"),
                 };
 
-                pixel_to_write = Some(color.to_rgba());
+                if pixel != 0x0 || pixel_to_write.is_none() {
+                    pixel_to_write = Some(color.to_rgba());
+                }
+            }
+
+            // Sprites with low priority
+            if lcdc.obj_sprite_display() {
+                let tmp = self.draw_sprites(
+                    false,
+                    screen_x,
+                    screen_y,
+                    sprite_palette0,
+                    sprite_palette1,
+                    sprite_size,
+                );
+
+                if tmp.is_some() {
+                    pixel_to_write = tmp;
+                }
             }
 
             if pixel_to_write.is_some() {
