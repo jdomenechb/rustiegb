@@ -1,6 +1,6 @@
 use crate::audio::{PulseDescription, VolumeEnvelopeDirection};
 use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::{Device, Stream};
+use cpal::{Device, Stream, SupportedStreamConfig};
 use std::sync::{Arc, RwLock};
 
 pub trait AudioUnitOutput {
@@ -60,6 +60,7 @@ impl AudioUnitOutput for DebugAudioUnitOutput {
 
 pub struct CpalAudioUnitOutput {
     device: Device,
+    config: SupportedStreamConfig,
 
     stream_1: Option<Stream>,
     stream_2: Option<Stream>,
@@ -79,8 +80,11 @@ impl CpalAudioUnitOutput {
             .default_output_device()
             .expect("failed to find a default output device");
 
+        let config = device.default_output_config().unwrap();
+
         Self {
             device,
+            config,
             stream_1: None,
             stream_2: None,
             stream_3: None,
@@ -167,12 +171,16 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
             return;
         }
 
-        let config = self.device.default_output_config().unwrap();
-
-        let stream = match config.sample_format() {
-            cpal::SampleFormat::F32 => self.run::<f32>(&config.into(), description).unwrap(),
-            cpal::SampleFormat::I16 => self.run::<i16>(&config.into(), description).unwrap(),
-            cpal::SampleFormat::U16 => self.run::<u16>(&config.into(), description).unwrap(),
+        let stream = match self.config.sample_format() {
+            cpal::SampleFormat::F32 => self
+                .run::<f32>(&self.config.clone().into(), description)
+                .unwrap(),
+            cpal::SampleFormat::I16 => self
+                .run::<i16>(&self.config.clone().into(), description)
+                .unwrap(),
+            cpal::SampleFormat::U16 => self
+                .run::<u16>(&self.config.clone().into(), description)
+                .unwrap(),
         };
 
         match description.pulse_n {
