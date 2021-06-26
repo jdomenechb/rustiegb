@@ -377,10 +377,6 @@ impl GPU {
             false => &self.sprites_to_be_drawn_without_priority,
         };
 
-        if sprites_to_be_drawn.is_empty() {
-            return None;
-        }
-
         let mut pixel_to_write = None;
         let mut last_drawn: Option<&OamEntry> = None;
 
