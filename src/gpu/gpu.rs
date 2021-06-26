@@ -112,35 +112,37 @@ impl GPU {
     }
 
     fn search_oam_ram(&mut self) {
-        if self.cycles_accumulated >= 80 {
-            // Enter transferring data to LCD Driver mode
-            self.cycles_accumulated = 0;
+        if self.cycles_accumulated < 80 {
+            return;
+        }
 
-            let mut memory = self.memory.borrow_mut();
-            memory.set_stat_mode(STATMode::LCDTransfer);
+        // Enter transferring data to LCD Driver mode
+        self.cycles_accumulated = 0;
 
-            self.sprites_to_be_drawn_with_priority.clear();
-            self.sprites_to_be_drawn_without_priority.clear();
+        let mut memory = self.memory.borrow_mut();
+        memory.set_stat_mode(STATMode::LCDTransfer);
 
-            let lcdc = &memory.lcdc;
+        self.sprites_to_be_drawn_with_priority.clear();
+        self.sprites_to_be_drawn_without_priority.clear();
 
-            if !lcdc.obj_sprite_display() {
-                return;
-            }
+        let lcdc = &memory.lcdc;
 
-            let ly: u8 = memory.ly.clone().into();
-            let sprite_size = if lcdc.obj_sprite_size() { 16 } else { 8 };
+        if !lcdc.obj_sprite_display() {
+            return;
+        }
 
-            for oam_entry in memory.oam_ram() {
-                if oam_entry.x() != 0
-                    && ly + 16 >= oam_entry.y()
-                    && ly + 16 < oam_entry.y() + sprite_size
-                {
-                    if oam_entry.priority() {
-                        self.sprites_to_be_drawn_with_priority.push(oam_entry);
-                    } else {
-                        self.sprites_to_be_drawn_without_priority.push(oam_entry);
-                    }
+        let ly: u8 = memory.ly.clone().into();
+        let sprite_size = if lcdc.obj_sprite_size() { 16 } else { 8 };
+
+        for oam_entry in memory.oam_ram() {
+            if oam_entry.x() != 0
+                && ly + 16 >= oam_entry.y()
+                && ly + 16 < oam_entry.y() + sprite_size
+            {
+                if oam_entry.priority() {
+                    self.sprites_to_be_drawn_with_priority.push(oam_entry);
+                } else {
+                    self.sprites_to_be_drawn_without_priority.push(oam_entry);
                 }
             }
         }
