@@ -204,7 +204,6 @@ impl GPU {
             let mut pixel_to_write: Option<DisplayPixel> = None;
             let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
             let tile_x;
-            let mut sprite_written_without_priority = false;
 
             // Sprites with low priority
             if lcdc.obj_sprite_display() {
@@ -217,24 +216,27 @@ impl GPU {
                     sprite_size,
                 );
 
-                sprite_written_without_priority = true;
-
-                // Sprites with high priority
-                if pixel_to_write.is_none() {
-                    pixel_to_write = self.draw_sprites(
-                        true,
-                        screen_x,
-                        screen_y,
-                        sprite_palette0,
-                        sprite_palette1,
-                        sprite_size,
+                if pixel_to_write.is_some() {
+                    canvas.put_pixel(
+                        screen_x as u32,
+                        screen_y as u32,
+                        Rgba(pixel_to_write.unwrap()),
                     );
 
-                    sprite_written_without_priority = false;
+                    continue;
                 }
+
+                pixel_to_write = self.draw_sprites(
+                    true,
+                    screen_x,
+                    screen_y,
+                    sprite_palette0,
+                    sprite_palette1,
+                    sprite_size,
+                );
             }
 
-            if lcdc.bg_display() && !sprite_written_without_priority {
+            if lcdc.bg_display() {
                 let bg_tile_map_location;
                 let tile_row;
 
@@ -290,23 +292,24 @@ impl GPU {
                 }
 
                 let pixel = self.read_pixel_from_tile(tile_x, tile_bytes);
-                let pixel_color = match pixel {
-                    0b11 => bgp >> 6,
-                    0b10 => bgp >> 4,
-                    0b01 => bgp >> 2,
-                    0b00 => bgp >> 0,
-                    _ => panic!("Unrecognised color"),
-                } & 0b11;
-
-                let color = match pixel_color {
-                    0b00 => Color::white(),
-                    0b01 => Color::light_grey(),
-                    0b10 => Color::dark_grey(),
-                    0b11 => Color::black(),
-                    _ => panic!("Unrecognised color"),
-                };
 
                 if pixel != 0x0 || pixel_to_write.is_none() {
+                    let pixel_color = match pixel {
+                        0b11 => bgp >> 6,
+                        0b10 => bgp >> 4,
+                        0b01 => bgp >> 2,
+                        0b00 => bgp >> 0,
+                        _ => panic!("Unrecognised color"),
+                    } & 0b11;
+
+                    let color = match pixel_color {
+                        0b00 => Color::white(),
+                        0b01 => Color::light_grey(),
+                        0b10 => Color::dark_grey(),
+                        0b11 => Color::black(),
+                        _ => panic!("Unrecognised color"),
+                    };
+
                     pixel_to_write = Some(color.to_rgba());
                 }
             }
