@@ -146,6 +146,12 @@ impl GPU {
                 }
             }
         }
+
+        self.sprites_to_be_drawn_with_priority
+            .sort_by(|a, b| a.x().cmp(&b.x()));
+
+        self.sprites_to_be_drawn_without_priority
+            .sort_by(|a, b| a.x().cmp(&b.x()));
     }
 
     fn lcd_transfer(&mut self, canvas: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
@@ -377,14 +383,9 @@ impl GPU {
             false => &self.sprites_to_be_drawn_without_priority,
         };
 
-        let mut pixel_to_write = None;
         let mut last_drawn: Option<&OamEntry> = None;
 
         for sprite in sprites_to_be_drawn {
-            if last_drawn.is_some() && last_drawn.unwrap().x() < sprite.x() {
-                continue;
-            }
-
             let current_pixel_x: i16 =
                 screen_x as i16 + GPU::PIXELS_PER_TILE as i16 - sprite.x() as i16;
 
@@ -446,10 +447,10 @@ impl GPU {
                 _ => panic!("Unrecognised color"),
             };
 
-            pixel_to_write = Some(color.to_rgba())
+            return Some(color.to_rgba());
         }
 
-        pixel_to_write
+        None
     }
 
     pub fn render(
