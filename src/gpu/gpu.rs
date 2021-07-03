@@ -236,8 +236,6 @@ impl GPU {
             }
 
             let mut pixel_to_write: Option<DisplayPixel> = None;
-            let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
-            let tile_x;
 
             // Sprites with low priority
             if lcdc.obj_sprite_display() {
@@ -252,6 +250,8 @@ impl GPU {
             }
 
             if lcdc.bg_display() {
+                let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
+                let tile_x;
                 let bg_tile_map_location;
                 let tile_row;
 
@@ -516,8 +516,6 @@ impl GPU {
                 if pixel == 0 {
                     continue;
                 }
-
-                last_drawn = Some(sprite);
 
                 let palette = if !sprite.palette() {
                     palette0
