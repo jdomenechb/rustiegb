@@ -8,6 +8,7 @@ use ::image::{ImageBuffer, Rgba, RgbaImage};
 use gfx_device_gl::{CommandBuffer, Factory, Resources};
 use piston_window::*;
 use std::cell::RefCell;
+use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -22,9 +23,6 @@ pub struct GPU {
     memory: Rc<RefCell<Memory>>,
 
     tile_row_cache: RefCell<HashMap<(Word, u16), (Byte, Byte)>>,
-
-    last_window_rendered_position_x: u16,
-    last_window_rendered_position_y: u16,
 }
 
 impl GPU {
@@ -43,8 +41,6 @@ impl GPU {
             sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
             tile_row_cache: RefCell::new(HashMap::new()),
-            last_window_rendered_position_x: 0,
-            last_window_rendered_position_y: 0,
         };
     }
 
@@ -93,9 +89,6 @@ impl GPU {
     fn vblank(&mut self) {
         if self.cycles_accumulated >= 456 {
             self.cycles_accumulated = 0;
-
-            self.last_window_rendered_position_x = 0;
-            self.last_window_rendered_position_y = 0;
 
             {
                 let mut memory = self.memory.borrow_mut();
@@ -206,45 +199,49 @@ impl GPU {
             8i16
         };
 
-        let mut any_window_rendered = false;
+        let mut screen_row_no_priority: [Option<DisplayPixel>; GPU::PIXEL_WIDTH as usize] =
+            [None; GPU::PIXEL_WIDTH as usize];
+        let mut screen_row_with_priority: [Option<DisplayPixel>; GPU::PIXEL_WIDTH as usize] =
+            [None; GPU::PIXEL_WIDTH as usize];
+
+        if lcdc.obj_sprite_display() {
+            self.draw_sprites_in_row(
+                false,
+                screen_y,
+                sprite_palette0,
+                sprite_palette1,
+                sprite_size,
+                &mut screen_row_no_priority,
+            );
+
+            self.draw_sprites_in_row(
+                true,
+                screen_y,
+                sprite_palette0,
+                sprite_palette1,
+                sprite_size,
+                &mut screen_row_with_priority,
+            );
+        }
 
         for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
-            let mut pixel_to_write: Option<DisplayPixel> = None;
-            let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
-            let tile_x;
+            let mut pixel_to_write = *screen_row_no_priority.get(screen_x as usize).unwrap();
 
-            // Sprites with low priority
-            if lcdc.obj_sprite_display() {
-                pixel_to_write = self.draw_sprites(
-                    false,
-                    screen_x,
-                    screen_y,
-                    sprite_palette0,
-                    sprite_palette1,
-                    sprite_size,
+            if pixel_to_write.is_some() {
+                canvas.put_pixel(
+                    screen_x as u32,
+                    screen_y as u32,
+                    Rgba(pixel_to_write.unwrap()),
                 );
 
-                if pixel_to_write.is_some() {
-                    canvas.put_pixel(
-                        screen_x as u32,
-                        screen_y as u32,
-                        Rgba(pixel_to_write.unwrap()),
-                    );
-
-                    continue;
-                }
-
-                pixel_to_write = self.draw_sprites(
-                    true,
-                    screen_x,
-                    screen_y,
-                    sprite_palette0,
-                    sprite_palette1,
-                    sprite_size,
-                );
+                continue;
             }
 
+            pixel_to_write = *screen_row_with_priority.get(screen_x as usize).unwrap();
+
             if lcdc.bg_display() {
+                let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
+                let tile_x;
                 let bg_tile_map_location;
                 let tile_row;
 
@@ -253,17 +250,19 @@ impl GPU {
                     && memory.wy <= screen_y as Byte
                     && memory.wx <= (screen_x + 7) as Byte
                 {
+                    let last_window_rendered_position_x: u16 =
+                        screen_x as u16 + 7 - memory.wx as u16;
+
+                    let last_window_rendered_position_y = screen_y as u16 - memory.wy as u16;
+
                     bg_tile_map_location = window_tile_map_start_location
-                        + (((self.last_window_rendered_position_y / GPU::PIXELS_PER_TILE)
+                        + (((last_window_rendered_position_y / GPU::PIXELS_PER_TILE)
                             * GPU::BACKGROUND_MAP_TILE_SIZE_X)
                             % (GPU::BACKGROUND_MAP_TILE_SIZE_X * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
-                        + (self.last_window_rendered_position_x / GPU::PIXELS_PER_TILE);
+                        + (last_window_rendered_position_x / GPU::PIXELS_PER_TILE);
 
-                    tile_x = self.last_window_rendered_position_x % 8;
-                    tile_row = self.last_window_rendered_position_y % 8;
-
-                    self.last_window_rendered_position_x += 1;
-                    any_window_rendered = true;
+                    tile_x = last_window_rendered_position_x % 8;
+                    tile_row = last_window_rendered_position_y % 8;
                 } else {
                     // Background
                     bg_tile_map_location = bg_tile_map_start_location
@@ -330,12 +329,6 @@ impl GPU {
                 );
             }
         }
-
-        self.last_window_rendered_position_x = 0;
-
-        if any_window_rendered {
-            self.last_window_rendered_position_y += 1;
-        }
     }
 
     fn read_pixel_from_tile(&self, bit_offset: u16, (byte1, byte2): (Byte, Byte)) -> Byte {
@@ -348,34 +341,34 @@ impl GPU {
     }
 
     fn read_tile_row(&self, tile_address: Word, row: u16) -> (Byte, Byte) {
-        let key = (tile_address, row);
+        //let key = (tile_address, row);
 
-        let mut cache = self.tile_row_cache.borrow_mut();
-
-        match cache.get(&key) {
-            Some(result) => return *result,
-            _ => {}
-        }
+        // let mut cache = self.tile_row_cache.borrow_mut();
+        //
+        // match cache.get(&key) {
+        //     Some(result) => return *result,
+        //     _ => {}
+        // }
 
         let memory = self.memory.borrow();
 
         let word = memory.read_word(tile_address + row * 2);
         let bytes = word_to_two_bytes(word);
 
-        cache.insert((tile_address, row), bytes);
+        // cache.insert((tile_address, row), bytes);
 
         bytes
     }
 
-    fn draw_sprites(
+    fn draw_sprites_in_row(
         &self,
         priority: bool,
-        screen_x: u16,
         screen_y: u16,
         palette0: Byte,
         palette1: Byte,
         sprite_size: i16,
-    ) -> Option<DisplayPixel> {
+        screen_row: &mut [Option<DisplayPixel>],
+    ) {
         const SPRITE_TILES_ADDR_START: u16 = 0x8000;
 
         let sprites_to_be_drawn = match priority {
@@ -383,22 +376,16 @@ impl GPU {
             false => &self.sprites_to_be_drawn_without_priority,
         };
 
-        let mut last_drawn: Option<&OamEntry> = None;
+        let mut screen_x = -1;
 
         for sprite in sprites_to_be_drawn {
-            let current_pixel_x: i16 =
-                screen_x as i16 + GPU::PIXELS_PER_TILE as i16 - sprite.x() as i16;
-
-            if current_pixel_x < 0 || current_pixel_x >= 8 {
-                continue;
-            }
+            screen_x = max(
+                screen_x + 1,
+                sprite.x() as i16 - GPU::PIXELS_PER_TILE as i16,
+            );
 
             let current_pixel_y: i16 =
                 screen_y as i16 + (GPU::PIXELS_PER_TILE * 2) as i16 - sprite.y() as i16;
-
-            if current_pixel_y < 0 || current_pixel_y >= sprite_size {
-                continue;
-            }
 
             let sprite_addr =
                 SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * GPU::TILE_SIZE_BYTES as u16;
@@ -411,46 +398,54 @@ impl GPU {
 
             let tile_row = self.read_tile_row(sprite_addr, row);
 
-            let pixel = self.read_pixel_from_tile(
-                if sprite.flip_x() {
-                    7 - current_pixel_x
+            let limit = min(sprite.x() as i16, GPU::PIXEL_WIDTH as i16);
+
+            for current_screen_x in screen_x..limit {
+                let current_pixel_x: i16 =
+                    current_screen_x as i16 + GPU::PIXELS_PER_TILE as i16 - sprite.x() as i16;
+
+                if current_pixel_x < 0 || current_pixel_x >= 8 {
+                    continue;
+                }
+
+                let pixel = self.read_pixel_from_tile(
+                    if sprite.flip_x() {
+                        7 - current_pixel_x
+                    } else {
+                        current_pixel_x
+                    } as Word,
+                    tile_row,
+                );
+
+                if pixel == 0 {
+                    continue;
+                }
+
+                let palette = if !sprite.palette() {
+                    palette0
                 } else {
-                    current_pixel_x
-                } as Word,
-                tile_row,
-            );
+                    palette1
+                };
 
-            if pixel == 0 {
-                continue;
+                let pixel_color = match pixel {
+                    0b11 => palette >> 6,
+                    0b10 => palette >> 4,
+                    0b01 => palette >> 2,
+                    _ => panic!("Unrecognised color"),
+                } & 0b11;
+
+                let color = match pixel_color {
+                    0b00 => Color::white(),
+                    0b01 => Color::light_grey(),
+                    0b10 => Color::dark_grey(),
+                    0b11 => Color::black(),
+                    _ => panic!("Unrecognised color"),
+                };
+
+                screen_row[current_screen_x as usize] = Some(color.to_rgba());
+                screen_x = current_screen_x;
             }
-
-            last_drawn = Some(sprite);
-
-            let palette = if !sprite.palette() {
-                palette0
-            } else {
-                palette1
-            };
-
-            let pixel_color = match pixel {
-                0b11 => palette >> 6,
-                0b10 => palette >> 4,
-                0b01 => palette >> 2,
-                _ => panic!("Unrecognised color"),
-            } & 0b11;
-
-            let color = match pixel_color {
-                0b00 => Color::white(),
-                0b01 => Color::light_grey(),
-                0b10 => Color::dark_grey(),
-                0b11 => Color::black(),
-                _ => panic!("Unrecognised color"),
-            };
-
-            return Some(color.to_rgba());
         }
-
-        None
     }
 
     pub fn render(
