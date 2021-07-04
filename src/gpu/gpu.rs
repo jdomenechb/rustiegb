@@ -24,7 +24,6 @@ pub struct GPU {
 
     tile_row_cache: RefCell<HashMap<(Word, u16), (Byte, Byte)>>,
 
-    last_window_rendered_position_x: u16,
     last_window_rendered_position_y: u16,
 }
 
@@ -44,7 +43,6 @@ impl GPU {
             sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
             tile_row_cache: RefCell::new(HashMap::new()),
-            last_window_rendered_position_x: 0,
             last_window_rendered_position_y: 0,
         };
     }
@@ -95,7 +93,6 @@ impl GPU {
         if self.cycles_accumulated >= 456 {
             self.cycles_accumulated = 0;
 
-            self.last_window_rendered_position_x = 0;
             self.last_window_rendered_position_y = 0;
 
             {
@@ -259,16 +256,18 @@ impl GPU {
                     && memory.wy <= screen_y as Byte
                     && memory.wx <= (screen_x + 7) as Byte
                 {
+                    let last_window_rendered_position_x: u16 =
+                        screen_x as u16 + 7 - memory.wx as u16;
+
                     bg_tile_map_location = window_tile_map_start_location
                         + (((self.last_window_rendered_position_y / GPU::PIXELS_PER_TILE)
                             * GPU::BACKGROUND_MAP_TILE_SIZE_X)
                             % (GPU::BACKGROUND_MAP_TILE_SIZE_X * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
-                        + (self.last_window_rendered_position_x / GPU::PIXELS_PER_TILE);
+                        + (last_window_rendered_position_x / GPU::PIXELS_PER_TILE);
 
-                    tile_x = self.last_window_rendered_position_x % 8;
+                    tile_x = last_window_rendered_position_x % 8;
                     tile_row = self.last_window_rendered_position_y % 8;
 
-                    self.last_window_rendered_position_x += 1;
                     any_window_rendered = true;
                 } else {
                     // Background
@@ -336,8 +335,6 @@ impl GPU {
                 );
             }
         }
-
-        self.last_window_rendered_position_x = 0;
 
         if any_window_rendered {
             self.last_window_rendered_position_y += 1;
