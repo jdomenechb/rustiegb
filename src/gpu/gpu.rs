@@ -23,8 +23,6 @@ pub struct GPU {
     memory: Rc<RefCell<Memory>>,
 
     tile_row_cache: RefCell<HashMap<(Word, u16), (Byte, Byte)>>,
-
-    last_window_rendered_position_y: u16,
 }
 
 impl GPU {
@@ -43,7 +41,6 @@ impl GPU {
             sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
             tile_row_cache: RefCell::new(HashMap::new()),
-            last_window_rendered_position_y: 0,
         };
     }
 
@@ -92,8 +89,6 @@ impl GPU {
     fn vblank(&mut self) {
         if self.cycles_accumulated >= 456 {
             self.cycles_accumulated = 0;
-
-            self.last_window_rendered_position_y = 0;
 
             {
                 let mut memory = self.memory.borrow_mut();
@@ -204,7 +199,6 @@ impl GPU {
             8i16
         };
 
-        let mut any_window_rendered = false;
         let mut screen_row_no_priority: [Option<DisplayPixel>; GPU::PIXEL_WIDTH as usize] =
             [None; GPU::PIXEL_WIDTH as usize];
         let mut screen_row_with_priority: [Option<DisplayPixel>; GPU::PIXEL_WIDTH as usize] =
@@ -259,16 +253,16 @@ impl GPU {
                     let last_window_rendered_position_x: u16 =
                         screen_x as u16 + 7 - memory.wx as u16;
 
+                    let last_window_rendered_position_y = screen_y as u16 - memory.wy as u16;
+
                     bg_tile_map_location = window_tile_map_start_location
-                        + (((self.last_window_rendered_position_y / GPU::PIXELS_PER_TILE)
+                        + (((last_window_rendered_position_y / GPU::PIXELS_PER_TILE)
                             * GPU::BACKGROUND_MAP_TILE_SIZE_X)
                             % (GPU::BACKGROUND_MAP_TILE_SIZE_X * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
                         + (last_window_rendered_position_x / GPU::PIXELS_PER_TILE);
 
                     tile_x = last_window_rendered_position_x % 8;
-                    tile_row = self.last_window_rendered_position_y % 8;
-
-                    any_window_rendered = true;
+                    tile_row = last_window_rendered_position_y % 8;
                 } else {
                     // Background
                     bg_tile_map_location = bg_tile_map_start_location
@@ -334,10 +328,6 @@ impl GPU {
                     Rgba(pixel_to_write.unwrap()),
                 );
             }
-        }
-
-        if any_window_rendered {
-            self.last_window_rendered_position_y += 1;
         }
     }
 
