@@ -1,5 +1,6 @@
 mod audio;
 mod cartridge;
+mod configuration;
 mod cpu;
 mod gpu;
 mod math;
@@ -13,6 +14,7 @@ extern crate piston_window;
 use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput, DebugAudioUnitOutput};
 use crate::audio::AudioUnit;
 use crate::cartridge::Cartridge;
+use crate::configuration::Configuration;
 use clap::{App, Arg};
 use cpu::cpu::CPU;
 use gpu::gpu::GPU;
@@ -29,58 +31,32 @@ type Word = u16;
 type SignedByte = i8;
 
 fn main() {
-    let matches = App::new(APP_NAME)
-        .arg(
-            Arg::with_name("ROMFILE")
-                .required(true)
-                .index(1)
-                .help("Path of the ROM file to use"),
-        )
-        .arg(
-            Arg::with_name("debug-cpu")
-                .long("debug-cpu")
-                .help("Prints CPU instructions on command line"),
-        )
-        .arg(
-            Arg::with_name("debug-audio")
-                .long("debug-audio")
-                .help("Prints audio triggered on command line"),
-        )
-        .arg(
-            Arg::with_name("debug-header")
-                .long("debug-header")
-                .help("Prints the parsed cartridge header"),
-        )
-        .arg(
-            Arg::with_name("bootstrap")
-                .long("bootstrap")
-                .help("Uses bootstrap ROM"),
-        )
-        .get_matches();
-
-    // --- Other vars
-    let debug_cpu: bool = matches.is_present("debug-cpu");
-    let debug_audio: bool = matches.is_present("debug-audio");
-    let debug_header: bool = matches.is_present("debug-header");
-    let bootstrap = matches.is_present("bootstrap");
+    let configuration = Configuration::from_command(APP_NAME);
 
     // --- Read ROM
-    let cartridge = Cartridge::new_from_path(matches.value_of("ROMFILE").unwrap());
+    let cartridge = Cartridge::new_from_path(configuration.rom_file.as_str());
 
-    if debug_header {
+    if configuration.debug_header {
         println!("{:?}", cartridge.header);
     }
 
     let window_title = format!("{} - {}", cartridge.header.title, APP_NAME);
 
     // --- Setting up GB components
-    let memory = Rc::new(RefCell::new(Memory::new(cartridge, bootstrap)));
-    let mut cpu = CPU::new(memory.clone(), debug_cpu, bootstrap);
+    let memory = Rc::new(RefCell::new(Memory::new(
+        cartridge,
+        configuration.bootstrap,
+    )));
+    let mut cpu = CPU::new(
+        memory.clone(),
+        configuration.debug_cpu,
+        configuration.bootstrap,
+    );
     let mut gpu = GPU::new(memory.clone());
 
     let audio_unit_output: Box<dyn AudioUnitOutput>;
 
-    if debug_audio {
+    if configuration.debug_audio {
         audio_unit_output = Box::new(DebugAudioUnitOutput {});
     } else {
         audio_unit_output = Box::new(CpalAudioUnitOutput::new());
