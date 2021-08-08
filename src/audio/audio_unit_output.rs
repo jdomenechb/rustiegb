@@ -5,9 +5,9 @@ use std::sync::{Arc, RwLock};
 
 pub trait AudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription);
-    fn update_pulse(&mut self, description: &PulseDescription);
     fn stop_all(&mut self);
     fn toggle_mute(&mut self);
+    fn step_64(&mut self);
 }
 
 pub struct DebugAudioUnitOutput {}
@@ -19,24 +19,7 @@ impl AudioUnitOutput for DebugAudioUnitOutput {
             description.pulse_n,
             description.frequency,
             description.wave_duty_percent * 100.0,
-            description.volume_envelope,
-            match description.volume_envelope_direction {
-                VolumeEnvelopeDirection::UP => "UP",
-                VolumeEnvelopeDirection::DOWN => "DOWN",
-            },
-            description.remaining_volume_envelope_duration_in_1_64_s
-        );
-
-        std::thread::sleep(std::time::Duration::from_millis(50));
-    }
-
-    fn update_pulse(&mut self, description: &PulseDescription) {
-        println!(
-            "S{}: Updated at {} Hz, {}% duty. Env: IV{}, {}, D{}/64",
-            description.pulse_n,
-            description.frequency,
-            description.wave_duty_percent * 100.0,
-            description.volume_envelope,
+            description.initial_volume_envelope,
             match description.volume_envelope_direction {
                 VolumeEnvelopeDirection::UP => "UP",
                 VolumeEnvelopeDirection::DOWN => "DOWN",
@@ -56,6 +39,10 @@ impl AudioUnitOutput for DebugAudioUnitOutput {
     fn toggle_mute(&mut self) {
         println!("Mute pressed");
     }
+
+    fn step_64(&mut self) {
+        println!("Step 64");
+    }
 }
 
 pub struct CpalAudioUnitOutput {
@@ -67,8 +54,9 @@ pub struct CpalAudioUnitOutput {
     stream_3: Option<Stream>,
     stream_4: Option<Stream>,
 
-    volume_envelope_1: Arc<RwLock<u8>>,
-    volume_envelope_2: Arc<RwLock<u8>>,
+    pulse_description_1: Arc<RwLock<PulseDescription>>,
+    pulse_description_2: Arc<RwLock<PulseDescription>>,
+
     muted: bool,
 }
 
@@ -90,17 +78,14 @@ impl CpalAudioUnitOutput {
             stream_3: None,
             stream_4: None,
 
-            volume_envelope_1: Arc::new(RwLock::new(0)),
-            volume_envelope_2: Arc::new(RwLock::new(0)),
+            pulse_description_1: Arc::new(RwLock::new(PulseDescription::default())),
+            pulse_description_2: Arc::new(RwLock::new(PulseDescription::default())),
+
             muted: false,
         }
     }
 
-    fn run<T>(
-        &mut self,
-        config: &cpal::StreamConfig,
-        description: &PulseDescription,
-    ) -> Result<Stream, anyhow::Error>
+    fn run<T>(&mut self, config: &cpal::StreamConfig, pulse_n: u8) -> Result<Stream, anyhow::Error>
     where
         T: cpal::Sample,
     {
@@ -108,27 +93,26 @@ impl CpalAudioUnitOutput {
         let sample_rate = config.sample_rate.0 as f32;
         let channels = config.channels as usize;
 
-        let mut sample_clock = 0f32;
-        let sample_in_period = sample_rate / description.frequency;
-        let high_part_max = sample_in_period * description.wave_duty_percent;
-
-        let volume_envelope = match description.pulse_n {
-            1 => {
-                let mut content = self.volume_envelope_1.write().unwrap();
-                *content = description.volume_envelope;
-
-                self.volume_envelope_1.clone()
-            }
-            2 => {
-                let mut content = self.volume_envelope_2.write().unwrap();
-                *content = description.volume_envelope;
-
-                self.volume_envelope_2.clone()
-            }
-            _ => panic!("Wrong pulse number"),
+        let description = match pulse_n {
+            1 => self.pulse_description_1.clone(),
+            2 => self.pulse_description_2.clone(),
+            _ => panic!("Invalid pulse number"),
         };
 
+        let mut sample_clock = 0f32;
+
         let mut next_value = move || {
+            let sample_in_period;
+            let high_part_max;
+            let volume_envelope;
+
+            {
+                let description = description.read().unwrap();
+                sample_in_period = sample_rate / description.frequency;
+                high_part_max = sample_in_period * description.wave_duty_percent;
+                volume_envelope = description.volume_envelope;
+            }
+
             sample_clock = (sample_clock + 1.0) % sample_rate; // 0..44099
 
             let wave = if sample_clock % sample_in_period <= high_part_max {
@@ -136,8 +120,6 @@ impl CpalAudioUnitOutput {
             } else {
                 -1.0
             };
-
-            let volume_envelope = volume_envelope.read().unwrap().clone();
 
             let to_return =
                 wave * volume_envelope as f32 / 0xF as f32 * volume_envelope as f32 / 14.0;
@@ -171,36 +153,63 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
             return;
         }
 
-        let stream = match self.config.sample_format() {
-            cpal::SampleFormat::F32 => self
-                .run::<f32>(&self.config.clone().into(), description)
-                .unwrap(),
-            cpal::SampleFormat::I16 => self
-                .run::<i16>(&self.config.clone().into(), description)
-                .unwrap(),
-            cpal::SampleFormat::U16 => self
-                .run::<u16>(&self.config.clone().into(), description)
-                .unwrap(),
-        };
+        let stream;
 
-        match description.pulse_n {
-            1 => self.stream_1 = Some(stream),
-            2 => self.stream_2 = Some(stream),
-            _ => panic!("Non pulse stream given"),
-        }
-    }
-
-    fn update_pulse(&mut self, description: &PulseDescription) {
         match description.pulse_n {
             1 => {
-                let mut content = self.volume_envelope_1.write().unwrap();
-                *content = description.volume_envelope;
+                let mut different = false;
+
+                {
+                    let read_pd = self.pulse_description_1.read().unwrap();
+                    different = *description != *read_pd;
+                }
+
+                if different {
+                    self.pulse_description_1
+                        .write()
+                        .unwrap()
+                        .exchange(description);
+                }
+
+                stream = &self.stream_1;
             }
             2 => {
-                let mut content = self.volume_envelope_2.write().unwrap();
-                *content = description.volume_envelope;
+                let mut different = false;
+
+                {
+                    let read_pd = self.pulse_description_2.read().unwrap();
+                    different = *description != *read_pd;
+                }
+
+                if different {
+                    self.pulse_description_2
+                        .write()
+                        .unwrap()
+                        .exchange(description);
+                }
+                stream = &self.stream_2;
             }
             _ => panic!("Non pulse stream given"),
+        }
+
+        if stream.is_none() {
+            let stream = match self.config.sample_format() {
+                cpal::SampleFormat::F32 => self
+                    .run::<f32>(&self.config.clone().into(), description.pulse_n)
+                    .unwrap(),
+                cpal::SampleFormat::I16 => self
+                    .run::<i16>(&self.config.clone().into(), description.pulse_n)
+                    .unwrap(),
+                cpal::SampleFormat::U16 => self
+                    .run::<u16>(&self.config.clone().into(), description.pulse_n)
+                    .unwrap(),
+            };
+
+            match description.pulse_n {
+                1 => self.stream_1 = Some(stream),
+                2 => self.stream_2 = Some(stream),
+                _ => panic!("Non pulse stream given"),
+            }
         }
     }
 
@@ -214,5 +223,10 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
     fn toggle_mute(&mut self) {
         self.muted = !self.muted;
         self.stop_all();
+    }
+
+    fn step_64(&mut self) {
+        self.pulse_description_1.write().unwrap().step_64();
+        self.pulse_description_2.write().unwrap().step_64();
     }
 }

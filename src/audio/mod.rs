@@ -9,6 +9,7 @@ use std::rc::Rc;
 const CYCLES_1_256_SEC: u16 = 16384;
 const CYCLES_1_64_SEC: u32 = 16384 * 4;
 
+#[derive(Eq, PartialEq, Copy, Clone)]
 pub enum VolumeEnvelopeDirection {
     UP,
     DOWN,
@@ -27,6 +28,7 @@ pub struct PulseDescription {
     pub pulse_n: u8,
     pub frequency: f32,
     pub wave_duty_percent: f32,
+    pub initial_volume_envelope: Byte,
     pub volume_envelope: Byte,
     pub volume_envelope_direction: VolumeEnvelopeDirection,
     pub volume_envelope_duration_in_1_64_s: u8,
@@ -34,9 +36,9 @@ pub struct PulseDescription {
 }
 
 impl PulseDescription {
-    fn step_64(&mut self) -> bool {
+    fn step_64(&mut self) {
         if self.volume_envelope_duration_in_1_64_s == 0 {
-            return false;
+            return;
         }
 
         if self.remaining_volume_envelope_duration_in_1_64_s == 0 {
@@ -56,21 +58,58 @@ impl PulseDescription {
             self.remaining_volume_envelope_duration_in_1_64_s =
                 self.volume_envelope_duration_in_1_64_s;
 
-            return true;
+            return;
         }
 
         self.remaining_volume_envelope_duration_in_1_64_s -= 1;
 
-        return false;
+        return;
+    }
+
+    fn exchange(&mut self, other: &Self) {
+        self.pulse_n = other.pulse_n;
+        self.frequency = other.frequency;
+        self.wave_duty_percent = other.wave_duty_percent;
+        self.initial_volume_envelope = other.initial_volume_envelope;
+        self.volume_envelope = other.volume_envelope;
+        self.volume_envelope_direction = other.volume_envelope_direction;
+        self.volume_envelope_duration_in_1_64_s = other.volume_envelope_duration_in_1_64_s;
+        self.remaining_volume_envelope_duration_in_1_64_s =
+            other.remaining_volume_envelope_duration_in_1_64_s;
+    }
+}
+
+impl PartialEq for PulseDescription {
+    fn eq(&self, other: &Self) -> bool {
+        return other.pulse_n == self.pulse_n
+            && other.frequency == self.frequency
+            && other.wave_duty_percent == self.wave_duty_percent
+            && other.initial_volume_envelope == self.initial_volume_envelope
+            && other.volume_envelope_direction == self.volume_envelope_direction
+            && other.volume_envelope_duration_in_1_64_s == self.volume_envelope_duration_in_1_64_s
+            && other.remaining_volume_envelope_duration_in_1_64_s
+                == self.remaining_volume_envelope_duration_in_1_64_s;
+    }
+}
+
+impl Default for PulseDescription {
+    fn default() -> Self {
+        Self {
+            pulse_n: 0,
+            frequency: 0.0,
+            wave_duty_percent: 0.0,
+            initial_volume_envelope: 0,
+            volume_envelope: 0,
+            volume_envelope_direction: VolumeEnvelopeDirection::UP,
+            volume_envelope_duration_in_1_64_s: 0,
+            remaining_volume_envelope_duration_in_1_64_s: 0,
+        }
     }
 }
 
 pub struct AudioUnit {
     auo: Box<dyn AudioUnitOutput>,
     memory: Rc<RefCell<Memory>>,
-
-    audio_status_1: Option<PulseDescription>,
-    audio_status_2: Option<PulseDescription>,
 
     cycle_count: u16,
     cycle_64_count: u32,
@@ -81,8 +120,6 @@ impl AudioUnit {
         Self {
             auo: au,
             memory,
-            audio_status_1: None,
-            audio_status_2: None,
             cycle_count: 0,
             cycle_64_count: 0,
         }
@@ -111,21 +148,7 @@ impl AudioUnit {
         if self.cycle_64_count > CYCLES_1_64_SEC {
             self.cycle_64_count -= CYCLES_1_64_SEC;
 
-            if self.audio_status_1.is_some() {
-                let changed = self.audio_status_1.as_mut().unwrap().step_64();
-
-                if changed {
-                    self.auo.update_pulse(self.audio_status_1.as_ref().unwrap());
-                }
-            }
-
-            if self.audio_status_2.is_some() {
-                let changed = self.audio_status_2.as_mut().unwrap().step_64();
-
-                if changed {
-                    self.auo.update_pulse(self.audio_status_2.as_ref().unwrap());
-                }
-            }
+            self.auo.step_64();
         }
 
         let all_sound_trigger = nr52 & 0b10000000 == 0b10000000;
@@ -150,8 +173,6 @@ impl AudioUnit {
 
     fn stop_all(&mut self) {
         self.auo.stop_all();
-        self.audio_status_1 = None;
-        self.audio_status_2 = None;
     }
 
     fn read_pulse(
@@ -207,6 +228,7 @@ impl AudioUnit {
             pulse_n,
             frequency,
             wave_duty_percent,
+            initial_volume_envelope,
             volume_envelope: initial_volume_envelope,
             volume_envelope_direction,
             volume_envelope_duration_in_1_64_s,
@@ -214,12 +236,6 @@ impl AudioUnit {
         };
 
         self.auo.play_pulse(&pulse_description);
-
-        match pulse_n {
-            1 => self.audio_status_1 = Some(pulse_description),
-            2 => self.audio_status_2 = Some(pulse_description),
-            _ => {}
-        }
     }
 
     pub fn toggle_mute(&mut self) {

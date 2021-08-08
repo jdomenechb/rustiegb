@@ -15,7 +15,6 @@ use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput, Debu
 use crate::audio::AudioUnit;
 use crate::cartridge::Cartridge;
 use crate::configuration::Configuration;
-use clap::{App, Arg};
 use cpu::cpu::CPU;
 use gpu::gpu::GPU;
 use image::ImageBuffer;
