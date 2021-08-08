@@ -47,20 +47,19 @@ fn main() {
         cartridge,
         configuration.bootstrap,
     )));
+
     let mut cpu = CPU::new(
         memory.clone(),
         configuration.debug_cpu,
         configuration.bootstrap,
     );
+
     let mut gpu = GPU::new(memory.clone());
 
-    let audio_unit_output: Box<dyn AudioUnitOutput>;
-
-    if configuration.debug_audio {
-        audio_unit_output = Box::new(DebugAudioUnitOutput {});
-    } else {
-        audio_unit_output = Box::new(CpalAudioUnitOutput::new());
-    }
+    let audio_unit_output: Box<dyn AudioUnitOutput> = match configuration.debug_audio {
+        true => Box::new(DebugAudioUnitOutput {}),
+        false => Box::new(CpalAudioUnitOutput::new()),
+    };
 
     let mut audio_unit = AudioUnit::new(audio_unit_output, memory.clone());
 
