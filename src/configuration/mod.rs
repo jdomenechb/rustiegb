@@ -2,7 +2,6 @@ use clap::{App, Arg};
 
 #[readonly::make]
 pub struct Configuration {
-    pub debug_cpu: bool,
     pub debug_audio: bool,
     pub debug_header: bool,
     pub bootstrap: bool,
@@ -41,7 +40,6 @@ impl Configuration {
             .get_matches();
 
         Self {
-            debug_cpu: matches.is_present("debug-cpu"),
             debug_audio: matches.is_present("debug-audio"),
             debug_header: matches.is_present("debug-header"),
             bootstrap: matches.is_present("bootstrap"),

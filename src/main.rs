@@ -47,11 +47,7 @@ fn main() {
         configuration.bootstrap,
     )));
 
-    let mut cpu = CPU::new(
-        memory.clone(),
-        configuration.debug_cpu,
-        configuration.bootstrap,
-    );
+    let mut cpu = CPU::new(memory.clone(), configuration.bootstrap);
 
     let mut gpu = GPU::new(memory.clone());
 
