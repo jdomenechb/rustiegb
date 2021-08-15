@@ -939,7 +939,7 @@ impl Memory {
         panic!("ERROR: Memory address {:X} not writable", position);
     }
 
-    pub fn step(&mut self, last_instruction_cycles: i16) {
+    pub fn step(&mut self, last_instruction_cycles: u8) {
         self.remaining_div_cycles += last_instruction_cycles as u32;
 
         while self.remaining_div_cycles as i16 - 256 as i16 > 0 {

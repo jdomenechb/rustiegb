@@ -178,8 +178,12 @@ fn main() {
         event.update(|_update_args| {
             while cpu.has_available_ccycles() {
                 cpu.step();
-                gpu.step(cpu.get_last_instruction_ccycles(), &mut canvas);
-                audio_unit.step(cpu.get_last_instruction_ccycles());
+
+                let last_instruction_cycles = cpu.get_last_instruction_ccycles();
+
+                memory.borrow_mut().step(last_instruction_cycles);
+                gpu.step(last_instruction_cycles, &mut canvas);
+                audio_unit.step(last_instruction_cycles);
 
                 let check_vblank;
                 let check_lcd_stat;

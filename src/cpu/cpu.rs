@@ -380,8 +380,6 @@ impl CPU {
         self.available_cycles -= self.last_instruction_ccycles as i32;
 
         self.registers.pc += self.pc_to_increment as Word;
-
-        self.memory.borrow_mut().step(self.last_instruction_ccycles);
     }
 
     fn prefix_cb(&mut self) {
