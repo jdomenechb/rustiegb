@@ -1,3 +1,4 @@
+use crate::cpu::cpu::CPU;
 use clap::{App, Arg};
 
 #[readonly::make]
@@ -55,6 +56,7 @@ impl Configuration {
 pub struct RuntimeConfig {
     pub user_speed_multiplier: i32,
     pub muted: bool,
+    pub available_cycles: i32,
 }
 
 impl Default for RuntimeConfig {
@@ -62,6 +64,7 @@ impl Default for RuntimeConfig {
         Self {
             user_speed_multiplier: 1,
             muted: false,
+            available_cycles: CPU::AVAILABLE_CCYCLES_PER_FRAME,
         }
     }
 }
@@ -69,5 +72,13 @@ impl Default for RuntimeConfig {
 impl RuntimeConfig {
     pub fn toggle_mute(&mut self) {
         self.muted = !self.muted;
+    }
+
+    pub fn reset_available_ccycles(&mut self) {
+        self.available_cycles = CPU::AVAILABLE_CCYCLES_PER_FRAME * self.user_speed_multiplier;
+    }
+
+    pub fn cpu_has_available_ccycles(&self) -> bool {
+        return self.available_cycles > 0;
     }
 }

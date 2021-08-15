@@ -171,15 +171,20 @@ fn main() {
                 );
             });
 
-            cpu.reset_available_ccycles(runtime_config.user_speed_multiplier);
+            runtime_config.reset_available_ccycles();
         });
 
         // Actions to do on update
         event.update(|_update_args| {
-            while cpu.has_available_ccycles() {
+            while runtime_config.cpu_has_available_ccycles() {
                 let last_instruction_cycles = cpu.step();
 
-                memory.borrow_mut().step(last_instruction_cycles);
+                runtime_config.available_cycles -= last_instruction_cycles as i32;
+
+                {
+                    memory.borrow_mut().step(last_instruction_cycles);
+                }
+
                 gpu.step(last_instruction_cycles, &mut canvas);
                 audio_unit.step(last_instruction_cycles, runtime_config.muted);
 

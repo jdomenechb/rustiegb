@@ -11,7 +11,6 @@ pub struct CPU {
 
     pub registers: CPURegisters,
     alu: ALU,
-    available_cycles: i32,
 
     pc_to_increment: i8,
     last_instruction_ccycles: u8,
@@ -20,7 +19,7 @@ pub struct CPU {
 }
 
 impl CPU {
-    const AVAILABLE_CCYCLES_PER_FRAME: i32 = 70221;
+    pub const AVAILABLE_CCYCLES_PER_FRAME: i32 = 70221;
 
     pub fn new(memory: Rc<RefCell<Memory>>, bootstrap: bool) -> CPU {
         return CPU {
@@ -28,21 +27,12 @@ impl CPU {
 
             registers: CPURegisters::new(bootstrap),
             alu: ALU {},
-            available_cycles: CPU::AVAILABLE_CCYCLES_PER_FRAME,
 
             pc_to_increment: -1,
             last_instruction_ccycles: 0,
             ime: false,
             halted: false,
         };
-    }
-
-    pub fn reset_available_ccycles(&mut self, user_speed_multiplier: i32) {
-        self.available_cycles = CPU::AVAILABLE_CCYCLES_PER_FRAME * user_speed_multiplier;
-    }
-
-    pub fn has_available_ccycles(&self) -> bool {
-        return self.available_cycles > 0;
     }
 
     pub fn step(&mut self) -> u8 {
@@ -353,8 +343,6 @@ impl CPU {
             self.last_instruction_ccycles = 4;
             self.pc_to_increment = 0;
         }
-
-        self.available_cycles -= self.last_instruction_ccycles as i32;
 
         self.registers.pc += self.pc_to_increment as Word;
 
