@@ -14,7 +14,7 @@ extern crate piston_window;
 use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput, DebugAudioUnitOutput};
 use crate::audio::AudioUnit;
 use crate::cartridge::Cartridge;
-use crate::configuration::Configuration;
+use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
 use cpu::cpu::CPU;
 use gpu::gpu::GPU;
@@ -32,6 +32,7 @@ type SignedByte = i8;
 
 fn main() {
     let configuration = Configuration::from_command(APP_NAME);
+    let mut runtime_config = RuntimeConfig::default();
 
     // --- Read ROM
     let cartridge = Cartridge::new_from_path(configuration.rom_file.as_str());
@@ -49,7 +50,6 @@ fn main() {
     )));
 
     let mut cpu = CPU::new(memory.clone(), configuration.bootstrap);
-
     let mut gpu = GPU::new(memory.clone());
 
     let audio_unit_output: Box<dyn AudioUnitOutput> = match configuration.debug_audio {
@@ -118,10 +118,10 @@ fn main() {
                     memory.interrupt_flag().set_p10_p13_transition(true);
                 }
                 Key::M => {
-                    audio_unit.toggle_mute();
+                    runtime_config.toggle_mute();
                 }
                 Key::Space => {
-                    cpu.set_user_speed_multiplier(20);
+                    runtime_config.user_speed_multiplier = 20;
                 }
                 _ => {}
             };
@@ -139,7 +139,7 @@ fn main() {
                 Key::Right => memory.joypad().right = false,
                 Key::Up => memory.joypad().up = false,
                 Key::Down => memory.joypad().down = false,
-                Key::Space => cpu.set_user_speed_multiplier(1),
+                Key::Space => runtime_config.user_speed_multiplier = 1,
                 _ => {}
             }
         };
@@ -171,7 +171,7 @@ fn main() {
                 );
             });
 
-            cpu.reset_available_ccycles();
+            cpu.reset_available_ccycles(runtime_config.user_speed_multiplier);
         });
 
         // Actions to do on update
@@ -181,7 +181,7 @@ fn main() {
 
                 memory.borrow_mut().step(last_instruction_cycles);
                 gpu.step(last_instruction_cycles, &mut canvas);
-                audio_unit.step(last_instruction_cycles);
+                audio_unit.step(last_instruction_cycles, runtime_config.muted);
 
                 let check_vblank;
                 let check_lcd_stat;

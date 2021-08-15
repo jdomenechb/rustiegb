@@ -125,7 +125,9 @@ impl AudioUnit {
         }
     }
 
-    pub fn step(&mut self, last_instruction_cycles: u8) {
+    pub fn step(&mut self, last_instruction_cycles: u8, muted: bool) {
+        self.auo.set_mute(muted);
+
         let nr52;
         let audio_triggers;
 
@@ -236,9 +238,5 @@ impl AudioUnit {
         };
 
         self.auo.play_pulse(&pulse_description);
-    }
-
-    pub fn toggle_mute(&mut self) {
-        self.auo.toggle_mute();
     }
 }

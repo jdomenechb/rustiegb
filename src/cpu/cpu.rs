@@ -17,8 +17,6 @@ pub struct CPU {
     last_instruction_ccycles: u8,
     ime: bool,
     halted: bool,
-
-    user_speed_multiplier: u8,
 }
 
 impl CPU {
@@ -36,22 +34,15 @@ impl CPU {
             last_instruction_ccycles: 0,
             ime: false,
             halted: false,
-
-            user_speed_multiplier: 1,
         };
     }
 
-    pub fn reset_available_ccycles(&mut self) {
-        self.available_cycles =
-            CPU::AVAILABLE_CCYCLES_PER_FRAME * self.user_speed_multiplier as i32;
+    pub fn reset_available_ccycles(&mut self, user_speed_multiplier: i32) {
+        self.available_cycles = CPU::AVAILABLE_CCYCLES_PER_FRAME * user_speed_multiplier;
     }
 
     pub fn has_available_ccycles(&self) -> bool {
         return self.available_cycles > 0;
-    }
-
-    pub fn set_user_speed_multiplier(&mut self, multiplier: u8) {
-        self.user_speed_multiplier = multiplier;
     }
 
     pub fn step(&mut self) -> u8 {

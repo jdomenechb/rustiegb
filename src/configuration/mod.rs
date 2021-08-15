@@ -6,6 +6,8 @@ pub struct Configuration {
     pub debug_header: bool,
     pub bootstrap: bool,
     pub rom_file: String,
+
+    pub user_speed_multiplier: i32,
 }
 
 impl Configuration {
@@ -44,6 +46,28 @@ impl Configuration {
             debug_header: matches.is_present("debug-header"),
             bootstrap: matches.is_present("bootstrap"),
             rom_file: matches.value_of("ROMFILE").unwrap().to_string(),
+
+            user_speed_multiplier: 1,
         }
+    }
+}
+
+pub struct RuntimeConfig {
+    pub user_speed_multiplier: i32,
+    pub muted: bool,
+}
+
+impl Default for RuntimeConfig {
+    fn default() -> Self {
+        Self {
+            user_speed_multiplier: 1,
+            muted: false,
+        }
+    }
+}
+
+impl RuntimeConfig {
+    pub fn toggle_mute(&mut self) {
+        self.muted = !self.muted;
     }
 }

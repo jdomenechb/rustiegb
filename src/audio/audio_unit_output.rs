@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 pub trait AudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription);
     fn stop_all(&mut self);
-    fn toggle_mute(&mut self);
+    fn set_mute(&mut self, muted: bool);
     fn step_64(&mut self);
 }
 
@@ -36,8 +36,8 @@ impl AudioUnitOutput for DebugAudioUnitOutput {
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
 
-    fn toggle_mute(&mut self) {
-        println!("Mute pressed");
+    fn set_mute(&mut self, muted: bool) {
+        println!("Mute pressed {}", muted);
     }
 
     fn step_64(&mut self) {
@@ -220,9 +220,11 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         self.stream_4 = None;
     }
 
-    fn toggle_mute(&mut self) {
-        self.muted = !self.muted;
-        self.stop_all();
+    fn set_mute(&mut self, muted: bool) {
+        if self.muted != muted {
+            self.stop_all();
+            self.muted = muted;
+        }
     }
 
     fn step_64(&mut self) {
