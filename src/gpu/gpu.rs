@@ -5,8 +5,6 @@ use crate::memory::oam_entry::OamEntry;
 use crate::memory::stat::STATMode;
 use crate::{Byte, Word};
 use ::image::{ImageBuffer, Rgba, RgbaImage};
-use gfx_device_gl::{CommandBuffer, Factory, Resources};
-use piston_window::*;
 use std::cell::RefCell;
 use std::cmp::{max, min};
 use std::collections::HashMap;

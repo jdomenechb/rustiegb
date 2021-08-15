@@ -14,7 +14,7 @@ pub struct CPU {
     available_cycles: i32,
 
     pc_to_increment: i8,
-    last_instruction_ccycles: i16,
+    last_instruction_ccycles: u8,
     ime: bool,
     halted: bool,
 
@@ -33,7 +33,7 @@ impl CPU {
             available_cycles: CPU::AVAILABLE_CCYCLES_PER_FRAME,
 
             pc_to_increment: -1,
-            last_instruction_ccycles: -1,
+            last_instruction_ccycles: 0,
             ime: false,
             halted: false,
 
@@ -50,22 +50,13 @@ impl CPU {
         return self.available_cycles > 0;
     }
 
-    pub fn get_last_instruction_ccycles(&self) -> u8 {
-        debug_assert!(
-            self.last_instruction_ccycles >= 0,
-            "No instruction has been executed yet"
-        );
-
-        return self.last_instruction_ccycles as u8;
-    }
-
     pub fn set_user_speed_multiplier(&mut self, multiplier: u8) {
         self.user_speed_multiplier = multiplier;
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> u8 {
         self.pc_to_increment = -1;
-        self.last_instruction_ccycles = -1;
+        self.last_instruction_ccycles = 0;
 
         if !self.halted {
             let instruction;
@@ -363,11 +354,6 @@ impl CPU {
             }
 
             debug_assert!(
-                self.last_instruction_ccycles >= 0,
-                "Instruction does not count ccycles: {:X}",
-                instruction
-            );
-            debug_assert!(
                 self.pc_to_increment >= 0,
                 "Instruction does not increment PC: {:X}",
                 instruction
@@ -380,6 +366,8 @@ impl CPU {
         self.available_cycles -= self.last_instruction_ccycles as i32;
 
         self.registers.pc += self.pc_to_increment as Word;
+
+        return self.last_instruction_ccycles;
     }
 
     fn prefix_cb(&mut self) {

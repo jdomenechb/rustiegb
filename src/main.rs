@@ -177,9 +177,7 @@ fn main() {
         // Actions to do on update
         event.update(|_update_args| {
             while cpu.has_available_ccycles() {
-                cpu.step();
-
-                let last_instruction_cycles = cpu.get_last_instruction_ccycles();
+                let last_instruction_cycles = cpu.step();
 
                 memory.borrow_mut().step(last_instruction_cycles);
                 gpu.step(last_instruction_cycles, &mut canvas);

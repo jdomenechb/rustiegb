@@ -157,7 +157,7 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
 
         match description.pulse_n {
             1 => {
-                let mut different = false;
+                let different;
 
                 {
                     let read_pd = self.pulse_description_1.read().unwrap();
@@ -174,7 +174,7 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
                 stream = &self.stream_1;
             }
             2 => {
-                let mut different = false;
+                let different;
 
                 {
                     let read_pd = self.pulse_description_2.read().unwrap();
