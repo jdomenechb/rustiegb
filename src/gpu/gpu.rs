@@ -447,37 +447,4 @@ impl GPU {
             }
         }
     }
-
-    pub fn render(
-        &mut self,
-        window: &mut PistonWindow,
-        event: &Event,
-        window_size: [f64; 2],
-        texture_context: &mut TextureContext<Factory, Resources, CommandBuffer>,
-        texture: &Texture<Resources>,
-    ) {
-        let memory = self.memory.borrow();
-
-        let pixel_size: (f64, f64) = (
-            window_size.get(0).unwrap() / (GPU::PIXEL_WIDTH as f64),
-            window_size.get(1).unwrap() / (GPU::PIXEL_HEIGHT as f64),
-        );
-
-        window.draw_2d(event, |context, graphics, device| {
-            texture_context.encoder.flush(device);
-
-            clear(Color::white().to_f_rgba(), graphics);
-
-            let lcdc = &memory.lcdc;
-
-            if !lcdc.lcd_control_operation() {
-                return;
-            }
-
-            let transform = context.transform;
-            let transform = transform.scale(pixel_size.0, pixel_size.1);
-
-            image(texture, transform, graphics);
-        });
-    }
 }

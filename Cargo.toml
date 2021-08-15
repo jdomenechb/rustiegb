@@ -14,3 +14,6 @@ strum_macros = "0.20.1"
 readonly = "0.2.0"
 cpal = "0.13.1"
 anyhow = "1.0.35"
+
+[profile.release]
+debug = true

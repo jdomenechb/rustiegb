@@ -15,6 +15,7 @@ use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput, Debu
 use crate::audio::AudioUnit;
 use crate::cartridge::Cartridge;
 use crate::configuration::Configuration;
+use crate::gpu::color::Color;
 use cpu::cpu::CPU;
 use gpu::gpu::GPU;
 use image::ImageBuffer;
@@ -147,13 +148,29 @@ fn main() {
         event.render(|render_args| {
             texture.update(&mut texture_context, &canvas).unwrap();
 
-            gpu.render(
-                &mut window,
-                &event,
-                render_args.window_size,
-                &mut texture_context,
-                &texture,
+            let memory = memory.borrow();
+
+            let pixel_size: (f64, f64) = (
+                render_args.window_size.get(0).unwrap() / (GPU::PIXEL_WIDTH as f64),
+                render_args.window_size.get(1).unwrap() / (GPU::PIXEL_HEIGHT as f64),
             );
+
+            window.draw_2d(&event, |context, graphics, device| {
+                texture_context.encoder.flush(device);
+
+                clear(Color::white().to_f_rgba(), graphics);
+
+                if !(&memory.lcdc).lcd_control_operation() {
+                    return;
+                }
+
+                image(
+                    &texture,
+                    context.transform.scale(pixel_size.0, pixel_size.1),
+                    graphics,
+                );
+            });
+
             cpu.reset_available_ccycles();
         });
 
