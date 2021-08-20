@@ -1,10 +1,13 @@
-use crate::audio::{PulseDescription, VolumeEnvelopeDirection, WaveDescription, WaveOutputLevel};
-use crate::memory::memory_sector::ReadMemory;
-use crate::Word;
+use std::sync::Arc;
+
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, Stream, SupportedStreamConfig};
 use parking_lot::RwLock;
-use std::sync::Arc;
+
+use crate::audio::description::{PulseDescription, WaveDescription};
+use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
+use crate::memory::memory_sector::ReadMemory;
+use crate::Word;
 
 pub trait AudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription);
