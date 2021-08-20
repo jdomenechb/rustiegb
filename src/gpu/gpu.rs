@@ -356,21 +356,10 @@ impl GPU {
     }
 
     fn read_tile_row(&self, tile_address: Word, row: u16) -> (Byte, Byte) {
-        //let key = (tile_address, row);
-
-        // let mut cache = self.tile_row_cache.borrow_mut();
-        //
-        // match cache.get(&key) {
-        //     Some(result) => return *result,
-        //     _ => {}
-        // }
-
         let memory = self.memory.read();
 
         let word = memory.read_word(tile_address + row * 2);
         let bytes = word_to_two_bytes(word);
-
-        // cache.insert((tile_address, row), bytes);
 
         bytes
     }

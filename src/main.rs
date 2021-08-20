@@ -56,23 +56,6 @@ fn main() {
     let canvas_thread = canvas.clone();
     let runtime_config_thread = runtime_config.clone();
     let (sx, rx) = mpsc::channel();
-    //
-    // std::thread::spawn(move || loop {
-    //     std::thread::sleep(Duration::from_secs(10));
-    //     let deadlocks = parking_lot::deadlock::check_deadlock();
-    //     if deadlocks.is_empty() {
-    //         continue;
-    //     }
-    //
-    //     println!("{} deadlocks detected", deadlocks.len());
-    //     for (i, threads) in deadlocks.iter().enumerate() {
-    //         println!("Deadlock #{}", i);
-    //         for t in threads {
-    //             println!("Thread Id {:#?}", t.thread_id());
-    //             println!("{:#?}", t.backtrace());
-    //         }
-    //     }
-    // });
 
     std::thread::spawn(move || {
         let mut cpu = CPU::new(memory_thread.clone(), configuration.bootstrap);
