@@ -32,6 +32,11 @@ impl AudioRegisters {
         return 131072 as f32 / (2048 - frequency) as f32;
     }
 
+    pub fn calculate_wave_frequency(&self) -> f32 {
+        let frequency = ((self.control as u16 & 0b111) << 8) | self.frequency as u16;
+        return 65536 as f32 / (2048 - frequency) as f32;
+    }
+
     pub fn calculate_wave_duty_percent(&self) -> f32 {
         let wave_duty = (self.length >> 6) & 0b11;
 

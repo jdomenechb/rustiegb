@@ -1,7 +1,9 @@
 pub mod audio_unit_output;
 
 use crate::memory::memory::Memory;
-use crate::{Byte, Word};
+use crate::memory::memory_sector::MemorySector;
+use crate::memory::wave_pattern_ram::WavePatternRam;
+use crate::Byte;
 use audio_unit_output::AudioUnitOutput;
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -24,11 +26,23 @@ impl From<bool> for VolumeEnvelopeDirection {
     }
 }
 
+#[derive(Eq, PartialEq, Clone, Copy)]
 pub enum WaveOutputLevel {
     Mute,
     Vol100Percent,
     Vol50Percent,
     Vol25Percent,
+}
+
+impl Into<f32> for WaveOutputLevel {
+    fn into(self) -> f32 {
+        match self {
+            WaveOutputLevel::Mute => 0.0,
+            WaveOutputLevel::Vol25Percent => 0.25,
+            WaveOutputLevel::Vol50Percent => 0.5,
+            WaveOutputLevel::Vol100Percent => 1.0,
+        }
+    }
 }
 
 pub struct PulseDescription {
@@ -118,6 +132,33 @@ impl Default for PulseDescription {
 pub struct WaveDescription {
     pub frequency: f32,
     pub output_level: WaveOutputLevel,
+    pub wave: WavePatternRam,
+}
+
+impl WaveDescription {
+    fn exchange(&mut self, other: &Self) {
+        self.frequency = other.frequency;
+        self.output_level = other.output_level.clone();
+        self.wave = WavePatternRam {
+            data: MemorySector::with_data(other.wave.data.data.clone()),
+        };
+    }
+}
+
+impl PartialEq for WaveDescription {
+    fn eq(&self, other: &Self) -> bool {
+        return other.frequency == self.frequency && other.output_level == self.output_level;
+    }
+}
+
+impl Default for WaveDescription {
+    fn default() -> Self {
+        Self {
+            frequency: 0.0,
+            output_level: WaveOutputLevel::Mute,
+            wave: WavePatternRam::default(),
+        }
+    }
 }
 
 pub struct AudioUnit {
@@ -173,7 +214,7 @@ impl AudioUnit {
             return;
         }
 
-        // TODO: sound 3-4
+        // TODO: sound 4
 
         // Sound 1
         if audio_triggers.0 {
@@ -227,18 +268,25 @@ impl AudioUnit {
 
     fn read_wave(&mut self) {
         let audio_registers;
+        let wave;
 
         {
             let memory = self.memory.read();
             audio_registers = memory.read_audio_registers(3);
+            wave = WavePatternRam {
+                data: MemorySector::with_data(memory.wave_pattern_ram.data.data.clone()),
+            }
         }
 
-        let frequency = audio_registers.calculate_frequency();
+        let frequency = audio_registers.calculate_wave_frequency();
         let wave_output_level = audio_registers.get_wave_output_level();
 
         let wave_description = WaveDescription {
             frequency,
             output_level: wave_output_level,
+            wave,
         };
+
+        self.auo.play_wave(&wave_description);
     }
 }

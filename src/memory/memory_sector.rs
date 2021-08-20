@@ -11,8 +11,9 @@ pub trait WriteMemory {
     fn write_word(&mut self, position: Word, value: Word);
 }
 
+#[readonly::make]
 pub struct MemorySector {
-    data: Vec<Byte>,
+    pub data: Vec<Byte>,
 }
 
 impl MemorySector {

@@ -89,7 +89,7 @@ pub struct Memory {
     // FF26
     nr52: Byte,
     // Wave pattern ram (FF30 - FF3F)
-    wave_pattern_ram: WavePatternRam,
+    pub wave_pattern_ram: WavePatternRam,
     // FF40
     pub lcdc: LCDC,
     // FF41

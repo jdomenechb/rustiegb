@@ -2,7 +2,7 @@ use crate::memory::memory_sector::{MemorySector, ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 
 pub struct WavePatternRam {
-    data: MemorySector,
+    pub data: MemorySector,
 }
 
 impl ReadMemory for WavePatternRam {
