@@ -140,7 +140,7 @@ fn main() {
                 }
             }
 
-            rx.recv();
+            rx.recv().expect("Could not receive from thread");
         }
     });
 
@@ -206,7 +206,7 @@ fn main() {
             });
 
             runtime_config.write().reset_available_ccycles();
-            sx.send(1);
+            sx.send(1).expect("Could not send to thread");
         });
     }
 }

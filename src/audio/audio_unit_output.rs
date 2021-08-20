@@ -185,7 +185,7 @@ impl CpalAudioUnitOutput {
 
         let mut next_value = move || {
             let sample_in_period;
-            let volume_envelope: f32;
+            let output_level;
             let mut wave_sample;
 
             sample_clock = (sample_clock + 1.0) % sample_rate; // 0..44099
@@ -196,7 +196,7 @@ impl CpalAudioUnitOutput {
                 // How many samples are in one frequency oscillation
                 sample_in_period = sample_rate / description.frequency;
 
-                volume_envelope = description.output_level.into();
+                output_level = description.output_level;
 
                 let current_wave_pos =
                     ((sample_clock % sample_in_period) / sample_in_period * 32.0).floor() as u8;
@@ -210,7 +210,14 @@ impl CpalAudioUnitOutput {
                 }
             }
 
-            let to_return = (wave_sample / 0b1111) as f32 * volume_envelope;
+            match output_level {
+                WaveOutputLevel::Mute => wave_sample = 0,
+                WaveOutputLevel::Vol50Percent => wave_sample >>= 1,
+                WaveOutputLevel::Vol25Percent => wave_sample >>= 2,
+                _ => {}
+            }
+
+            let to_return = (wave_sample / 0b1111) as f32;
 
             to_return
         };
