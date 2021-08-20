@@ -1759,6 +1759,7 @@ dependencies = [
  "cpal",
  "gfx_device_gl",
  "image",
+ "parking_lot 0.11.1",
  "piston_window",
  "readonly",
  "strum",

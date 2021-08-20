@@ -3,8 +3,8 @@ pub mod audio_unit_output;
 use crate::memory::memory::Memory;
 use crate::{Byte, Word};
 use audio_unit_output::AudioUnitOutput;
+use parking_lot::RwLock;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 const CYCLES_1_256_SEC: u16 = 16384;
 const CYCLES_1_64_SEC: u32 = 16384 * 4;
@@ -132,7 +132,7 @@ impl AudioUnit {
         let audio_triggers;
 
         {
-            let mut memory = self.memory.write().unwrap();
+            let mut memory = self.memory.write();
 
             nr52 = memory.read_byte(0xFF26);
             audio_triggers = memory.audio_has_been_trigered();
@@ -193,7 +193,7 @@ impl AudioUnit {
         let sweep;
 
         {
-            let memory = self.memory.read().unwrap();
+            let memory = self.memory.read();
 
             control_reg = memory.internally_read_byte(control_addr).unwrap();
             frequency_reg = memory.internally_read_byte(frequency_addr).unwrap();

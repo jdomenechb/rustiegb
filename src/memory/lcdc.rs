@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct LCDC {
     // 0 - Stop completely (no picture on screen)
     // 1 - operation

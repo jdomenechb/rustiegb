@@ -20,9 +20,10 @@ use cpu::cpu::CPU;
 use gpu::gpu::GPU;
 use image::ImageBuffer;
 use memory::memory::Memory;
+use parking_lot::{Mutex, RwLock};
 use piston_window::*;
 use std::sync::{mpsc, Arc};
-use std::sync::{Mutex, RwLock};
+use std::time::Duration;
 
 const APP_NAME: &str = "RustieGB";
 
@@ -55,6 +56,23 @@ fn main() {
     let canvas_thread = canvas.clone();
     let runtime_config_thread = runtime_config.clone();
     let (sx, rx) = mpsc::channel();
+    //
+    // std::thread::spawn(move || loop {
+    //     std::thread::sleep(Duration::from_secs(10));
+    //     let deadlocks = parking_lot::deadlock::check_deadlock();
+    //     if deadlocks.is_empty() {
+    //         continue;
+    //     }
+    //
+    //     println!("{} deadlocks detected", deadlocks.len());
+    //     for (i, threads) in deadlocks.iter().enumerate() {
+    //         println!("Deadlock #{}", i);
+    //         for t in threads {
+    //             println!("Thread Id {:#?}", t.thread_id());
+    //             println!("{:#?}", t.backtrace());
+    //         }
+    //     }
+    // });
 
     std::thread::spawn(move || {
         let mut cpu = CPU::new(memory_thread.clone(), configuration.bootstrap);
@@ -68,16 +86,11 @@ fn main() {
         let mut audio_unit = AudioUnit::new(audio_unit_output, memory_thread.clone());
 
         loop {
-            while {
-                runtime_config_thread
-                    .read()
-                    .unwrap()
-                    .cpu_has_available_ccycles()
-            } {
+            while { runtime_config_thread.read().cpu_has_available_ccycles() } {
                 let last_instruction_cycles = cpu.step();
 
                 {
-                    runtime_config_thread.write().unwrap().available_cycles -=
+                    runtime_config_thread.write().available_cycles -=
                         last_instruction_cycles as i32;
                 }
 
@@ -87,7 +100,7 @@ fn main() {
                 let check_joystick;
 
                 {
-                    let mut memory_thread = memory_thread.write().unwrap();
+                    let mut memory_thread = memory_thread.write();
                     memory_thread.step(last_instruction_cycles);
 
                     check_vblank = memory_thread.interrupt_enable().is_vblank()
@@ -104,13 +117,13 @@ fn main() {
                 }
 
                 {
-                    gpu.step(last_instruction_cycles, &mut canvas_thread.write().unwrap());
+                    gpu.step(last_instruction_cycles, &mut canvas_thread.write());
                 }
 
                 let muted;
 
                 {
-                    muted = runtime_config_thread.read().unwrap().muted;
+                    muted = runtime_config_thread.read().muted;
                 }
 
                 audio_unit.step(last_instruction_cycles, muted);
@@ -164,14 +177,14 @@ fn main() {
 
     let mut texture: G2dTexture = Texture::from_image(
         &mut texture_context,
-        &canvas.read().unwrap(),
+        &canvas.read(),
         &TextureSettings::new(),
     )
     .unwrap();
 
     while let Some(event) = window.next() {
         if let Some(Button::Keyboard(key)) = event.press_args() {
-            let mut memory = memory.write().unwrap();
+            let mut memory = memory.write();
 
             match key {
                 Key::X => {
@@ -207,17 +220,17 @@ fn main() {
                     memory.interrupt_flag().set_p10_p13_transition(true);
                 }
                 Key::M => {
-                    runtime_config.write().unwrap().toggle_mute();
+                    runtime_config.write().toggle_mute();
                 }
                 Key::Space => {
-                    runtime_config.write().unwrap().user_speed_multiplier = 20;
+                    runtime_config.write().user_speed_multiplier = 20;
                 }
                 _ => {}
             };
         }
 
         if let Some(Button::Keyboard(key)) = event.release_args() {
-            let mut memory = memory.write().unwrap();
+            let mut memory = memory.write();
 
             match key {
                 Key::X => memory.joypad().a = false,
@@ -229,7 +242,7 @@ fn main() {
                 Key::Up => memory.joypad().up = false,
                 Key::Down => memory.joypad().down = false,
                 Key::Space => {
-                    runtime_config.write().unwrap().user_speed_multiplier = 1;
+                    runtime_config.write().user_speed_multiplier = 1;
                 }
                 _ => {}
             }
@@ -238,10 +251,10 @@ fn main() {
         // Actions to do on render
         event.render(|render_args| {
             texture
-                .update(&mut texture_context, &canvas.read().unwrap())
+                .update(&mut texture_context, &canvas.read())
                 .unwrap();
 
-            let memory = memory.read().unwrap();
+            let memory = memory.read();
 
             let pixel_size: (f64, f64) = (
                 render_args.window_size.get(0).unwrap() / (GPU::PIXEL_WIDTH as f64),
@@ -264,7 +277,7 @@ fn main() {
                 );
             });
 
-            runtime_config.write().unwrap().reset_available_ccycles();
+            runtime_config.write().reset_available_ccycles();
             sx.send(1);
         });
     }

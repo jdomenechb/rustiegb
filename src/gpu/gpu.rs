@@ -5,11 +5,11 @@ use crate::memory::oam_entry::OamEntry;
 use crate::memory::stat::STATMode;
 use crate::{Byte, Word};
 use ::image::{ImageBuffer, Rgba, RgbaImage};
+use parking_lot::RwLock;
 use std::cell::RefCell;
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 type DisplayPixel = [Byte; 4];
 
@@ -47,7 +47,7 @@ impl GPU {
         let mode;
 
         {
-            let memory = self.memory.read().unwrap();
+            let memory = self.memory.read();
             mode = memory.stat.mode();
         }
 
@@ -73,7 +73,7 @@ impl GPU {
             self.cycles_accumulated = 0;
 
             {
-                let mut memory = self.memory.write().unwrap();
+                let mut memory = self.memory.write();
                 memory.ly_increment();
 
                 if memory.ly.has_reached_end_of_screen() {
@@ -90,7 +90,7 @@ impl GPU {
             self.cycles_accumulated = 0;
 
             {
-                let mut memory = self.memory.write().unwrap();
+                let mut memory = self.memory.write();
                 memory.ly_increment();
 
                 if memory.ly.has_reached_end_of_vblank() {
@@ -111,7 +111,7 @@ impl GPU {
         // Enter transferring data to LCD Driver mode
         self.cycles_accumulated = 0;
 
-        let mut memory = self.memory.write().unwrap();
+        let mut memory = self.memory.write();
         memory.set_stat_mode(STATMode::LCDTransfer);
 
         self.sprites_to_be_drawn_with_priority.clear();
@@ -154,14 +154,39 @@ impl GPU {
         self.cycles_accumulated = 0;
 
         {
-            let mut memory = self.memory.write().unwrap();
+            let mut memory = self.memory.write();
             memory.set_stat_mode(STATMode::HBlank);
         }
 
-        let memory = self.memory.read().unwrap();
+        let lcdc;
+        let scx;
+        let scy;
+        let bgp;
+        let screen_y;
+        let sprite_palette0;
+        let sprite_palette1;
+        let sprite_size;
 
-        // Draw pixel line
-        let lcdc = &memory.lcdc;
+        {
+            let memory = self.memory.read();
+
+            // Draw pixel line
+            lcdc = memory.lcdc.clone();
+            scx = memory.scx();
+            scy = memory.scy();
+            bgp = memory.bgp();
+
+            screen_y = Byte::from(memory.ly.clone()) as u16;
+
+            sprite_palette0 = memory.read_byte(0xFF48);
+            sprite_palette1 = memory.read_byte(0xFF49);
+
+            sprite_size = if memory.lcdc.obj_sprite_size() {
+                16i16
+            } else {
+                8i16
+            };
+        }
 
         if !lcdc.lcd_control_operation() {
             return;
@@ -179,24 +204,10 @@ impl GPU {
             0x9800
         };
 
-        let scx = memory.scx();
-        let scy = memory.scy();
-        let bgp = memory.bgp();
-
-        let screen_y = Byte::from(memory.ly.clone()) as u16;
         let screen_y_with_offset = scy as u16 + screen_y;
 
         let mut previous_bg_tile_map_location = 0u16;
         let mut tile_bytes = (0, 0);
-
-        let sprite_palette0 = memory.read_byte(0xFF48);
-        let sprite_palette1 = memory.read_byte(0xFF49);
-
-        let sprite_size = if memory.lcdc.obj_sprite_size() {
-            16i16
-        } else {
-            8i16
-        };
 
         let mut screen_row_no_priority: [Option<DisplayPixel>; GPU::PIXEL_WIDTH as usize] =
             [None; GPU::PIXEL_WIDTH as usize];
@@ -244,15 +255,20 @@ impl GPU {
                 let bg_tile_map_location;
                 let tile_row;
 
-                // Window
-                if lcdc.window_display()
-                    && memory.wy <= screen_y as Byte
-                    && memory.wx <= (screen_x + 7) as Byte
-                {
-                    let last_window_rendered_position_x: u16 =
-                        screen_x as u16 + 7 - memory.wx as u16;
+                let wy;
+                let wx;
 
-                    let last_window_rendered_position_y = screen_y as u16 - memory.wy as u16;
+                {
+                    let memory = self.memory.read();
+                    wy = memory.wy;
+                    wx = memory.wx;
+                }
+
+                // Window
+                if lcdc.window_display() && wy <= screen_y as Byte && wx <= (screen_x + 7) as Byte {
+                    let last_window_rendered_position_x: u16 = screen_x as u16 + 7 - wx as u16;
+
+                    let last_window_rendered_position_y = screen_y as u16 - wy as u16;
 
                     bg_tile_map_location = window_tile_map_start_location
                         + (((last_window_rendered_position_y / GPU::PIXELS_PER_TILE)
@@ -275,20 +291,20 @@ impl GPU {
                 }
 
                 if previous_bg_tile_map_location != bg_tile_map_location {
-                    let bg_data_location = match lcdc.bg_and_window_tile_data_select() {
-                        true => {
-                            0x8000
-                                + memory.read_byte(bg_tile_map_location) as Word
-                                    * GPU::TILE_SIZE_BYTES as Word
-                        }
-                        false => {
-                            let rel_address = memory.read_byte(bg_tile_map_location);
+                    let bg_tile_map;
 
-                            (if rel_address >= 0b10000000 {
+                    {
+                        bg_tile_map = self.memory.read().read_byte(bg_tile_map_location);
+                    }
+
+                    let bg_data_location = match lcdc.bg_and_window_tile_data_select() {
+                        true => 0x8000 + bg_tile_map as Word * GPU::TILE_SIZE_BYTES as Word,
+                        false => {
+                            (if bg_tile_map >= 0b10000000 {
                                 0x8800
                             } else {
                                 0x9000
-                            }) + (rel_address & 0b01111111) as Word * GPU::TILE_SIZE_BYTES as Word
+                            }) + (bg_tile_map & 0b01111111) as Word * GPU::TILE_SIZE_BYTES as Word
                         }
                     };
 
@@ -349,7 +365,7 @@ impl GPU {
         //     _ => {}
         // }
 
-        let memory = self.memory.read().unwrap();
+        let memory = self.memory.read();
 
         let word = memory.read_word(tile_address + row * 2);
         let bytes = word_to_two_bytes(word);

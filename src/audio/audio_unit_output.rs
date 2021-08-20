@@ -1,7 +1,8 @@
 use crate::audio::{PulseDescription, VolumeEnvelopeDirection};
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, Stream, SupportedStreamConfig};
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 pub trait AudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription);
@@ -107,7 +108,7 @@ impl CpalAudioUnitOutput {
             let volume_envelope;
 
             {
-                let description = description.read().unwrap();
+                let description = description.read();
                 sample_in_period = sample_rate / description.frequency;
                 high_part_max = sample_in_period * description.wave_duty_percent;
                 volume_envelope = description.volume_envelope;
@@ -160,15 +161,12 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
                 let different;
 
                 {
-                    let read_pd = self.pulse_description_1.read().unwrap();
+                    let read_pd = self.pulse_description_1.read();
                     different = *description != *read_pd;
                 }
 
                 if different {
-                    self.pulse_description_1
-                        .write()
-                        .unwrap()
-                        .exchange(description);
+                    self.pulse_description_1.write().exchange(description);
                 }
 
                 stream = &self.stream_1;
@@ -177,15 +175,12 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
                 let different;
 
                 {
-                    let read_pd = self.pulse_description_2.read().unwrap();
+                    let read_pd = self.pulse_description_2.read();
                     different = *description != *read_pd;
                 }
 
                 if different {
-                    self.pulse_description_2
-                        .write()
-                        .unwrap()
-                        .exchange(description);
+                    self.pulse_description_2.write().exchange(description);
                 }
                 stream = &self.stream_2;
             }
@@ -228,7 +223,7 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
     }
 
     fn step_64(&mut self) {
-        self.pulse_description_1.write().unwrap().step_64();
-        self.pulse_description_2.write().unwrap().step_64();
+        self.pulse_description_1.write().step_64();
+        self.pulse_description_2.write().step_64();
     }
 }
