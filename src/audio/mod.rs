@@ -164,53 +164,35 @@ impl AudioUnit {
 
         // Sound 1
         if audio_triggers.0 {
-            self.read_pulse(1, 0xFF14, 0xFF13, 0xFF12, 0xFF11, Some(0xFF10));
+            self.read_pulse(1);
         }
 
         // Sound 2
         if audio_triggers.1 {
-            self.read_pulse(2, 0xFF19, 0xFF18, 0xFF17, 0xFF16, None);
+            self.read_pulse(2);
         }
+
+        // Sound 3
+        if audio_triggers.2 {}
     }
 
     fn stop_all(&mut self) {
         self.auo.stop_all();
     }
 
-    fn read_pulse(
-        &mut self,
-        pulse_n: u8,
-        control_addr: Word,
-        frequency_addr: Word,
-        volume_addr: Word,
-        length_addr: Word,
-        sweep_addr: Option<Word>,
-    ) {
-        let control_reg;
-        let frequency_reg;
-        let volume_reg;
-        let length_reg;
-        let sweep;
+    fn read_pulse(&mut self, pulse_n: u8) {
+        let audio_registers;
 
         {
             let memory = self.memory.read();
-
-            control_reg = memory.internally_read_byte(control_addr).unwrap();
-            frequency_reg = memory.internally_read_byte(frequency_addr).unwrap();
-            volume_reg = memory.internally_read_byte(volume_addr).unwrap();
-            length_reg = memory.internally_read_byte(length_addr).unwrap();
-
-            if sweep_addr.is_some() {
-                sweep = Some(memory.internally_read_byte(sweep_addr.unwrap()));
-            } else {
-                sweep = None;
-            }
+            audio_registers = memory.read_audio_registers(pulse_n);
         }
 
-        let frequency = ((control_reg as u16 & 0b111) << 8) | frequency_reg as u16;
+        let frequency =
+            ((audio_registers.control as u16 & 0b111) << 8) | audio_registers.frequency as u16;
         let frequency = 131072 as f32 / (2048 - frequency) as f32;
 
-        let wave_duty = (length_reg >> 6) & 0b11;
+        let wave_duty = (audio_registers.length >> 6) & 0b11;
 
         let wave_duty_percent: f32 = match wave_duty {
             0b00 => 0.125,
@@ -220,11 +202,11 @@ impl AudioUnit {
             _ => panic!("Invalid Wave Duty"),
         };
 
-        let initial_volume_envelope = (volume_reg >> 4) & 0xF;
+        let initial_volume_envelope = (audio_registers.volume >> 4) & 0xF;
         let volume_envelope_direction =
-            VolumeEnvelopeDirection::from(volume_reg & 0b1000 == 0b1000);
+            VolumeEnvelopeDirection::from(audio_registers.volume & 0b1000 == 0b1000);
 
-        let volume_envelope_duration_in_1_64_s = volume_reg & 0b111;
+        let volume_envelope_duration_in_1_64_s = audio_registers.volume & 0b111;
 
         let pulse_description = PulseDescription {
             pulse_n,

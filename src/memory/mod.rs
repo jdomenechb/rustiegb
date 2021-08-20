@@ -1,3 +1,4 @@
+pub mod audio_registers;
 pub mod internal_ram_8k_memory_sector;
 pub mod internal_ram_memory_sector;
 pub mod interrupt_flag;

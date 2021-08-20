@@ -7,6 +7,7 @@ use super::stat::STAT;
 use super::timer_control::TimerControl;
 use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use crate::cartridge::Cartridge;
+use crate::memory::audio_registers::AudioRegisters;
 use crate::memory::joypad::Joypad;
 use crate::memory::ly::LY;
 use crate::memory::memory_sector::ReadMemory;
@@ -1072,5 +1073,26 @@ impl Memory {
         self.audio_4_triggered = false;
 
         to_return
+    }
+
+    pub fn read_audio_registers(&self, channel: u8) -> AudioRegisters {
+        let mut sweep = None;
+        let start_address = match channel {
+            1 => {
+                sweep = self.internally_read_byte(0xFF10);
+                0xFF14
+            }
+            2 => 0xFF19,
+            3 => 0xFF1E,
+            _ => panic!("Invalid channel provided"),
+        };
+
+        AudioRegisters::new(
+            self.internally_read_byte(start_address).unwrap(),
+            self.internally_read_byte(start_address - 1).unwrap(),
+            self.internally_read_byte(start_address - 2).unwrap(),
+            self.internally_read_byte(start_address - 3).unwrap(),
+            sweep,
+        )
     }
 }
