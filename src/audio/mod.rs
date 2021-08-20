@@ -24,6 +24,13 @@ impl From<bool> for VolumeEnvelopeDirection {
     }
 }
 
+pub enum WaveOutputLevel {
+    Mute,
+    Vol100Percent,
+    Vol50Percent,
+    Vol25Percent,
+}
+
 pub struct PulseDescription {
     pub pulse_n: u8,
     pub frequency: f32,
@@ -107,6 +114,12 @@ impl Default for PulseDescription {
     }
 }
 
+#[readonly::make]
+pub struct WaveDescription {
+    pub frequency: f32,
+    pub output_level: WaveOutputLevel,
+}
+
 pub struct AudioUnit {
     auo: Box<dyn AudioUnitOutput>,
     memory: Arc<RwLock<Memory>>,
@@ -173,43 +186,33 @@ impl AudioUnit {
         }
 
         // Sound 3
-        if audio_triggers.2 {}
+        if audio_triggers.2 {
+            self.read_wave();
+        }
     }
 
     fn stop_all(&mut self) {
         self.auo.stop_all();
     }
 
-    fn read_pulse(&mut self, pulse_n: u8) {
+    fn read_pulse(&mut self, channel_n: u8) {
         let audio_registers;
 
         {
             let memory = self.memory.read();
-            audio_registers = memory.read_audio_registers(pulse_n);
+            audio_registers = memory.read_audio_registers(channel_n);
         }
 
-        let frequency =
-            ((audio_registers.control as u16 & 0b111) << 8) | audio_registers.frequency as u16;
-        let frequency = 131072 as f32 / (2048 - frequency) as f32;
+        let frequency = audio_registers.calculate_frequency();
 
-        let wave_duty = (audio_registers.length >> 6) & 0b11;
+        let initial_volume_envelope = audio_registers.get_volume_envelope();
+        let volume_envelope_direction = audio_registers.get_volume_envelope_direction();
 
-        let wave_duty_percent: f32 = match wave_duty {
-            0b00 => 0.125,
-            0b01 => 0.25,
-            0b10 => 0.50,
-            0b11 => 0.75,
-            _ => panic!("Invalid Wave Duty"),
-        };
-
-        let initial_volume_envelope = (audio_registers.volume >> 4) & 0xF;
-        let volume_envelope_direction =
-            VolumeEnvelopeDirection::from(audio_registers.volume & 0b1000 == 0b1000);
-
-        let volume_envelope_duration_in_1_64_s = audio_registers.volume & 0b111;
+        let volume_envelope_duration_in_1_64_s = audio_registers.get_volume_envelope_duration_64();
+        let wave_duty_percent = audio_registers.calculate_wave_duty_percent();
 
         let pulse_description = PulseDescription {
-            pulse_n,
+            pulse_n: channel_n,
             frequency,
             wave_duty_percent,
             initial_volume_envelope,
@@ -220,5 +223,22 @@ impl AudioUnit {
         };
 
         self.auo.play_pulse(&pulse_description);
+    }
+
+    fn read_wave(&mut self) {
+        let audio_registers;
+
+        {
+            let memory = self.memory.read();
+            audio_registers = memory.read_audio_registers(3);
+        }
+
+        let frequency = audio_registers.calculate_frequency();
+        let wave_output_level = audio_registers.get_wave_output_level();
+
+        let wave_description = WaveDescription {
+            frequency,
+            output_level: wave_output_level,
+        };
     }
 }
