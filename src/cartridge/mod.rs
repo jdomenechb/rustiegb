@@ -216,6 +216,11 @@ impl Cartridge {
             ram: CartridgeMemorySector::with_size(ram_size_in_bytes),
         }
     }
+
+    pub fn print_header(&self) {
+        println!("CARTRIDGE HEADER");
+        println!("{:?}", self.header);
+    }
 }
 
 impl Default for Cartridge {

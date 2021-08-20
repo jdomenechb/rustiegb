@@ -3,6 +3,7 @@ mod cartridge;
 mod configuration;
 mod cpu;
 mod gpu;
+mod joypad;
 mod math;
 mod memory;
 
@@ -16,14 +17,14 @@ use crate::audio::AudioUnit;
 use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
+use crate::joypad::JoypadHandler;
 use cpu::cpu::CPU;
 use gpu::gpu::GPU;
 use image::ImageBuffer;
 use memory::memory::Memory;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 use piston_window::*;
 use std::sync::{mpsc, Arc};
-use std::time::Duration;
 
 const APP_NAME: &str = "RustieGB";
 
@@ -39,13 +40,14 @@ fn main() {
     let cartridge = Cartridge::new_from_path(configuration.rom_file.as_str());
 
     if configuration.debug_header {
-        println!("{:?}", cartridge.header);
+        cartridge.print_header();
     }
 
     let window_title = format!("{} - {}", cartridge.header.title, APP_NAME);
 
     // --- Setting up GB components
     let memory = Arc::new(RwLock::new(Memory::new(cartridge, configuration.bootstrap)));
+    let joypad_handler = JoypadHandler::new(memory.clone(), runtime_config.clone());
 
     let canvas = Arc::new(RwLock::new(ImageBuffer::new(
         GPU::PIXEL_WIDTH as u32,
@@ -167,68 +169,11 @@ fn main() {
 
     while let Some(event) = window.next() {
         if let Some(Button::Keyboard(key)) = event.press_args() {
-            let mut memory = memory.write();
-
-            match key {
-                Key::X => {
-                    memory.joypad().a = true;
-                    memory.interrupt_flag().set_p10_p13_transition(true);
-                }
-                Key::Z => {
-                    memory.joypad().b = true;
-                    memory.interrupt_flag().set_p10_p13_transition(true);
-                }
-                Key::Return => {
-                    memory.joypad().start = true;
-                    memory.interrupt_flag().set_p10_p13_transition(true);
-                }
-                Key::RShift => {
-                    memory.joypad().select = true;
-                    memory.interrupt_flag().set_p10_p13_transition(true);
-                }
-                Key::Left => {
-                    memory.joypad().left = true;
-                    memory.interrupt_flag().set_p10_p13_transition(true);
-                }
-                Key::Right => {
-                    memory.joypad().right = true;
-                    memory.interrupt_flag().set_p10_p13_transition(true);
-                }
-                Key::Up => {
-                    memory.joypad().up = true;
-                    memory.interrupt_flag().set_p10_p13_transition(true);
-                }
-                Key::Down => {
-                    memory.joypad().down = true;
-                    memory.interrupt_flag().set_p10_p13_transition(true);
-                }
-                Key::M => {
-                    runtime_config.write().toggle_mute();
-                }
-                Key::Space => {
-                    runtime_config.write().user_speed_multiplier = 20;
-                }
-                _ => {}
-            };
+            joypad_handler.press(key);
         }
 
         if let Some(Button::Keyboard(key)) = event.release_args() {
-            let mut memory = memory.write();
-
-            match key {
-                Key::X => memory.joypad().a = false,
-                Key::Z => memory.joypad().b = false,
-                Key::Return => memory.joypad().start = false,
-                Key::RShift => memory.joypad().select = false,
-                Key::Left => memory.joypad().left = false,
-                Key::Right => memory.joypad().right = false,
-                Key::Up => memory.joypad().up = false,
-                Key::Down => memory.joypad().down = false,
-                Key::Space => {
-                    runtime_config.write().user_speed_multiplier = 1;
-                }
-                _ => {}
-            }
+            joypad_handler.release(key);
         };
 
         // Actions to do on render
