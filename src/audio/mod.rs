@@ -3,8 +3,8 @@ pub mod audio_unit_output;
 use crate::memory::memory::Memory;
 use crate::{Byte, Word};
 use audio_unit_output::AudioUnitOutput;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 const CYCLES_1_256_SEC: u16 = 16384;
 const CYCLES_1_64_SEC: u32 = 16384 * 4;
@@ -109,14 +109,14 @@ impl Default for PulseDescription {
 
 pub struct AudioUnit {
     auo: Box<dyn AudioUnitOutput>,
-    memory: Rc<RefCell<Memory>>,
+    memory: Arc<RwLock<Memory>>,
 
     cycle_count: u16,
     cycle_64_count: u32,
 }
 
 impl AudioUnit {
-    pub fn new(au: Box<dyn AudioUnitOutput>, memory: Rc<RefCell<Memory>>) -> Self {
+    pub fn new(au: Box<dyn AudioUnitOutput>, memory: Arc<RwLock<Memory>>) -> Self {
         Self {
             auo: au,
             memory,
@@ -132,7 +132,7 @@ impl AudioUnit {
         let audio_triggers;
 
         {
-            let mut memory = self.memory.borrow_mut();
+            let mut memory = self.memory.write().unwrap();
 
             nr52 = memory.read_byte(0xFF26);
             audio_triggers = memory.audio_has_been_trigered();
@@ -193,7 +193,7 @@ impl AudioUnit {
         let sweep;
 
         {
-            let memory = self.memory.borrow();
+            let memory = self.memory.read().unwrap();
 
             control_reg = memory.internally_read_byte(control_addr).unwrap();
             frequency_reg = memory.internally_read_byte(frequency_addr).unwrap();

@@ -21,8 +21,8 @@ use gpu::gpu::GPU;
 use image::ImageBuffer;
 use memory::memory::Memory;
 use piston_window::*;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{mpsc, Arc};
+use std::sync::{Mutex, RwLock};
 
 const APP_NAME: &str = "RustieGB";
 
@@ -32,7 +32,7 @@ type SignedByte = i8;
 
 fn main() {
     let configuration = Configuration::from_command(APP_NAME);
-    let mut runtime_config = RuntimeConfig::default();
+    let runtime_config = Arc::new(RwLock::new(RuntimeConfig::default()));
 
     // --- Read ROM
     let cartridge = Cartridge::new_from_path(configuration.rom_file.as_str());
@@ -44,20 +44,107 @@ fn main() {
     let window_title = format!("{} - {}", cartridge.header.title, APP_NAME);
 
     // --- Setting up GB components
-    let memory = Rc::new(RefCell::new(Memory::new(
-        cartridge,
-        configuration.bootstrap,
+    let memory = Arc::new(RwLock::new(Memory::new(cartridge, configuration.bootstrap)));
+
+    let canvas = Arc::new(RwLock::new(ImageBuffer::new(
+        GPU::PIXEL_WIDTH as u32,
+        GPU::PIXEL_HEIGHT as u32,
     )));
 
-    let mut cpu = CPU::new(memory.clone(), configuration.bootstrap);
-    let mut gpu = GPU::new(memory.clone());
+    let memory_thread = memory.clone();
+    let canvas_thread = canvas.clone();
+    let runtime_config_thread = runtime_config.clone();
+    let (sx, rx) = mpsc::channel();
 
-    let audio_unit_output: Box<dyn AudioUnitOutput> = match configuration.debug_audio {
-        true => Box::new(DebugAudioUnitOutput {}),
-        false => Box::new(CpalAudioUnitOutput::new()),
-    };
+    std::thread::spawn(move || {
+        let mut cpu = CPU::new(memory_thread.clone(), configuration.bootstrap);
+        let mut gpu = GPU::new(memory_thread.clone());
 
-    let mut audio_unit = AudioUnit::new(audio_unit_output, memory.clone());
+        let audio_unit_output: Box<dyn AudioUnitOutput> = match configuration.debug_audio {
+            true => Box::new(DebugAudioUnitOutput {}),
+            false => Box::new(CpalAudioUnitOutput::new()),
+        };
+
+        let mut audio_unit = AudioUnit::new(audio_unit_output, memory_thread.clone());
+
+        loop {
+            while {
+                runtime_config_thread
+                    .read()
+                    .unwrap()
+                    .cpu_has_available_ccycles()
+            } {
+                let last_instruction_cycles = cpu.step();
+
+                {
+                    runtime_config_thread.write().unwrap().available_cycles -=
+                        last_instruction_cycles as i32;
+                }
+
+                let check_vblank;
+                let check_lcd_stat;
+                let check_timer_overflow;
+                let check_joystick;
+
+                {
+                    let mut memory_thread = memory_thread.write().unwrap();
+                    memory_thread.step(last_instruction_cycles);
+
+                    check_vblank = memory_thread.interrupt_enable().is_vblank()
+                        && memory_thread.interrupt_flag.is_vblank();
+
+                    check_lcd_stat = memory_thread.interrupt_enable().is_lcd_stat()
+                        && memory_thread.interrupt_flag.is_lcd_stat();
+
+                    check_timer_overflow = memory_thread.interrupt_enable().is_timer_overflow()
+                        && memory_thread.interrupt_flag.is_timer_overflow();
+
+                    check_joystick = memory_thread.interrupt_enable().is_p10_p13_transition()
+                        && memory_thread.interrupt_flag.is_p10_p13_transition();
+                }
+
+                {
+                    gpu.step(last_instruction_cycles, &mut canvas_thread.write().unwrap());
+                }
+
+                let muted;
+
+                {
+                    muted = runtime_config_thread.read().unwrap().muted;
+                }
+
+                audio_unit.step(last_instruction_cycles, muted);
+
+                if check_vblank {
+                    cpu.vblank_interrupt();
+
+                    continue;
+                }
+
+                if check_lcd_stat {
+                    cpu.lcd_stat_interrupt();
+
+                    continue;
+                }
+
+                if check_timer_overflow {
+                    cpu.timer_overflow_interrupt();
+
+                    continue;
+                }
+
+                // TODO: Serial transfer
+
+                if check_joystick {
+                    cpu.p10_p13_transition_interrupt();
+
+                    continue;
+                }
+            }
+
+            rx.recv();
+        }
+    });
 
     // --- Seting up window
     let mut window: PistonWindow = WindowSettings::new(window_title, [640, 576])
@@ -68,21 +155,23 @@ fn main() {
 
     let mut event_settings = EventSettings::new();
     event_settings.set_max_fps(60);
-    event_settings.set_ups(60);
     window.events.set_event_settings(event_settings);
 
-    let mut canvas = ImageBuffer::new(GPU::PIXEL_WIDTH as u32, GPU::PIXEL_HEIGHT as u32);
     let mut texture_context = TextureContext {
         factory: window.factory.clone(),
         encoder: window.factory.create_command_buffer().into(),
     };
 
-    let mut texture: G2dTexture =
-        Texture::from_image(&mut texture_context, &canvas, &TextureSettings::new()).unwrap();
+    let mut texture: G2dTexture = Texture::from_image(
+        &mut texture_context,
+        &canvas.read().unwrap(),
+        &TextureSettings::new(),
+    )
+    .unwrap();
 
     while let Some(event) = window.next() {
         if let Some(Button::Keyboard(key)) = event.press_args() {
-            let mut memory = memory.borrow_mut();
+            let mut memory = memory.write().unwrap();
 
             match key {
                 Key::X => {
@@ -118,17 +207,17 @@ fn main() {
                     memory.interrupt_flag().set_p10_p13_transition(true);
                 }
                 Key::M => {
-                    runtime_config.toggle_mute();
+                    runtime_config.write().unwrap().toggle_mute();
                 }
                 Key::Space => {
-                    runtime_config.user_speed_multiplier = 20;
+                    runtime_config.write().unwrap().user_speed_multiplier = 20;
                 }
                 _ => {}
             };
         }
 
         if let Some(Button::Keyboard(key)) = event.release_args() {
-            let mut memory = memory.borrow_mut();
+            let mut memory = memory.write().unwrap();
 
             match key {
                 Key::X => memory.joypad().a = false,
@@ -139,16 +228,20 @@ fn main() {
                 Key::Right => memory.joypad().right = false,
                 Key::Up => memory.joypad().up = false,
                 Key::Down => memory.joypad().down = false,
-                Key::Space => runtime_config.user_speed_multiplier = 1,
+                Key::Space => {
+                    runtime_config.write().unwrap().user_speed_multiplier = 1;
+                }
                 _ => {}
             }
         };
 
         // Actions to do on render
         event.render(|render_args| {
-            texture.update(&mut texture_context, &canvas).unwrap();
+            texture
+                .update(&mut texture_context, &canvas.read().unwrap())
+                .unwrap();
 
-            let memory = memory.borrow();
+            let memory = memory.read().unwrap();
 
             let pixel_size: (f64, f64) = (
                 render_args.window_size.get(0).unwrap() / (GPU::PIXEL_WIDTH as f64),
@@ -171,70 +264,8 @@ fn main() {
                 );
             });
 
-            runtime_config.reset_available_ccycles();
-        });
-
-        // Actions to do on update
-        event.update(|_update_args| {
-            while runtime_config.cpu_has_available_ccycles() {
-                let last_instruction_cycles = cpu.step();
-
-                runtime_config.available_cycles -= last_instruction_cycles as i32;
-
-                {
-                    memory.borrow_mut().step(last_instruction_cycles);
-                }
-
-                gpu.step(last_instruction_cycles, &mut canvas);
-                audio_unit.step(last_instruction_cycles, runtime_config.muted);
-
-                let check_vblank;
-                let check_lcd_stat;
-                let check_timer_overflow;
-                let check_joystick;
-
-                {
-                    let mut memory = memory.borrow_mut();
-
-                    check_vblank = memory.interrupt_enable().is_vblank()
-                        && memory.interrupt_flag().is_vblank();
-
-                    check_lcd_stat = memory.interrupt_enable().is_lcd_stat()
-                        && memory.interrupt_flag().is_lcd_stat();
-
-                    check_timer_overflow = memory.interrupt_enable().is_timer_overflow()
-                        && memory.interrupt_flag().is_timer_overflow();
-
-                    check_joystick = memory.interrupt_enable().is_p10_p13_transition()
-                        && memory.interrupt_flag().is_p10_p13_transition();
-                }
-
-                if check_vblank {
-                    cpu.vblank_interrupt();
-
-                    continue;
-                }
-
-                if check_lcd_stat {
-                    cpu.lcd_stat_interrupt();
-
-                    continue;
-                }
-
-                if check_timer_overflow {
-                    cpu.timer_overflow_interrupt();
-
-                    continue;
-                }
-
-                // TODO: Serial transfer
-
-                if check_joystick {
-                    cpu.p10_p13_transition_interrupt();
-
-                    continue;
-                }
-            }
+            runtime_config.write().unwrap().reset_available_ccycles();
+            sx.send(1);
         });
     }
 }

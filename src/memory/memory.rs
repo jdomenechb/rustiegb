@@ -28,7 +28,7 @@ pub struct Memory {
     video_ram: VideoRam8kMemorySector,
     switchable_ram_bank: InternalRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
-    oam_ram: OamMemorySector,
+    pub oam_ram: OamMemorySector,
     // FF00
     p1: Joypad,
     // FF01
@@ -44,7 +44,7 @@ pub struct Memory {
     // FF07
     timer_control: TimerControl,
     // FF0F
-    interrupt_flag: InterruptFlag,
+    pub interrupt_flag: InterruptFlag,
     // FF10
     nr10: Byte,
     // FF11
@@ -115,7 +115,7 @@ pub struct Memory {
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
     // FFFF
-    interrupt_enable: InterruptFlag,
+    pub interrupt_enable: InterruptFlag,
 
     // -- Other
     remaining_timer_cycles: u32,
