@@ -350,12 +350,10 @@ impl CPU {
     }
 
     fn prefix_cb(&mut self) {
-        let op: Byte;
-
-        {
+        let op: Byte = {
             let memory = self.memory.read();
-            op = memory.read_byte(self.registers.pc + 1);
-        }
+            memory.read_byte(self.registers.pc + 1)
+        };
 
         match op {
             0x00 => self.rlc_r(ByteRegister::B),
@@ -820,12 +818,10 @@ impl CPU {
     }
 
     fn sub_n(&mut self) {
-        let to_subtract;
-
-        {
+        let to_subtract = {
             let memory = self.memory.read();
-            to_subtract = memory.read_byte(self.registers.pc + 1);
-        }
+            memory.read_byte(self.registers.pc + 1)
+        };
 
         let value = self.registers.read_byte(&ByteRegister::A);
 
@@ -1115,12 +1111,10 @@ impl CPU {
     }
 
     fn cp_n(&mut self) {
-        let n;
-
-        {
+        let n = {
             let memory = self.memory.read();
-            n = memory.read_byte(self.registers.pc + 1);
-        }
+            memory.read_byte(self.registers.pc + 1)
+        };
 
         self.alu.cp_n(&mut self.registers, n);
 
@@ -1129,12 +1123,10 @@ impl CPU {
     }
 
     fn cp_mhl(&mut self) {
-        let n;
-
-        {
+        let n = {
             let memory = self.memory.read();
-            n = memory.read_byte(self.registers.read_word(&WordRegister::HL));
-        }
+            memory.read_byte(self.registers.read_word(&WordRegister::HL))
+        };
 
         self.alu.cp_n(&mut self.registers, n);
 
@@ -1519,12 +1511,10 @@ impl CPU {
     }
 
     fn jp_nc_nn(&mut self) {
-        let possible_value;
-
-        {
+        let possible_value = {
             let memory = self.memory.read();
-            possible_value = memory.read_word(self.registers.read_word(&WordRegister::PC) + 1);
-        }
+            memory.read_word(self.registers.read_word(&WordRegister::PC) + 1)
+        };
 
         self.registers.pc += 3;
 
@@ -1964,12 +1954,10 @@ impl CPU {
 
     fn rrc_mhl(&mut self) {
         let address = self.registers.read_word(&WordRegister::HL);
-        let mut value;
-
-        {
+        let mut value = {
             let memory = self.memory.read();
-            value = memory.read_byte(address)
-        }
+            memory.read_byte(address)
+        };
 
         let new_carry: bool = value & 0x1 == 0x1;
 

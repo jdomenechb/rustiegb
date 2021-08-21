@@ -205,12 +205,10 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
 
         match description.pulse_n {
             1 => {
-                let different;
-
-                {
+                let different = {
                     let read_pd = self.pulse_description_1.read();
-                    different = *description != *read_pd;
-                }
+                    *description != *read_pd
+                };
 
                 if different {
                     self.pulse_description_1.write().exchange(description);
@@ -219,16 +217,15 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
                 stream = &self.stream_1;
             }
             2 => {
-                let different;
-
-                {
+                let different = {
                     let read_pd = self.pulse_description_2.read();
-                    different = *description != *read_pd;
-                }
+                    *description != *read_pd
+                };
 
                 if different {
                     self.pulse_description_2.write().exchange(description);
                 }
+
                 stream = &self.stream_2;
             }
             _ => panic!("Non pulse stream given"),

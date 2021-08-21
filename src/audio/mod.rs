@@ -125,12 +125,10 @@ impl AudioUnit {
     }
 
     fn read_pulse(&mut self, channel_n: u8) {
-        let audio_registers;
-
-        {
+        let audio_registers = {
             let memory = self.memory.read();
-            audio_registers = memory.read_audio_registers(channel_n);
-        }
+            memory.read_audio_registers(channel_n)
+        };
 
         let frequency = audio_registers.calculate_frequency();
 

@@ -44,12 +44,10 @@ impl GPU {
     }
 
     pub fn step(&mut self, last_instruction_cycles: u8, canvas: &mut RgbaImage) {
-        let mode;
-
-        {
+        let mode = {
             let memory = self.memory.read();
-            mode = memory.stat.mode();
-        }
+            memory.stat.mode()
+        };
 
         self.cycles_accumulated += last_instruction_cycles as u16;
 
@@ -291,11 +289,7 @@ impl GPU {
                 }
 
                 if previous_bg_tile_map_location != bg_tile_map_location {
-                    let bg_tile_map;
-
-                    {
-                        bg_tile_map = self.memory.read().read_byte(bg_tile_map_location);
-                    }
+                    let bg_tile_map = { self.memory.read().read_byte(bg_tile_map_location) };
 
                     let bg_data_location = match lcdc.bg_and_window_tile_data_select() {
                         true => 0x8000 + bg_tile_map as Word * GPU::TILE_SIZE_BYTES as Word,

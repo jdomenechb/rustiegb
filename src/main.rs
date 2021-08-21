@@ -102,11 +102,7 @@ fn main() {
                     gpu.step(last_instruction_cycles, &mut canvas_thread.write());
                 }
 
-                let muted;
-
-                {
-                    muted = runtime_config_thread.read().muted;
-                }
+                let muted = { runtime_config_thread.read().muted };
 
                 audio_unit.step(last_instruction_cycles, muted);
 

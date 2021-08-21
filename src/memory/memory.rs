@@ -131,9 +131,7 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(cartridge: Cartridge, bootstrap: bool) -> Memory {
-        let bootstrap_rom;
-
-        if bootstrap {
+        let bootstrap_rom = if bootstrap {
             let bootstrap_rom_path = "./DMG_ROM.bin";
             let mut bootstrap_data: Vec<Byte> = Vec::with_capacity(0x256);
 
@@ -142,10 +140,10 @@ impl Memory {
                 .read_to_end(&mut bootstrap_data)
                 .expect("Error on reading ROM contents");
 
-            bootstrap_rom = Some(ReadOnlyMemorySector::new(&bootstrap_data));
+            Some(ReadOnlyMemorySector::new(&bootstrap_data))
         } else {
-            bootstrap_rom = None;
-        }
+            None
+        };
 
         return Memory {
             bootstrap_rom,
