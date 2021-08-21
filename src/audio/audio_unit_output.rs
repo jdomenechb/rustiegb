@@ -15,6 +15,7 @@ pub trait AudioUnitOutput {
     fn stop_all(&mut self);
     fn set_mute(&mut self, muted: bool);
     fn step_64(&mut self);
+    fn step_256(&mut self);
 }
 
 pub struct CpalAudioUnitOutput {
@@ -140,6 +141,7 @@ impl CpalAudioUnitOutput {
             let sample_in_period;
             let output_level;
             let mut wave_sample;
+            let duration_not_finished: f32;
 
             sample_clock = (sample_clock + 1.0) % sample_rate; // 0..44099
 
@@ -148,8 +150,13 @@ impl CpalAudioUnitOutput {
 
                 // How many samples are in one frequency oscillation
                 sample_in_period = sample_rate / description.frequency;
-
                 output_level = description.output_level;
+                duration_not_finished =
+                    if !description.use_length || description.remaining_steps > 0 {
+                        1.0
+                    } else {
+                        0.0
+                    };
 
                 let current_wave_pos =
                     ((sample_clock % sample_in_period) / sample_in_period * 32.0).floor() as u8;
@@ -170,7 +177,7 @@ impl CpalAudioUnitOutput {
                 _ => {}
             }
 
-            let to_return = (wave_sample / 0b1111) as f32;
+            let to_return = (wave_sample / 0b1111) as f32 * duration_not_finished;
 
             to_return
         };
@@ -305,5 +312,9 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
     fn step_64(&mut self) {
         self.pulse_description_1.write().step_64();
         self.pulse_description_2.write().step_64();
+    }
+
+    fn step_256(&mut self) {
+        self.wave_description.write().step_256();
     }
 }

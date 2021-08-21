@@ -70,4 +70,12 @@ impl AudioRegisters {
             _ => panic!("Invalid Wave Output Level"),
         }
     }
+
+    pub fn get_use_length(&self) -> bool {
+        self.control & 0b1000000 == 0b1000000
+    }
+
+    pub fn get_length(&self) -> Byte {
+        self.length
+    }
 }

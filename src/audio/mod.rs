@@ -86,7 +86,7 @@ impl AudioUnit {
         if self.cycle_count > CYCLES_1_256_SEC {
             self.cycle_count -= CYCLES_1_256_SEC;
 
-            // TODO
+            self.auo.step_256();
         }
 
         if self.cycle_64_count > CYCLES_1_64_SEC {
@@ -102,8 +102,6 @@ impl AudioUnit {
             return;
         }
 
-        // TODO: sound 4
-
         // Sound 1
         if audio_triggers.0 {
             self.read_pulse(1);
@@ -118,6 +116,8 @@ impl AudioUnit {
         if audio_triggers.2 {
             self.read_wave();
         }
+
+        // TODO: sound 4
     }
 
     fn stop_all(&mut self) {
@@ -167,11 +167,13 @@ impl AudioUnit {
         let frequency = audio_registers.calculate_wave_frequency();
         let wave_output_level = audio_registers.get_wave_output_level();
 
-        let wave_description = WaveDescription {
+        let wave_description = WaveDescription::new(
             frequency,
-            output_level: wave_output_level,
+            wave_output_level,
             wave,
-        };
+            audio_registers.get_use_length(),
+            audio_registers.get_length(),
+        );
 
         self.auo.play_wave(&wave_description);
     }

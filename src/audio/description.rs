@@ -1,7 +1,7 @@
 use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
-use crate::Byte;
+use crate::{Byte, Word};
 
 pub struct PulseDescription {
     pub pulse_n: u8,
@@ -90,15 +90,41 @@ pub struct WaveDescription {
     pub frequency: f32,
     pub output_level: WaveOutputLevel,
     pub wave: WavePatternRam,
+    pub use_length: bool,
+    pub remaining_steps: Word,
 }
 
 impl WaveDescription {
+    pub fn new(
+        frequency: f32,
+        output_level: WaveOutputLevel,
+        wave: WavePatternRam,
+        use_length: bool,
+        length: Byte,
+    ) -> Self {
+        Self {
+            frequency,
+            output_level,
+            wave,
+            use_length,
+            remaining_steps: 256 - length as Word,
+        }
+    }
+
     pub fn exchange(&mut self, other: &Self) {
         self.frequency = other.frequency;
         self.output_level = other.output_level.clone();
         self.wave = WavePatternRam {
             data: MemorySector::with_data(other.wave.data.data.clone()),
         };
+        self.use_length = other.use_length;
+        self.remaining_steps = other.remaining_steps;
+    }
+
+    pub fn step_256(&mut self) {
+        if self.use_length && self.remaining_steps > 0 {
+            self.remaining_steps -= 1;
+        }
     }
 }
 
@@ -110,10 +136,12 @@ impl PartialEq for WaveDescription {
 
 impl Default for WaveDescription {
     fn default() -> Self {
-        Self {
-            frequency: 0.0,
-            output_level: WaveOutputLevel::Mute,
-            wave: WavePatternRam::default(),
-        }
+        Self::new(
+            0.0,
+            WaveOutputLevel::Mute,
+            WavePatternRam::default(),
+            false,
+            0xFF,
+        )
     }
 }
