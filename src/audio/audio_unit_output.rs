@@ -17,56 +17,6 @@ pub trait AudioUnitOutput {
     fn step_64(&mut self);
 }
 
-pub struct DebugAudioUnitOutput {}
-
-impl AudioUnitOutput for DebugAudioUnitOutput {
-    fn play_pulse(&mut self, description: &PulseDescription) {
-        println!(
-            "S{}: Played at {} Hz, {}% duty. Env: IV{}, {}, D{}/64",
-            description.pulse_n,
-            description.frequency,
-            description.wave_duty_percent * 100.0,
-            description.initial_volume_envelope,
-            match description.volume_envelope_direction {
-                VolumeEnvelopeDirection::UP => "UP",
-                VolumeEnvelopeDirection::DOWN => "DOWN",
-            },
-            description.remaining_volume_envelope_duration_in_1_64_s
-        );
-
-        std::thread::sleep(std::time::Duration::from_millis(50));
-    }
-
-    fn play_wave(&mut self, description: &WaveDescription) {
-        println!(
-            "S3: Played wave at {} Hz, {}% output level",
-            description.frequency,
-            match description.output_level {
-                WaveOutputLevel::Mute => "0",
-                WaveOutputLevel::Vol25Percent => "25",
-                WaveOutputLevel::Vol50Percent => "50",
-                WaveOutputLevel::Vol100Percent => "100",
-            },
-        );
-
-        std::thread::sleep(std::time::Duration::from_millis(50));
-    }
-
-    fn stop_all(&mut self) {
-        println!("Stopped all sounds");
-
-        std::thread::sleep(std::time::Duration::from_millis(50));
-    }
-
-    fn set_mute(&mut self, muted: bool) {
-        println!("Mute pressed {}", muted);
-    }
-
-    fn step_64(&mut self) {
-        println!("Step 64");
-    }
-}
-
 pub struct CpalAudioUnitOutput {
     device: Device,
     config: SupportedStreamConfig,

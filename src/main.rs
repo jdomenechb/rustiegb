@@ -12,7 +12,7 @@ extern crate cpal;
 extern crate image;
 extern crate piston_window;
 
-use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput, DebugAudioUnitOutput};
+use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput};
 use crate::audio::AudioUnit;
 use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
@@ -63,10 +63,7 @@ fn main() {
         let mut cpu = CPU::new(memory_thread.clone(), configuration.bootstrap);
         let mut gpu = GPU::new(memory_thread.clone());
 
-        let audio_unit_output: Box<dyn AudioUnitOutput> = match configuration.debug_audio {
-            true => Box::new(DebugAudioUnitOutput {}),
-            false => Box::new(CpalAudioUnitOutput::new()),
-        };
+        let audio_unit_output = Box::new(CpalAudioUnitOutput::new());
 
         let mut audio_unit = AudioUnit::new(audio_unit_output, memory_thread.clone());
 

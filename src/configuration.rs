@@ -3,7 +3,6 @@ use clap::{App, Arg};
 
 #[readonly::make]
 pub struct Configuration {
-    pub debug_audio: bool,
     pub debug_header: bool,
     pub bootstrap: bool,
     pub rom_file: String,
@@ -26,11 +25,6 @@ impl Configuration {
                     .help("Prints CPU instructions on command line"),
             )
             .arg(
-                Arg::with_name("debug-audio")
-                    .long("debug-audio")
-                    .help("Prints audio triggered on command line"),
-            )
-            .arg(
                 Arg::with_name("debug-header")
                     .long("debug-header")
                     .help("Prints the parsed cartridge header"),
@@ -43,7 +37,6 @@ impl Configuration {
             .get_matches();
 
         Self {
-            debug_audio: matches.is_present("debug-audio"),
             debug_header: matches.is_present("debug-header"),
             bootstrap: matches.is_present("bootstrap"),
             rom_file: matches.value_of("ROMFILE").unwrap().to_string(),
