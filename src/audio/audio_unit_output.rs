@@ -5,6 +5,7 @@ use cpal::{Device, Stream, SupportedStreamConfig};
 use parking_lot::RwLock;
 
 use crate::audio::description::{PulseDescription, WaveDescription};
+use crate::audio::sweep::SweepDirection;
 use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
 use crate::memory::memory_sector::ReadMemory;
 use crate::Word;
@@ -15,6 +16,7 @@ pub trait AudioUnitOutput {
     fn stop_all(&mut self);
     fn set_mute(&mut self, muted: bool);
     fn step_64(&mut self);
+    fn step_128(&mut self);
     fn step_256(&mut self);
 }
 
@@ -86,8 +88,24 @@ impl CpalAudioUnitOutput {
             let volume_envelope;
 
             {
-                let description = description.read();
-                sample_in_period = sample_rate / description.frequency;
+                let mut description = description.write();
+
+                if let Some(mut sweep) = description.sweep {
+                    if sweep.happened {
+                        let to_add_sub =
+                            description.current_frequency / 2.0_f32.powf(sweep.shifts as f32);
+                        match sweep.direction {
+                            SweepDirection::Add => description.current_frequency += to_add_sub,
+                            SweepDirection::Sub => description.current_frequency -= to_add_sub,
+                        }
+
+                        sweep.happened = false;
+
+                        description.sweep = Some(sweep);
+                    }
+                }
+
+                sample_in_period = sample_rate / description.current_frequency;
                 high_part_max = sample_in_period * description.wave_duty_percent;
                 volume_envelope = description.volume_envelope;
             }
@@ -313,6 +331,10 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
     fn step_64(&mut self) {
         self.pulse_description_1.write().step_64();
         self.pulse_description_2.write().step_64();
+    }
+
+    fn step_128(&mut self) {
+        self.pulse_description_1.write().step_128();
     }
 
     fn step_256(&mut self) {

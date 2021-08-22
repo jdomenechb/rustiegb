@@ -1,3 +1,4 @@
+use crate::audio::sweep::Sweep;
 use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
 use crate::Byte;
 
@@ -85,5 +86,13 @@ impl AudioRegisters {
         }
 
         true
+    }
+
+    pub fn get_sweep(&self) -> Option<Sweep> {
+        if let Some(sweep) = self.sweep {
+            return Some(Sweep::from(sweep));
+        }
+
+        None
     }
 }

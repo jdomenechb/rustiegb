@@ -11,8 +11,10 @@ use crate::memory::wave_pattern_ram::WavePatternRam;
 
 pub mod audio_unit_output;
 mod description;
+pub mod sweep;
 
 const CYCLES_1_256_SEC: u16 = 16384;
+const CYCLES_1_128_SEC: u16 = 16384 * 2;
 const CYCLES_1_64_SEC: u32 = 16384 * 4;
 
 #[derive(Eq, PartialEq, Copy, Clone)]
@@ -54,6 +56,7 @@ pub struct AudioUnit {
     memory: Arc<RwLock<Memory>>,
 
     cycle_count: u16,
+    cycle_128_count: u16,
     cycle_64_count: u32,
 }
 
@@ -63,6 +66,7 @@ impl AudioUnit {
             auo: au,
             memory,
             cycle_count: 0,
+            cycle_128_count: 0,
             cycle_64_count: 0,
         }
     }
@@ -81,12 +85,19 @@ impl AudioUnit {
         }
 
         self.cycle_count += last_instruction_cycles as u16;
+        self.cycle_128_count += last_instruction_cycles as u16;
         self.cycle_64_count += last_instruction_cycles as u32;
 
         if self.cycle_count > CYCLES_1_256_SEC {
             self.cycle_count -= CYCLES_1_256_SEC;
 
             self.auo.step_256();
+        }
+
+        if self.cycle_128_count > CYCLES_1_128_SEC {
+            self.cycle_128_count -= CYCLES_1_128_SEC;
+
+            self.auo.step_128();
         }
 
         if self.cycle_64_count > CYCLES_1_64_SEC {
@@ -137,16 +148,19 @@ impl AudioUnit {
 
         let volume_envelope_duration_in_1_64_s = audio_registers.get_volume_envelope_duration_64();
         let wave_duty_percent = audio_registers.calculate_wave_duty_percent();
+        let sweep = audio_registers.get_sweep();
 
         let pulse_description = PulseDescription {
             pulse_n: channel_n,
             frequency,
+            current_frequency: frequency,
             wave_duty_percent,
             initial_volume_envelope,
             volume_envelope: initial_volume_envelope,
             volume_envelope_direction,
             volume_envelope_duration_in_1_64_s,
             remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
+            sweep,
         };
 
         self.auo.play_pulse(&pulse_description);
