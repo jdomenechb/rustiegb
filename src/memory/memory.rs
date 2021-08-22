@@ -812,7 +812,7 @@ impl Memory {
             // DMA Transfer
             let init_address = (self.dma as Word) << 8 & 0xFF00;
 
-            for i in (0..0x8C).step_by(2) {
+            for i in (0..0xA0).step_by(2) {
                 self.oam_ram.write_word(i, self.read_word(init_address + i));
             }
 
@@ -913,7 +913,7 @@ impl Memory {
         }
 
         if position >= 0xFE00 && position < 0xFEA0 {
-            return self.oam_ram.write_word(position - 0xE000, value);
+            return self.oam_ram.write_word(position - 0xFE00, value);
         }
 
         if position >= 0xFEA0 && position < 0xFF00 {
