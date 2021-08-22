@@ -2,6 +2,8 @@ use crate::memory::memory_sector::{MemorySector, ReadMemory, WriteMemory};
 use crate::memory::oam_entry::OamEntry;
 use crate::{Byte, Word};
 
+const OAM_MEMORY_SECTOR_SIZE: u16 = 0xA0;
+
 pub struct OamMemorySector {
     data: MemorySector,
     count: u16,
@@ -42,7 +44,7 @@ impl Iterator for OamMemorySector {
     type Item = OamEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.count >= self.data.len() as u16 {
+        if self.count >= OAM_MEMORY_SECTOR_SIZE {
             self.count = 0;
             return None;
         }
@@ -57,7 +59,7 @@ impl Iterator for OamMemorySector {
 impl Default for OamMemorySector {
     fn default() -> Self {
         Self {
-            data: MemorySector::with_size(0xA0),
+            data: MemorySector::with_size(OAM_MEMORY_SECTOR_SIZE as usize),
             count: 0,
         }
     }

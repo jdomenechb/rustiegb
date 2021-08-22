@@ -6,7 +6,7 @@ use parking_lot::RwLock;
 
 use crate::audio::description::{PulseDescription, WaveDescription};
 use crate::audio::sweep::SweepDirection;
-use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
+use crate::audio::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
 use crate::Word;
 

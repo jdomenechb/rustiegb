@@ -12,7 +12,7 @@ extern crate cpal;
 extern crate image;
 extern crate piston_window;
 
-use crate::audio::audio_unit_output::{AudioUnitOutput, CpalAudioUnitOutput};
+use crate::audio::audio_unit_output::CpalAudioUnitOutput;
 use crate::audio::AudioUnit;
 use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
