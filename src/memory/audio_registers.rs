@@ -78,4 +78,12 @@ impl AudioRegisters {
     pub fn get_length(&self) -> Byte {
         self.length
     }
+
+    pub fn get_should_play(&self) -> bool {
+        if let Some(sweep) = self.sweep {
+            return sweep & 0b10000000 == 0b10000000;
+        }
+
+        true
+    }
 }

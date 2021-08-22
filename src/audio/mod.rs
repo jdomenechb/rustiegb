@@ -173,6 +173,7 @@ impl AudioUnit {
             wave,
             audio_registers.get_use_length(),
             audio_registers.get_length(),
+            audio_registers.get_should_play(),
         );
 
         self.auo.play_wave(&wave_description);

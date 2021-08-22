@@ -260,7 +260,8 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
     }
 
     fn play_wave(&mut self, description: &WaveDescription) {
-        if self.muted {
+        if self.muted || !description.should_play {
+            self.stream_3 = None;
             return;
         }
 

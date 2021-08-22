@@ -91,7 +91,9 @@ pub struct WaveDescription {
     pub output_level: WaveOutputLevel,
     pub wave: WavePatternRam,
     pub use_length: bool,
+    pub length: Byte,
     pub remaining_steps: Word,
+    pub should_play: bool,
 }
 
 impl WaveDescription {
@@ -101,13 +103,16 @@ impl WaveDescription {
         wave: WavePatternRam,
         use_length: bool,
         length: Byte,
+        should_play: bool,
     ) -> Self {
         Self {
             frequency,
             output_level,
             wave,
             use_length,
+            length,
             remaining_steps: 256 - length as Word,
+            should_play,
         }
     }
 
@@ -119,6 +124,7 @@ impl WaveDescription {
         };
         self.use_length = other.use_length;
         self.remaining_steps = other.remaining_steps;
+        self.should_play = other.should_play;
     }
 
     pub fn step_256(&mut self) {
@@ -130,7 +136,12 @@ impl WaveDescription {
 
 impl PartialEq for WaveDescription {
     fn eq(&self, other: &Self) -> bool {
-        return other.frequency == self.frequency && other.output_level == self.output_level;
+        return other.frequency == self.frequency
+            && other.output_level == self.output_level
+            && other.use_length == self.use_length
+            && other.length == self.length
+            && other.should_play == self.should_play
+            && other.wave.data.data == self.wave.data.data;
     }
 }
 
@@ -142,6 +153,7 @@ impl Default for WaveDescription {
             WavePatternRam::default(),
             false,
             0xFF,
+            false,
         )
     }
 }
