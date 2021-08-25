@@ -159,14 +159,13 @@ pub struct CartridgeHeader {
 
 impl CartridgeHeader {
     fn new_from_data(data: &Vec<Byte>) -> Self {
-        let mut title = String::from_utf8((&data[0x134..0x144]).to_vec());
+        let slice = &data[0x134..0x143];
+        let title_chars = slice.iter().map(|b| *b as char).collect::<Vec<_>>();
 
-        if title.is_err() {
-            title = String::from_utf8((&data[0x134..0x144]).to_vec());
-        }
+        let title = title_chars.iter().collect::<String>();
 
         Self {
-            title: title.unwrap().trim_end_matches("\0").to_string(),
+            title: title.trim_end_matches("\0").to_string(),
             cartridge_type: data[0x147].into(),
             rom_size: data[0x148].into(),
             ram_size: data[0x149].into(),
