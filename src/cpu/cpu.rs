@@ -2361,8 +2361,6 @@ mod test {
     use crate::cpu::registers::{ByteRegister, WordRegister};
     use crate::memory::memory::Memory;
     use parking_lot::RwLock;
-    use std::cell::{Ref, RefCell};
-    use std::rc::Rc;
     use std::sync::Arc;
 
     #[test]
