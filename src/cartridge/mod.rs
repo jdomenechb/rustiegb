@@ -1,6 +1,8 @@
 mod cartridge_memory_sector;
 
-use crate::cartridge::cartridge_memory_sector::{CartridgeMemorySector, ReadCartridgeMemory};
+use crate::cartridge::cartridge_memory_sector::{
+    CartridgeMemorySector, ReadCartridgeMemory, WriteCartridgeMemory,
+};
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 use std::fs::File;
@@ -192,6 +194,7 @@ pub struct Cartridge {
     ram_enabled: bool,
     selected_ram_bank: u8,
     ram: CartridgeMemorySector,
+    ram_banking_mode: bool,
 }
 
 impl Cartridge {
@@ -213,6 +216,7 @@ impl Cartridge {
             ram_enabled: false,
             selected_ram_bank: 1,
             ram: CartridgeMemorySector::with_size(ram_size_in_bytes),
+            ram_banking_mode: false,
         }
     }
 
@@ -231,6 +235,7 @@ impl Default for Cartridge {
             ram_enabled: false,
             selected_ram_bank: 1,
             ram: CartridgeMemorySector::with_size(0),
+            ram_banking_mode: false,
         }
     }
 }
@@ -248,15 +253,32 @@ impl ReadMemory for Cartridge {
         }
 
         match self.header.cartridge_type {
-            CartridgeType::Rom(false, false) => return self.data.read_byte(position as usize),
-            CartridgeType::Mbc1(_, _) => {}
-            _ => {}
-        }
+            CartridgeType::Rom(false, false) => self.data.read_byte(position as usize),
+            CartridgeType::Mbc1(_, _) => {
+                if position >= 0xA000 && position < 0xBFFF {
+                    if !self.ram_enabled {
+                        return 0xFF;
+                    }
 
-        panic!(
-            "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-            position, self.header.cartridge_type
-        );
+                    return self.ram.read_byte(
+                        position as usize - 0xA000 + 0xA000 * self.selected_ram_bank as usize,
+                    );
+                }
+
+                panic!(
+                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
+            _ => {
+                panic!(
+                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
+        }
     }
 
     fn read_word(&self, position: Word) -> Word {
@@ -307,6 +329,34 @@ impl WriteMemory for Cartridge {
                     } else {
                         1
                     };
+                    return;
+                }
+
+                if position >= 0x4000 && position < 0x6000 {
+                    let new_value = value & 0b11;
+
+                    if !self.ram_banking_mode {
+                        self.selected_rom_bank =
+                            new_value as u16 >> 5 | (self.selected_rom_bank & 0b11111);
+                    } else {
+                        self.selected_ram_bank = new_value;
+                    }
+
+                    return;
+                }
+
+                if position >= 0x6000 && position < 0x8000 {
+                    self.ram_banking_mode = value != 0;
+                    return;
+                }
+
+                if position >= 0xA000 && position < 0xC000 {
+                    if self.ram_enabled {
+                        self.ram.write_byte(
+                            position as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
+                            value,
+                        );
+                    }
                     return;
                 }
             }
