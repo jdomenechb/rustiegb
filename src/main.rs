@@ -68,7 +68,7 @@ fn main() {
         let mut audio_unit = AudioUnit::new(audio_unit_output, memory_thread.clone());
 
         loop {
-            while { runtime_config_thread.read().cpu_has_available_ccycles() } {
+            while runtime_config_thread.read().cpu_has_available_ccycles() {
                 let last_instruction_cycles = cpu.step();
 
                 {

@@ -402,7 +402,7 @@ impl WriteMemory for Cartridge {
         );
     }
 
-    fn write_word(&mut self, position: u16, value: u16) {
+    fn write_word(&mut self, position: u16, _value: u16) {
         match self.header.cartridge_type {
             CartridgeType::Rom(false, false) => {
                 println!(

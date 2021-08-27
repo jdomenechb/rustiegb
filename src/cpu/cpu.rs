@@ -2425,6 +2425,7 @@ mod test {
         }
     }
 
+    #[test]
     fn test_add_hl_rr() {
         let registers = [
             WordRegister::BC,
