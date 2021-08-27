@@ -337,7 +337,7 @@ impl WriteMemory for Cartridge {
 
                     if !self.ram_banking_mode {
                         self.selected_rom_bank =
-                            new_value as u16 >> 5 | (self.selected_rom_bank & 0b11111);
+                            (new_value as u16) << 5 | (self.selected_rom_bank & 0b11111);
                     } else {
                         self.selected_ram_bank = new_value;
                     }
