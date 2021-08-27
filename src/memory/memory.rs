@@ -1011,8 +1011,6 @@ impl Memory {
     }
 
     pub fn set_stat_mode(&mut self, mode: STATMode) {
-        let lcd_control_operation = { self.lcdc.lcd_control_operation() };
-
         match mode {
             STATMode::HBlank => {
                 if self.stat.mode_0 {
@@ -1025,9 +1023,7 @@ impl Memory {
                     self.interrupt_flag.set_lcd_stat(true);
                 }
 
-                if lcd_control_operation {
-                    self.interrupt_flag.set_vblank(true);
-                }
+                self.interrupt_flag().set_vblank(true);
             }
             STATMode::SearchOamRam => {
                 if self.stat.mode_2 {
