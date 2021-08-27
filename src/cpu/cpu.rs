@@ -2269,11 +2269,17 @@ impl CPU {
 
     pub fn lcd_stat_interrupt(&mut self) {
         if self.ime {
+            let lcd_enabled;
             {
-                self.memory.write().interrupt_flag().set_lcd_stat(false);
+                let mut memory = self.memory.write();
+                memory.interrupt_flag().set_lcd_stat(false);
+
+                lcd_enabled = memory.lcdc.lcd_control_operation();
             }
 
-            self.interrupt_vv(0x48)
+            if lcd_enabled {
+                self.interrupt_vv(0x48)
+            }
         }
 
         self.unhalt()
