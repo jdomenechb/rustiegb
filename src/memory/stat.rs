@@ -61,10 +61,10 @@ impl From<Byte> for STAT {
             coincidence_flag: value & 0b100 == 0b100,
 
             mode: match value & 0b11 {
-                0x00 => STATMode::HBlank,
-                0x01 => STATMode::VBlank,
-                0x10 => STATMode::SearchOamRam,
-                0x11 => STATMode::LCDTransfer,
+                0b00 => STATMode::HBlank,
+                0b01 => STATMode::VBlank,
+                0b10 => STATMode::SearchOamRam,
+                0b11 => STATMode::LCDTransfer,
                 _ => panic!("Unrecognized STAT mode"),
             },
         }
