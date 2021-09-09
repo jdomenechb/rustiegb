@@ -338,6 +338,18 @@ impl WriteMemory for Cartridge {
                 }
             }
 
+            CartridgeType::Mbc3(timer, _, _) => {
+                if self.determine_ram_enable(position, value) {
+                    return;
+                }
+
+                if position >= 6000 && position < 0x8000 {
+                    if !timer {
+                        return;
+                    }
+                }
+            }
+
             CartridgeType::Mbc5(_, _, _) => {
                 if self.determine_ram_enable(position, value) {
                     return;
