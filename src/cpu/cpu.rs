@@ -2195,15 +2195,23 @@ impl CPU {
     // --- INTERNAL --------------------------------------------------------------------------------
 
     fn push_vv(&mut self, value: Word) {
-        let mut memory = self.memory.write();
-        memory.write_word(self.registers.sp - 2, value);
-        self.registers.sp = self.registers.sp - 2;
+        let new_sp = self.registers.sp.wrapping_sub(2);
+
+        {
+            let mut memory = self.memory.write();
+            memory.write_word(new_sp, value);
+        }
+
+        self.registers.sp = new_sp;
     }
 
     fn pop_vv(&mut self) -> Word {
-        let memory = self.memory.read();
-        let value = memory.read_word(self.registers.sp);
-        self.registers.sp += 2;
+        let value = {
+            let memory = self.memory.read();
+            memory.read_word(self.registers.sp)
+        };
+
+        self.registers.sp = self.registers.sp.wrapping_add(2);
 
         return value;
     }
