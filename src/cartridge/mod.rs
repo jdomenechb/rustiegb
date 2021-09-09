@@ -280,29 +280,6 @@ impl ReadMemory for Cartridge {
             }
         }
     }
-
-    fn read_word(&self, position: Word) -> Word {
-        if position < 0x4000 {
-            return self.data.read_word(position as usize);
-        }
-
-        if position >= 0x4000 && position < 0x8000 {
-            return self
-                .data
-                .read_word(position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize);
-        }
-
-        match self.header.cartridge_type {
-            CartridgeType::Rom(false, false) => return self.data.read_word(position as usize),
-            CartridgeType::Mbc1(_, _) => {}
-            _ => {}
-        }
-
-        panic!(
-            "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-            position, self.header.cartridge_type
-        );
-    }
 }
 
 impl WriteMemory for Cartridge {
@@ -400,24 +377,6 @@ impl WriteMemory for Cartridge {
             "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
             position, self.header.cartridge_type
         );
-    }
-
-    fn write_word(&mut self, position: u16, _value: u16) {
-        match self.header.cartridge_type {
-            CartridgeType::Rom(false, false) => {
-                println!(
-                    "Attempt to write at Memory {:X}. ROM is not writable!!!",
-                    position
-                );
-            }
-            _ => {
-                panic!(
-                    "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
-                    position,
-                    self.header.cartridge_type
-                );
-            }
-        }
     }
 }
 

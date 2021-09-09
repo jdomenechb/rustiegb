@@ -7,6 +7,7 @@ use super::stat::STAT;
 use super::timer_control::TimerControl;
 use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use crate::cartridge::Cartridge;
+use crate::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::memory::audio_registers::AudioRegisters;
 use crate::memory::joypad::Joypad;
 use crate::memory::ly::LY;
@@ -485,51 +486,7 @@ impl Memory {
     }
 
     pub fn read_word(&self, position: Word) -> Word {
-        // Bootstrap rom
-        if self.bootstrap_rom.is_some() && position < 0x100 {
-            return self.bootstrap_rom.as_ref().unwrap().read_word(position);
-        }
-
-        // ROM
-        if position < 0x8000 {
-            return self.cartridge.read_word(position);
-        }
-
-        // Video RAM
-        if position >= 0x8000 && position < 0xA000 {
-            return self.video_ram.read_word(position - 0x8000);
-        }
-
-        // 8k switchable RAM bank
-        if position >= 0xA000 && position < 0xC000 {
-            return self.switchable_ram_bank.read_word(position - 0xA000);
-        }
-
-        // Internal RAM 8k
-        if position >= 0xC000 && position < 0xE000 {
-            return self.internal_ram_8k.read_word(position - 0xC000);
-        }
-
-        // Echo of internal RAM
-        if position >= 0xE000 && position < 0xFE00 {
-            return self.internal_ram_8k.read_word(position - 0xE000);
-        }
-
-        if position >= 0xFE00 && position < 0xFEA0 {
-            return self.oam_ram.read_word(position - 0xFE00);
-        }
-
-        // Wave pattern RAM
-        if position >= 0xFF30 && position < 0xFF40 {
-            return self.wave_pattern_ram.read_word(position - 0xFF30);
-        }
-
-        // Internal RAM
-        if position >= 0xFF80 && position < 0xFFFF {
-            return self.internal_ram.read_word(position - 0xFF80);
-        }
-
-        panic!("ERROR: Memory address {:X} not readable", position);
+        two_bytes_to_word(self.read_byte(position + 1), self.read_byte(position))
     }
 
     pub fn write_byte(&mut self, position: Word, value: Byte) {
@@ -812,8 +769,8 @@ impl Memory {
             // DMA Transfer
             let init_address = (self.dma as Word) << 8 & 0xFF00;
 
-            for i in (0..0xA0).step_by(2) {
-                self.oam_ram.write_word(i, self.read_word(init_address + i));
+            for i in 0..0xA0 {
+                self.oam_ram.write_byte(i, self.read_byte(init_address + i));
             }
 
             self.dma = 0;
@@ -885,57 +842,10 @@ impl Memory {
     }
 
     pub fn write_word(&mut self, position: Word, value: Word) {
-        // ROM
-        if position < 0x8000 {
-            self.cartridge.write_word(position, value);
-            return;
-        }
+        let bytes = word_to_two_bytes(value);
 
-        if position >= 0x8000 && position < 0xA000 {
-            return self.video_ram.write_word(position - 0x8000, value);
-        }
-
-        // Internal RAM 8k
-        if position >= 0xA000 && position < 0xC000 {
-            return self
-                .switchable_ram_bank
-                .write_word(position - 0xA000, value);
-        }
-
-        // Internal RAM 8k
-        if position >= 0xC000 && position < 0xE000 {
-            return self.internal_ram_8k.write_word(position - 0xC000, value);
-        }
-
-        // Echo of internal RAM
-        if position >= 0xE000 && position < 0xFE00 {
-            return self.internal_ram_8k.write_word(position - 0xE000, value);
-        }
-
-        if position >= 0xFE00 && position < 0xFEA0 {
-            return self.oam_ram.write_word(position - 0xFE00, value);
-        }
-
-        if position >= 0xFEA0 && position < 0xFF00 {
-            println!("Attempt to write at an unused RAM position {:X}", position);
-            return;
-        }
-
-        if position >= 0xFF30 && position < 0xFF40 {
-            return self.wave_pattern_ram.write_word(position - 0xFF30, value);
-        }
-
-        if position >= 0xFF4C && position < 0xFF80 {
-            println!("Attempt to write at an unused RAM position {:X}", position);
-            return;
-        }
-
-        // Internal RAM
-        if position >= 0xFF80 && position < 0xFFFF {
-            return self.internal_ram.write_word(position - 0xFF80, value);
-        }
-
-        panic!("ERROR: Memory address {:X} not writable", position);
+        self.write_byte(position, bytes.1);
+        self.write_byte(position + 1, bytes.0);
     }
 
     pub fn step(&mut self, last_instruction_cycles: u8) {
