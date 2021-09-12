@@ -959,11 +959,12 @@ impl Memory {
     fn determine_ly_interrupt(&mut self) {
         let ly = Byte::from(self.ly.clone());
 
-        if self.stat.lyc_ly_coincidence {
-            self.interrupt_flag.set_lcd_stat(
-                (ly == self.lyc && self.stat.coincidence_flag)
-                    || (ly != self.lyc && !self.stat.coincidence_flag),
-            );
+        let new_value = ly == self.lyc;
+
+        self.stat.coincidence_flag = new_value;
+
+        if self.stat.lyc_ly_coincidence && new_value {
+            self.interrupt_flag.set_lcd_stat(true);
         }
     }
 
