@@ -6,9 +6,7 @@ use crate::memory::stat::STATMode;
 use crate::{Byte, Word};
 use ::image::{ImageBuffer, Rgba, RgbaImage};
 use parking_lot::RwLock;
-use std::cell::RefCell;
 use std::cmp::{max, min};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 type DisplayPixel = [Byte; 4];
@@ -20,8 +18,6 @@ pub struct GPU {
     sprites_to_be_drawn_without_priority: Vec<OamEntry>,
 
     memory: Arc<RwLock<Memory>>,
-
-    tile_row_cache: RefCell<HashMap<(Word, u16), (Byte, Byte)>>,
 }
 
 impl GPU {
@@ -39,7 +35,6 @@ impl GPU {
             sprites_to_be_drawn_with_priority: Vec::with_capacity(10),
             sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
-            tile_row_cache: RefCell::new(HashMap::new()),
         };
     }
 
@@ -95,7 +90,6 @@ impl GPU {
                     // Enter Searching OAM-RAM mode
                     memory.set_stat_mode(STATMode::SearchOamRam);
                     memory.ly_reset();
-                    self.tile_row_cache.borrow_mut().clear();
                 }
             }
         }
