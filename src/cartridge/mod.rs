@@ -306,6 +306,7 @@ impl WriteMemory for Cartridge {
                     } else {
                         1
                     };
+
                     return;
                 }
 
@@ -357,13 +358,15 @@ impl WriteMemory for Cartridge {
 
                 // Select ROM Bank Number - Low
                 if position >= 0x2000 && position < 0x3000 {
-                    self.selected_rom_bank = value as u16 & 0xFF;
+                    self.selected_rom_bank = value as Word & 0xFF;
+
                     return;
                 }
 
                 // Select ROM Bank Number - High
                 if position >= 0x3000 && position < 0x4000 {
-                    self.selected_rom_bank = ((value & 0x1) as u16) << 8 | self.selected_rom_bank;
+                    self.selected_rom_bank = ((value & 0x1) as Word) << 8 | self.selected_rom_bank;
+
                     return;
                 }
 
