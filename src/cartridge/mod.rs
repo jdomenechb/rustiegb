@@ -343,8 +343,25 @@ impl WriteMemory for Cartridge {
                 if self.determine_ram_enable(position, value) {
                     return;
                 }
+                // Select ROM Bank Number
+                if position >= 0x2000 && position < 0x4000 {
+                    self.selected_rom_bank = if value != 0 {
+                        value as u16 & 0b1111111
+                    } else {
+                        1
+                    };
 
-                if position >= 6000 && position < 0x8000 {
+                    return;
+                }
+
+                if position >= 0x4000 && position < 0x6000 {
+                    if value <= 0x7 {
+                        self.selected_ram_bank = value;
+                        return;
+                    }
+                }
+
+                if position >= 0x6000 && position < 0x8000 {
                     if !timer {
                         return;
                     }
@@ -388,10 +405,7 @@ impl WriteMemory for Cartridge {
             _ => {}
         }
 
-        panic!(
-            "Writing to address {:X} into ROM space for cartridge type {:?} is not implemented",
-            position, self.header.cartridge_type
-        );
+        panic!("Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented", value, position, self.header.cartridge_type);
     }
 }
 

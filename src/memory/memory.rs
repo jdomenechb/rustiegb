@@ -613,6 +613,11 @@ impl Memory {
             return;
         }
 
+        // Ignore it, not used
+        if position == 0xFF15 {
+            return;
+        }
+
         // NR21
         if position == 0xFF16 {
             self.nr21 = value;
