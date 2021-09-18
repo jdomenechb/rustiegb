@@ -37,7 +37,7 @@ impl Cartridge {
 
         let header = CartridgeHeader::new_from_data(&data);
 
-        let ram_size_in_bytes = header.ram_size.size();
+        let ram_size_in_bytes = header.ram_size.in_bytes();
 
         Self {
             data: CartridgeMemorySector::with_data(data),

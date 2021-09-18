@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RomSize {
     Kb32,
     Kb64,
@@ -33,5 +33,32 @@ impl From<Byte> for RomSize {
             0x54 => Self::Mb1d5,
             _ => panic!("Invalid ROM size"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_ok() {
+        assert_eq!(RomSize::from(0x00), RomSize::Kb32);
+        assert_eq!(RomSize::from(0x01), RomSize::Kb64);
+        assert_eq!(RomSize::from(0x02), RomSize::Kb128);
+        assert_eq!(RomSize::from(0x03), RomSize::Kb256);
+        assert_eq!(RomSize::from(0x04), RomSize::Kb512);
+        assert_eq!(RomSize::from(0x05), RomSize::Mb1);
+        assert_eq!(RomSize::from(0x06), RomSize::Mb2);
+        assert_eq!(RomSize::from(0x07), RomSize::Mb4);
+        assert_eq!(RomSize::from(0x08), RomSize::Mb8);
+        assert_eq!(RomSize::from(0x52), RomSize::Mb1d1);
+        assert_eq!(RomSize::from(0x53), RomSize::Mb1d2);
+        assert_eq!(RomSize::from(0x54), RomSize::Mb1d5);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid ROM size")]
+    fn test_from_ko() {
+        RomSize::from(0xFF);
     }
 }
