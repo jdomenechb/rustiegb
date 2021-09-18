@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum CartridgeType {
     // ROM + RAM + Battery
     Rom(bool, bool),
@@ -64,5 +64,83 @@ impl From<Byte> for CartridgeType {
 
             _ => panic!("Invalid cartridge type value"),
         }
+    }
+}
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_ok() {
+        assert_eq!(CartridgeType::from(0x00), CartridgeType::Rom(false, false));
+        assert_eq!(CartridgeType::from(0x01), CartridgeType::Mbc1(false, false));
+        assert_eq!(CartridgeType::from(0x02), CartridgeType::Mbc1(true, false));
+        assert_eq!(CartridgeType::from(0x03), CartridgeType::Mbc1(true, true));
+        assert_eq!(CartridgeType::from(0x05), CartridgeType::Mbc2(false));
+        assert_eq!(CartridgeType::from(0x06), CartridgeType::Mbc2(true));
+        assert_eq!(CartridgeType::from(0x08), CartridgeType::Rom(true, false));
+        assert_eq!(CartridgeType::from(0x09), CartridgeType::Rom(true, true));
+        assert_eq!(
+            CartridgeType::from(0x0b),
+            CartridgeType::Mmm01(false, false)
+        );
+        assert_eq!(CartridgeType::from(0x0c), CartridgeType::Mmm01(true, false));
+        assert_eq!(CartridgeType::from(0x0d), CartridgeType::Mmm01(true, true));
+        assert_eq!(
+            CartridgeType::from(0x0f),
+            CartridgeType::Mbc3(true, false, true)
+        );
+        assert_eq!(
+            CartridgeType::from(0x10),
+            CartridgeType::Mbc3(true, true, true)
+        );
+        assert_eq!(
+            CartridgeType::from(0x11),
+            CartridgeType::Mbc3(false, false, false)
+        );
+        assert_eq!(
+            CartridgeType::from(0x12),
+            CartridgeType::Mbc3(false, true, false)
+        );
+        assert_eq!(
+            CartridgeType::from(0x13),
+            CartridgeType::Mbc3(false, true, true)
+        );
+        assert_eq!(
+            CartridgeType::from(0x19),
+            CartridgeType::Mbc5(false, false, false)
+        );
+        assert_eq!(
+            CartridgeType::from(0x1A),
+            CartridgeType::Mbc5(false, true, false)
+        );
+        assert_eq!(
+            CartridgeType::from(0x1B),
+            CartridgeType::Mbc5(false, true, true)
+        );
+        assert_eq!(
+            CartridgeType::from(0x1C),
+            CartridgeType::Mbc5(true, false, false)
+        );
+        assert_eq!(
+            CartridgeType::from(0x1D),
+            CartridgeType::Mbc5(true, true, false)
+        );
+        assert_eq!(
+            CartridgeType::from(0x1E),
+            CartridgeType::Mbc5(true, true, true)
+        );
+        assert_eq!(CartridgeType::from(0x20), CartridgeType::Mbc6);
+        assert_eq!(CartridgeType::from(0x22), CartridgeType::Mbc7);
+        assert_eq!(CartridgeType::from(0xFC), CartridgeType::PocketCamera);
+        assert_eq!(CartridgeType::from(0xFD), CartridgeType::BandaiTama5);
+        assert_eq!(CartridgeType::from(0xFE), CartridgeType::HuC3);
+        assert_eq!(CartridgeType::from(0xFF), CartridgeType::HuC1);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid cartridge type value")]
+    fn test_from_ko() {
+        CartridgeType::from(0x50);
     }
 }

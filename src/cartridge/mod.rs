@@ -40,12 +40,12 @@ impl Cartridge {
         let ram_size_in_bytes = header.ram_size.in_bytes();
 
         Self {
-            data: CartridgeMemorySector::with_data(data),
+            data: CartridgeMemorySector::from_data(data),
             header,
             selected_rom_bank: 1,
             ram_enabled: false,
             selected_ram_bank: 1,
-            ram: CartridgeMemorySector::with_size(ram_size_in_bytes),
+            ram: CartridgeMemorySector::of_size(ram_size_in_bytes),
             ram_banking_mode: false,
         }
     }
@@ -59,12 +59,12 @@ impl Cartridge {
 impl Default for Cartridge {
     fn default() -> Self {
         Self {
-            data: CartridgeMemorySector::with_size(0),
+            data: CartridgeMemorySector::of_size(0),
             header: CartridgeHeader::default(),
             selected_rom_bank: 1,
             ram_enabled: false,
             selected_ram_bank: 1,
-            ram: CartridgeMemorySector::with_size(0),
+            ram: CartridgeMemorySector::of_size(0),
             ram_banking_mode: false,
         }
     }

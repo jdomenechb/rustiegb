@@ -16,13 +16,13 @@ pub struct CartridgeMemorySector {
 }
 
 impl CartridgeMemorySector {
-    pub fn with_size(size: usize) -> Self {
+    pub fn of_size(size: usize) -> Self {
         Self {
             data: vec![0; size],
         }
     }
 
-    pub fn with_data(data: Vec<Byte>) -> Self {
+    pub fn from_data(data: Vec<Byte>) -> Self {
         Self { data }
     }
 }
