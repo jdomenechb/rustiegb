@@ -2438,13 +2438,8 @@ mod test {
     }
 
     #[test]
-    fn test_add_hl_rr() {
-        let registers = [
-            WordRegister::BC,
-            WordRegister::DE,
-            WordRegister::HL,
-            WordRegister::SP,
-        ];
+    fn test_add_hl_rr_non_hl() {
+        let registers = [WordRegister::BC, WordRegister::DE, WordRegister::SP];
 
         let mut cpu = CPU::new(Arc::new(RwLock::new(Memory::default())), false);
 
