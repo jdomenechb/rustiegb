@@ -1,2 +1,2 @@
-pub mod gpu;
 pub mod color;
+pub mod gpu;
