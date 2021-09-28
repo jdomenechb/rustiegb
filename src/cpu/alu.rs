@@ -1,14 +1,14 @@
-use super::registers::CPURegisters;
+use super::registers::CpuRegisters;
 use crate::cpu::registers::ByteRegister;
 use crate::{Byte, Word};
 
 #[derive(Debug)]
-pub struct ALU {}
+pub struct Alu {}
 
-impl ALU {
-    pub fn add_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte, carry: bool) -> Byte {
+impl Alu {
+    pub fn add_n(&self, registers: &mut CpuRegisters, a: Byte, b: Byte, carry: bool) -> Byte {
         registers.set_flag_n(false);
-        registers.set_flag_h((a & 0xf) + (b & 0xf) + (carry as Byte) & 0x10 == 0x10);
+        registers.set_flag_h(((a & 0xf) + (b & 0xf) + (carry as Byte)) & 0x10 == 0x10);
         registers.set_flag_c((a as Word + b as Word + carry as Word) & 0x100 == 0x100);
 
         let value = a.wrapping_add(b).wrapping_add(carry as Byte);
@@ -18,7 +18,7 @@ impl ALU {
         value
     }
 
-    pub fn inc_n(&self, registers: &mut CPURegisters, a: Byte) -> Byte {
+    pub fn inc_n(&self, registers: &mut CpuRegisters, a: Byte) -> Byte {
         let b = 1;
 
         registers.set_flag_n(false);
@@ -31,7 +31,7 @@ impl ALU {
         value
     }
 
-    pub fn sub_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte, carry: bool) -> Byte {
+    pub fn sub_n(&self, registers: &mut CpuRegisters, a: Byte, b: Byte, carry: bool) -> Byte {
         registers.set_flag_n(true);
         registers.set_flag_h((a & 0x0f) < ((b & 0x0f) + (carry as Byte)));
         registers.set_flag_c((a as Word) < ((b as Word) + (carry as Word)));
@@ -43,7 +43,7 @@ impl ALU {
         value
     }
 
-    pub fn dec_n(&self, registers: &mut CPURegisters, a: Byte) -> Byte {
+    pub fn dec_n(&self, registers: &mut CpuRegisters, a: Byte) -> Byte {
         let b = 1;
 
         registers.set_flag_n(true);
@@ -56,7 +56,7 @@ impl ALU {
         value
     }
 
-    pub fn or_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
+    pub fn or_n(&self, registers: &mut CpuRegisters, a: Byte, b: Byte) -> Byte {
         let result = a | b;
 
         registers.set_flag_z(result == 0);
@@ -67,7 +67,7 @@ impl ALU {
         result
     }
 
-    pub fn and_n(&self, registers: &mut CPURegisters, a: Byte, b: Byte) -> Byte {
+    pub fn and_n(&self, registers: &mut CpuRegisters, a: Byte, b: Byte) -> Byte {
         let result = a & b;
 
         registers.set_flag_z(result == 0);
@@ -78,7 +78,7 @@ impl ALU {
         result
     }
 
-    pub fn cp_n(&self, registers: &mut CPURegisters, b: Byte) {
+    pub fn cp_n(&self, registers: &mut CpuRegisters, b: Byte) {
         let a = registers.read_byte(&ByteRegister::A);
 
         registers.set_flag_z(a == b);
@@ -87,7 +87,7 @@ impl ALU {
         registers.set_flag_c(a < b);
     }
 
-    pub fn swap_n(&self, registers: &mut CPURegisters, value: Byte) -> Byte {
+    pub fn swap_n(&self, registers: &mut CpuRegisters, value: Byte) -> Byte {
         registers.set_flag_n(false);
         registers.set_flag_c(false);
         registers.set_flag_h(false);
@@ -101,7 +101,7 @@ impl ALU {
 
     // --- 16 bit ----------------------------------------------------------------------------------
 
-    pub fn add_nn(&self, registers: &mut CPURegisters, a: Word, b: Word) -> Word {
+    pub fn add_nn(&self, registers: &mut CpuRegisters, a: Word, b: Word) -> Word {
         registers.set_flag_n(false);
 
         let half_carry = ((a & 0xFFF) + (b & 0xFFF)) & 0x1000 == 0x1000;
@@ -113,7 +113,7 @@ impl ALU {
         a.wrapping_add(b)
     }
 
-    pub fn add_nn_signed(&self, registers: &mut CPURegisters, a: Word, b: i16) -> Word {
+    pub fn add_nn_signed(&self, registers: &mut CpuRegisters, a: Word, b: i16) -> Word {
         let b = b as Word;
 
         registers.set_flag_z(false);

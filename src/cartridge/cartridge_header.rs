@@ -20,7 +20,7 @@ impl CartridgeHeader {
         let title = title_chars.iter().collect::<String>();
 
         Self {
-            title: title.trim_end_matches("\0").to_string(),
+            title: title.trim_end_matches('\0').to_string(),
             cartridge_type: data[0x147].into(),
             rom_size: data[0x148].into(),
             ram_size: data[0x149].into(),

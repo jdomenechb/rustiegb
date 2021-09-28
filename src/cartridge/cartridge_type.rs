@@ -67,6 +67,7 @@ impl From<Byte> for CartridgeType {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 

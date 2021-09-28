@@ -11,13 +11,13 @@ pub struct InterruptFlag {
 
 impl InterruptFlag {
     pub fn new() -> InterruptFlag {
-        return InterruptFlag {
+        InterruptFlag {
             p10_13_transition: false,
             serial_io_transfer_complete: false,
             timer_overflow: false,
             lcd_stat: false,
             vblank: false,
-        };
+        }
     }
 
     pub fn is_vblank(&self) -> bool {
@@ -67,12 +67,10 @@ impl From<Byte> for InterruptFlag {
 
 impl From<&InterruptFlag> for Byte {
     fn from(original: &InterruptFlag) -> Self {
-        let value = ((original.p10_13_transition as Byte) << 4)
+        ((original.p10_13_transition as Byte) << 4)
             | ((original.serial_io_transfer_complete as Byte) << 3)
             | ((original.timer_overflow as Byte) << 2)
             | ((original.lcd_stat as Byte) << 1)
-            | (original.vblank as Byte);
-
-        value
+            | (original.vblank as Byte)
     }
 }

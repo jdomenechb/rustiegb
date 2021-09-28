@@ -118,10 +118,7 @@ impl CpalAudioUnitOutput {
                 -1.0
             };
 
-            let to_return =
-                wave * volume_envelope as f32 / 0xF as f32 * volume_envelope as f32 / 14.0;
-
-            to_return
+            wave * volume_envelope as f32 / 0xF as f32 * volume_envelope as f32 / 14.0
         };
 
         let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
@@ -182,7 +179,7 @@ impl CpalAudioUnitOutput {
                 wave_sample = description.wave.read_byte((current_wave_pos / 2) as Word);
 
                 if current_wave_pos % 2 == 0 {
-                    wave_sample = wave_sample >> 4;
+                    wave_sample >>= 4;
                 } else {
                     wave_sample &= 0b1111;
                 }
@@ -195,9 +192,7 @@ impl CpalAudioUnitOutput {
                 _ => {}
             }
 
-            let to_return = (wave_sample / 0b1111) as f32 * duration_not_finished;
-
-            to_return
+            (wave_sample / 0b1111) as f32 * duration_not_finished
         };
 
         let err_fn = |err| eprintln!("An error occurred on stream: {}", err);

@@ -1,9 +1,9 @@
 use super::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use super::internal_ram_memory_sector::InternalRamMemorySector;
 use super::interrupt_flag::InterruptFlag;
-use super::lcdc::LCDC;
+use super::lcdc::Lcdc;
 use super::read_only_memory_sector::ReadOnlyMemorySector;
-use super::stat::STAT;
+use super::stat::Stat;
 use super::timer_control::TimerControl;
 use super::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use crate::cartridge::Cartridge;
@@ -92,9 +92,9 @@ pub struct Memory {
     // Wave pattern ram (FF30 - FF3F)
     pub wave_pattern_ram: WavePatternRam,
     // FF40
-    pub lcdc: LCDC,
+    pub lcdc: Lcdc,
     // FF41
-    pub stat: STAT,
+    pub stat: Stat,
     // FF42 - FF43
     scy: Byte,
     scx: Byte,
@@ -146,7 +146,7 @@ impl Memory {
             None
         };
 
-        return Memory {
+        Memory {
             bootstrap_rom,
             cartridge,
             video_ram: VideoRam8kMemorySector::default(),
@@ -182,8 +182,8 @@ impl Memory {
             nr51: 0xf3,
             nr52: 0xf1,
             wave_pattern_ram: WavePatternRam::default(),
-            lcdc: LCDC::new(),
-            stat: STAT::default(),
+            lcdc: Lcdc::new(),
+            stat: Stat::default(),
             scy: 0x00,
             scx: 0x00,
             ly: LY::default(),
@@ -204,7 +204,7 @@ impl Memory {
             audio_2_triggered: false,
             audio_3_triggered: false,
             audio_4_triggered: false,
-        };
+        }
     }
 
     pub fn read_byte(&self, position: Word) -> Byte {
@@ -234,27 +234,27 @@ impl Memory {
         }
 
         // Video RAM
-        if position >= 0x8000 && position < 0xA000 {
+        if (0x8000..0xA000).contains(&position) {
             return Some(self.video_ram.read_byte(position - 0x8000));
         }
 
         // 8k switchable RAM bank
-        if position >= 0xA000 && position < 0xC000 {
+        if (0xA000..0xC000).contains(&position) {
             return Some(self.switchable_ram_bank.read_byte(position - 0xA000));
         }
 
         // Internal RAM 8k
-        if position >= 0xC000 && position < 0xE000 {
+        if (0xC000..0xE000).contains(&position) {
             return Some(self.internal_ram_8k.read_byte(position - 0xC000));
         }
 
         // Echo of Internal RAM
-        if position >= 0xE000 && position < 0xFE00 {
+        if (0xE000..0xFE00).contains(&position) {
             return Some(self.internal_ram_8k.read_byte(position - 0xE000));
         }
 
         // OAM Ram
-        if position >= 0xFE00 && position < 0xFEA0 {
+        if (0xFE00..0xFEA0).contains(&position) {
             return Some(self.oam_ram.read_byte(position - 0xFE00));
         }
 
@@ -399,7 +399,7 @@ impl Memory {
         }
 
         // Wave pattern RAM
-        if position >= 0xFF30 && position < 0xFF40 {
+        if (0xFF30..0xFF40).contains(&position) {
             return Some(self.wave_pattern_ram.read_byte(position - 0xFF30));
         }
 
@@ -469,7 +469,7 @@ impl Memory {
         }
 
         // Internal RAM
-        if position >= 0xFF80 && position < 0xFFFF {
+        if (0xFF80..0xFFFF).contains(&position) {
             return Some(self.internal_ram.read_byte(position - 0xFF80));
         }
 
@@ -497,36 +497,36 @@ impl Memory {
         }
 
         // Video RAM
-        if position >= 0x8000 && position < 0xA000 {
+        if (0x8000..0xA000).contains(&position) {
             self.video_ram.write_byte(position - 0x8000, value);
             return;
         }
 
         // 8k switchable RAM bank
-        if position >= 0xA000 && position < 0xC000 {
+        if (0xA000..0xC000).contains(&position) {
             self.switchable_ram_bank
                 .write_byte(position - 0xA000, value);
             return;
         }
 
         // Internal RAM 8k
-        if position >= 0xC000 && position < 0xE000 {
+        if (0xC000..0xE000).contains(&position) {
             self.internal_ram_8k.write_byte(position - 0xC000, value);
             return;
         }
 
         // Echo of internal RAM
-        if position >= 0xE000 && position < 0xFE00 {
+        if (0xE000..0xFE00).contains(&position) {
             self.internal_ram_8k.write_byte(position - 0xE000, value);
             return;
         }
 
-        if position >= 0xFE00 && position < 0xFEA0 {
+        if (0xFE00..0xFEA0).contains(&position) {
             self.oam_ram.write_byte(position - 0xFE00, value);
             return;
         }
 
-        if position >= 0xFEA0 && position < 0xFF00 {
+        if (0xFEA0..0xFF00).contains(&position) {
             println!("Attempt to write at an unused RAM position {:X}", position);
             return;
         }
@@ -726,7 +726,7 @@ impl Memory {
             return;
         }
 
-        if position >= 0xFF30 && position < 0xFF40 {
+        if (0xFF30..0xFF40).contains(&position) {
             self.wave_pattern_ram.write_byte(position - 0xFF30, value);
             return;
         }
@@ -826,13 +826,13 @@ impl Memory {
         }
 
         // Empty but unusable for I/O
-        if position >= 0xFF4E && position < 0xFF80 {
+        if (0xFF4E..0xFF80).contains(&position) {
             println!("Attempt to write at an unused RAM position {:X}", position);
             return;
         }
 
         // Internal RAM
-        if position >= 0xFF80 && position < 0xFFFF {
+        if (0xFF80..0xFFFF).contains(&position) {
             self.internal_ram.write_byte(position - 0xFF80, value);
             return;
         }
@@ -856,9 +856,9 @@ impl Memory {
     pub fn step(&mut self, last_instruction_cycles: u8) {
         self.remaining_div_cycles += last_instruction_cycles as u32;
 
-        while self.remaining_div_cycles as i16 - 256 as i16 > 0 {
+        while self.remaining_div_cycles as i16 - 256_i16 > 0 {
             self.div = self.div.wrapping_add(1);
-            self.remaining_div_cycles -= 256 as u32;
+            self.remaining_div_cycles -= 256_u32;
         }
 
         if !self.timer_control.started {

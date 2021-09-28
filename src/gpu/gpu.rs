@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 type DisplayPixel = [Byte; 4];
 
-pub struct GPU {
+pub struct Gpu {
     cycles_accumulated: u16,
 
     sprites_to_be_drawn_with_priority: Vec<OamEntry>,
@@ -20,7 +20,7 @@ pub struct GPU {
     memory: Arc<RwLock<Memory>>,
 }
 
-impl GPU {
+impl Gpu {
     pub const PIXEL_WIDTH: u8 = 160;
     pub const PIXEL_HEIGHT: u8 = 144;
 
@@ -29,13 +29,13 @@ impl GPU {
     const BACKGROUND_MAP_TILE_SIZE_Y: u16 = 32;
     const PIXELS_PER_TILE: u16 = 8;
 
-    pub fn new(memory: Arc<RwLock<Memory>>) -> GPU {
-        return GPU {
+    pub fn new(memory: Arc<RwLock<Memory>>) -> Gpu {
+        Gpu {
             cycles_accumulated: 0,
             sprites_to_be_drawn_with_priority: Vec::with_capacity(10),
             sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
-        };
+        }
     }
 
     pub fn step(&mut self, last_instruction_cycles: u8, canvas: &mut RgbaImage) {
@@ -132,10 +132,10 @@ impl GPU {
         }
 
         self.sprites_to_be_drawn_with_priority
-            .sort_by(|a, b| a.x().cmp(&b.x()));
+            .sort_by_key(|a| a.x());
 
         self.sprites_to_be_drawn_without_priority
-            .sort_by(|a, b| a.x().cmp(&b.x()));
+            .sort_by_key(|a| a.x());
     }
 
     fn lcd_transfer(&mut self, canvas: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
@@ -163,7 +163,7 @@ impl GPU {
             let memory = self.memory.read();
 
             // Draw pixel line
-            lcdc = memory.lcdc.clone();
+            lcdc = memory.lcdc;
             scx = memory.scx();
             scy = memory.scy();
             bgp = memory.bgp();
@@ -201,10 +201,10 @@ impl GPU {
         let mut previous_bg_tile_map_location = 0u16;
         let mut tile_bytes = (0, 0);
 
-        let mut screen_row_no_priority: [Option<DisplayPixel>; GPU::PIXEL_WIDTH as usize] =
-            [None; GPU::PIXEL_WIDTH as usize];
-        let mut screen_row_with_priority: [Option<DisplayPixel>; GPU::PIXEL_WIDTH as usize] =
-            [None; GPU::PIXEL_WIDTH as usize];
+        let mut screen_row_no_priority: [Option<DisplayPixel>; Gpu::PIXEL_WIDTH as usize] =
+            [None; Gpu::PIXEL_WIDTH as usize];
+        let mut screen_row_with_priority: [Option<DisplayPixel>; Gpu::PIXEL_WIDTH as usize] =
+            [None; Gpu::PIXEL_WIDTH as usize];
 
         if lcdc.obj_sprite_display() {
             self.draw_sprites_in_row(
@@ -226,15 +226,11 @@ impl GPU {
             );
         }
 
-        for screen_x in 0..(GPU::PIXEL_WIDTH as u16) {
+        for screen_x in 0..(Gpu::PIXEL_WIDTH as u16) {
             let mut pixel_to_write = *screen_row_no_priority.get(screen_x as usize).unwrap();
 
-            if pixel_to_write.is_some() {
-                canvas.put_pixel(
-                    screen_x as u32,
-                    screen_y as u32,
-                    Rgba(pixel_to_write.unwrap()),
-                );
+            if let Some(ptw) = pixel_to_write {
+                canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
 
                 continue;
             }
@@ -263,20 +259,20 @@ impl GPU {
                     let last_window_rendered_position_y = screen_y as u16 - wy as u16;
 
                     bg_tile_map_location = window_tile_map_start_location
-                        + (((last_window_rendered_position_y / GPU::PIXELS_PER_TILE)
-                            * GPU::BACKGROUND_MAP_TILE_SIZE_X)
-                            % (GPU::BACKGROUND_MAP_TILE_SIZE_X * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
-                        + (last_window_rendered_position_x / GPU::PIXELS_PER_TILE);
+                        + (((last_window_rendered_position_y / Gpu::PIXELS_PER_TILE)
+                            * Gpu::BACKGROUND_MAP_TILE_SIZE_X)
+                            % (Gpu::BACKGROUND_MAP_TILE_SIZE_X * Gpu::BACKGROUND_MAP_TILE_SIZE_Y))
+                        + (last_window_rendered_position_x / Gpu::PIXELS_PER_TILE);
 
                     tile_x = last_window_rendered_position_x % 8;
                     tile_row = last_window_rendered_position_y % 8;
                 } else {
                     // Background
                     bg_tile_map_location = bg_tile_map_start_location
-                        + (((screen_y_with_offset / GPU::PIXELS_PER_TILE)
-                            * GPU::BACKGROUND_MAP_TILE_SIZE_X)
-                            % (GPU::BACKGROUND_MAP_TILE_SIZE_X * GPU::BACKGROUND_MAP_TILE_SIZE_Y))
-                        + (screen_x_with_offset / GPU::PIXELS_PER_TILE);
+                        + (((screen_y_with_offset / Gpu::PIXELS_PER_TILE)
+                            * Gpu::BACKGROUND_MAP_TILE_SIZE_X)
+                            % (Gpu::BACKGROUND_MAP_TILE_SIZE_X * Gpu::BACKGROUND_MAP_TILE_SIZE_Y))
+                        + (screen_x_with_offset / Gpu::PIXELS_PER_TILE);
 
                     tile_x = screen_x_with_offset % 8;
                     tile_row = screen_y_with_offset as u16 % 8;
@@ -286,13 +282,13 @@ impl GPU {
                     let bg_tile_map = { self.memory.read().read_byte(bg_tile_map_location) };
 
                     let bg_data_location = match lcdc.bg_and_window_tile_data_select() {
-                        true => 0x8000 + bg_tile_map as Word * GPU::TILE_SIZE_BYTES as Word,
+                        true => 0x8000 + bg_tile_map as Word * Gpu::TILE_SIZE_BYTES as Word,
                         false => {
                             (if bg_tile_map >= 0b10000000 {
                                 0x8800
                             } else {
                                 0x9000
-                            }) + (bg_tile_map & 0b01111111) as Word * GPU::TILE_SIZE_BYTES as Word
+                            }) + (bg_tile_map & 0b01111111) as Word * Gpu::TILE_SIZE_BYTES as Word
                         }
                     };
 
@@ -308,7 +304,7 @@ impl GPU {
                         0b11 => bgp >> 6,
                         0b10 => bgp >> 4,
                         0b01 => bgp >> 2,
-                        0b00 => bgp >> 0,
+                        0b00 => bgp,
                         _ => panic!("Unrecognised color"),
                     } & 0b11;
 
@@ -324,12 +320,8 @@ impl GPU {
                 }
             }
 
-            if pixel_to_write.is_some() {
-                canvas.put_pixel(
-                    screen_x as u32,
-                    screen_y as u32,
-                    Rgba(pixel_to_write.unwrap()),
-                );
+            if let Some(ptw) = pixel_to_write {
+                canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
             }
         }
     }
@@ -347,9 +339,8 @@ impl GPU {
         let memory = self.memory.read();
 
         let word = memory.read_word(tile_address + row * 2);
-        let bytes = word_to_two_bytes(word);
 
-        bytes
+        word_to_two_bytes(word)
     }
 
     fn draw_sprites_in_row(
@@ -373,14 +364,14 @@ impl GPU {
         for sprite in sprites_to_be_drawn {
             screen_x = max(
                 screen_x + 1,
-                sprite.x() as i16 - GPU::PIXELS_PER_TILE as i16,
+                sprite.x() as i16 - Gpu::PIXELS_PER_TILE as i16,
             );
 
             let current_pixel_y: i16 =
-                screen_y as i16 + (GPU::PIXELS_PER_TILE * 2) as i16 - sprite.y() as i16;
+                screen_y as i16 + (Gpu::PIXELS_PER_TILE * 2) as i16 - sprite.y() as i16;
 
             let sprite_addr =
-                SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * GPU::TILE_SIZE_BYTES as u16;
+                SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * Gpu::TILE_SIZE_BYTES as u16;
 
             let row = if sprite.flip_y() {
                 sprite_size - 1 - current_pixel_y
@@ -390,13 +381,13 @@ impl GPU {
 
             let tile_row = self.read_tile_row(sprite_addr, row);
 
-            let limit = min(sprite.x() as i16, GPU::PIXEL_WIDTH as i16);
+            let limit = min(sprite.x() as i16, Gpu::PIXEL_WIDTH as i16);
 
             for current_screen_x in screen_x..limit {
                 let current_pixel_x: i16 =
-                    current_screen_x as i16 + GPU::PIXELS_PER_TILE as i16 - sprite.x() as i16;
+                    current_screen_x as i16 + Gpu::PIXELS_PER_TILE as i16 - sprite.x() as i16;
 
-                if current_pixel_x < 0 || current_pixel_x >= 8 {
+                if !(0..8).contains(&current_pixel_x) {
                     continue;
                 }
 

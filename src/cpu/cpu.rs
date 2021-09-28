@@ -1,16 +1,16 @@
-use super::alu::ALU;
-use super::registers::CPURegisters;
+use super::alu::Alu;
+use super::registers::CpuRegisters;
 use crate::cpu::registers::{ByteRegister, WordRegister};
 use crate::memory::memory::Memory;
 use crate::{Byte, Word};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-pub struct CPU {
+pub struct Cpu {
     memory: Arc<RwLock<Memory>>,
 
-    pub registers: CPURegisters,
-    alu: ALU,
+    pub registers: CpuRegisters,
+    alu: Alu,
 
     pc_to_increment: i8,
     last_instruction_ccycles: u8,
@@ -18,21 +18,21 @@ pub struct CPU {
     halted: bool,
 }
 
-impl CPU {
+impl Cpu {
     pub const AVAILABLE_CCYCLES_PER_FRAME: i32 = 70221;
 
-    pub fn new(memory: Arc<RwLock<Memory>>, bootstrap: bool) -> CPU {
-        return CPU {
+    pub fn new(memory: Arc<RwLock<Memory>>, bootstrap: bool) -> Cpu {
+        Cpu {
             memory,
 
-            registers: CPURegisters::new(bootstrap),
-            alu: ALU {},
+            registers: CpuRegisters::new(bootstrap),
+            alu: Alu {},
 
             pc_to_increment: -1,
             last_instruction_ccycles: 0,
             ime: false,
             halted: false,
-        };
+        }
     }
 
     pub fn step(&mut self) -> u8 {
@@ -346,7 +346,7 @@ impl CPU {
 
         self.registers.pc += self.pc_to_increment as Word;
 
-        return self.last_instruction_ccycles;
+        self.last_instruction_ccycles
     }
 
     fn prefix_cb(&mut self) {
@@ -941,7 +941,7 @@ impl CPU {
         let value1 = self.registers.read_byte(&register);
         let mut result = self.registers.read_byte(&ByteRegister::A);
 
-        result = value1 ^ result;
+        result ^= value1;
 
         self.registers.set_flag_z(result == 0);
         self.registers.set_flag_n(false);
@@ -978,7 +978,7 @@ impl CPU {
         let memory = self.memory.read();
 
         let mut value = memory.read_byte(self.registers.read_word(&WordRegister::HL));
-        value = value ^ self.registers.read_byte(&ByteRegister::A);
+        value ^= self.registers.read_byte(&ByteRegister::A);
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_n(false);
@@ -1864,8 +1864,8 @@ impl CPU {
     fn rla(&mut self) {
         let new_carry: bool = self.registers.a & 0b10000000 == 0b10000000;
 
-        self.registers.a = self.registers.a << 1;
-        self.registers.a = self.registers.a | (0b00000001 & (self.registers.is_flag_c() as Byte));
+        self.registers.a <<= 1;
+        self.registers.a |= 0b00000001 & (self.registers.is_flag_c() as Byte);
 
         self.registers.set_flag_z(false);
         self.registers.set_flag_c(new_carry);
@@ -1880,8 +1880,8 @@ impl CPU {
         let mut value = self.registers.read_byte(&register);
         let new_carry: bool = value & 0b10000000 == 0b10000000;
 
-        value = value << 1;
-        value = value | (new_carry as Byte);
+        value <<= 1;
+        value |= new_carry as Byte;
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_n(false);
@@ -1901,8 +1901,8 @@ impl CPU {
         let mut value = memory.read_byte(address);
         let new_carry: bool = value & 0b10000000 == 0b10000000;
 
-        value = value << 1;
-        value = value | (new_carry as Byte);
+        value <<= 1;
+        value |= new_carry as Byte;
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_n(false);
@@ -1919,8 +1919,8 @@ impl CPU {
         let mut value = self.registers.read_byte(&ByteRegister::A);
         let new_carry: bool = value & 0b10000000 == 0b10000000;
 
-        value = value << 1;
-        value = value | (new_carry as Byte);
+        value <<= 1;
+        value |= new_carry as Byte;
 
         self.registers.set_flag_z(false);
         self.registers.set_flag_c(new_carry);
@@ -1937,8 +1937,8 @@ impl CPU {
         let mut value = self.registers.read_byte(&register);
         let new_carry: bool = value & 0x1 == 0x1;
 
-        value = value >> 1;
-        value = value | ((new_carry as Byte) << 7);
+        value >>= 1;
+        value |= (new_carry as Byte) << 7;
 
         self.registers
             .set_flag_z(if set_zero { value == 0 } else { false });
@@ -1961,8 +1961,8 @@ impl CPU {
 
         let new_carry: bool = value & 0x1 == 0x1;
 
-        value = value >> 1;
-        value = value | ((new_carry as Byte) << 7);
+        value >>= 1;
+        value |= (new_carry as Byte) << 7;
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_c(new_carry);
@@ -2020,7 +2020,7 @@ impl CPU {
 
         let carry: bool = value & 0b10000000 == 0b10000000;
 
-        value = value << 1;
+        value <<= 1;
 
         self.registers.write_byte(&register, value);
 
@@ -2040,7 +2040,7 @@ impl CPU {
 
         let carry: bool = value & 0b10000000 == 0b10000000;
 
-        value = value << 1;
+        value <<= 1;
 
         memory.write_byte(address, value);
 
@@ -2058,7 +2058,7 @@ impl CPU {
         let msb = value & 0b10000000;
         let carry = value & 0x1 == 0x1;
 
-        value = value >> 1;
+        value >>= 1;
         value |= msb;
 
         self.registers.write_byte(&register, value);
@@ -2080,7 +2080,7 @@ impl CPU {
         let msb = value & 0b10000000;
         let carry = value & 0x1 == 0x1;
 
-        value = value >> 1;
+        value >>= 1;
         value |= msb;
 
         memory.write_byte(address, value);
@@ -2117,8 +2117,6 @@ impl CPU {
     }
 
     fn res_v_r(&mut self, bit: u8, register: ByteRegister) {
-        format!("RES {},{}", bit, register.to_string()).to_string();
-
         let mask = !(0x1 << bit);
 
         let value = self.registers.read_byte(&register) & mask;
@@ -2213,7 +2211,7 @@ impl CPU {
 
         self.registers.sp = self.registers.sp.wrapping_add(2);
 
-        return value;
+        value
     }
 
     fn rst_v(&mut self, value: Byte) {
@@ -2361,17 +2359,17 @@ impl CPU {
 
         if self.ime {
             self.pc_to_increment = 1;
-            self.last_instruction_ccycles = 4;
         } else {
             self.pc_to_increment = 2;
-            self.last_instruction_ccycles = 4;
         }
+
+        self.last_instruction_ccycles = 4;
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::cpu::cpu::CPU;
+    use crate::cpu::cpu::Cpu;
     use crate::cpu::registers::{ByteRegister, WordRegister};
     use crate::memory::memory::Memory;
     use parking_lot::RwLock;
@@ -2386,7 +2384,7 @@ mod test {
             WordRegister::SP,
         ];
 
-        let mut cpu = CPU::new(Arc::new(RwLock::new(Memory::default())), false);
+        let mut cpu = Cpu::new(Arc::new(RwLock::new(Memory::default())), false);
 
         for register in registers.iter() {
             // 0x0000 to 0x0001
@@ -2416,7 +2414,7 @@ mod test {
             WordRegister::SP,
         ];
 
-        let mut cpu = CPU::new(Arc::new(RwLock::new(Memory::default())), false);
+        let mut cpu = Cpu::new(Arc::new(RwLock::new(Memory::default())), false);
 
         for register in registers.iter() {
             // 0x0001 to 0x0000
@@ -2441,7 +2439,7 @@ mod test {
     fn test_add_hl_rr_non_hl() {
         let registers = [WordRegister::BC, WordRegister::DE, WordRegister::SP];
 
-        let mut cpu = CPU::new(Arc::new(RwLock::new(Memory::default())), false);
+        let mut cpu = Cpu::new(Arc::new(RwLock::new(Memory::default())), false);
 
         for register in registers.iter() {
             cpu.registers.write_word(&WordRegister::HL, 0xFFFF);

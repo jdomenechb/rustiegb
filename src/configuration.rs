@@ -1,4 +1,4 @@
-use crate::cpu::cpu::CPU;
+use crate::cpu::cpu::Cpu;
 use clap::{App, Arg};
 
 #[readonly::make]
@@ -57,7 +57,7 @@ impl Default for RuntimeConfig {
         Self {
             user_speed_multiplier: 1,
             muted: false,
-            available_cycles: CPU::AVAILABLE_CCYCLES_PER_FRAME,
+            available_cycles: Cpu::AVAILABLE_CCYCLES_PER_FRAME,
         }
     }
 }
@@ -68,10 +68,10 @@ impl RuntimeConfig {
     }
 
     pub fn reset_available_ccycles(&mut self) {
-        self.available_cycles = CPU::AVAILABLE_CCYCLES_PER_FRAME * self.user_speed_multiplier;
+        self.available_cycles = Cpu::AVAILABLE_CCYCLES_PER_FRAME * self.user_speed_multiplier;
     }
 
     pub fn cpu_has_available_ccycles(&self) -> bool {
-        return self.available_cycles > 0;
+        self.available_cycles > 0
     }
 }

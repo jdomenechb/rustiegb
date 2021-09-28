@@ -1,7 +1,7 @@
 use crate::Byte;
 
 #[derive(Default, Clone, Copy)]
-pub struct LCDC {
+pub struct Lcdc {
     // 0 - Stop completely (no picture on screen)
     // 1 - operation
     lcd_control_operation: bool,
@@ -35,9 +35,9 @@ pub struct LCDC {
     bg_display: bool,
 }
 
-impl LCDC {
-    pub fn new() -> LCDC {
-        return LCDC {
+impl Lcdc {
+    pub fn new() -> Lcdc {
+        Lcdc {
             lcd_control_operation: false,
             window_tile_map_display_select: true,
             window_display: false,
@@ -46,56 +46,54 @@ impl LCDC {
             obj_sprite_size: false,
             obj_sprite_display: true,
             bg_display: true,
-        };
+        }
     }
 
     pub fn to_byte(&self) -> Byte {
-        let value = ((self.lcd_control_operation as Byte) << 7)
+        ((self.lcd_control_operation as Byte) << 7)
             | ((self.window_tile_map_display_select as Byte) << 6)
             | ((self.window_display as Byte) << 5)
             | ((self.bg_and_window_tile_data_select as Byte) << 4)
             | ((self.bg_tile_map_display_select as Byte) << 3)
             | ((self.obj_sprite_size as Byte) << 2)
             | ((self.obj_sprite_display as Byte) << 1)
-            | (self.bg_display as Byte);
-
-        value
+            | (self.bg_display as Byte)
     }
 
     pub fn lcd_control_operation(&self) -> bool {
-        return self.lcd_control_operation;
+        self.lcd_control_operation
     }
 
     pub fn window_tile_map_display_select(&self) -> bool {
-        return self.window_tile_map_display_select;
+        self.window_tile_map_display_select
     }
 
     pub fn window_display(&self) -> bool {
-        return self.window_display;
+        self.window_display
     }
 
     pub fn bg_and_window_tile_data_select(&self) -> bool {
-        return self.bg_and_window_tile_data_select;
+        self.bg_and_window_tile_data_select
     }
 
     pub fn bg_tile_map_display_select(&self) -> bool {
-        return self.bg_tile_map_display_select;
+        self.bg_tile_map_display_select
     }
 
     pub fn obj_sprite_size(&self) -> bool {
-        return self.obj_sprite_size;
+        self.obj_sprite_size
     }
 
     pub fn obj_sprite_display(&self) -> bool {
-        return self.obj_sprite_display;
+        self.obj_sprite_display
     }
 
     pub fn bg_display(&self) -> bool {
-        return self.bg_display;
+        self.bg_display
     }
 }
 
-impl From<Byte> for LCDC {
+impl From<Byte> for Lcdc {
     fn from(value: Byte) -> Self {
         Self {
             lcd_control_operation: value & 0b10000000 == 0b10000000,
@@ -110,17 +108,15 @@ impl From<Byte> for LCDC {
     }
 }
 
-impl From<&LCDC> for Byte {
-    fn from(original: &LCDC) -> Self {
-        let value = ((original.lcd_control_operation as Byte) << 7)
+impl From<&Lcdc> for Byte {
+    fn from(original: &Lcdc) -> Self {
+        ((original.lcd_control_operation as Byte) << 7)
             | ((original.window_tile_map_display_select as Byte) << 6)
             | ((original.window_display as Byte) << 5)
             | ((original.bg_and_window_tile_data_select as Byte) << 4)
             | ((original.bg_tile_map_display_select as Byte) << 3)
             | ((original.obj_sprite_size as Byte) << 2)
             | ((original.obj_sprite_display as Byte) << 1)
-            | (original.bg_display as Byte);
-
-        value
+            | (original.bg_display as Byte)
     }
 }

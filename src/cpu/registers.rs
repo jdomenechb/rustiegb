@@ -25,7 +25,7 @@ pub enum WordRegister {
 }
 
 #[derive(Debug)]
-pub struct CPURegisters {
+pub struct CpuRegisters {
     pub a: Byte,
     f: Byte,
     b: Byte,
@@ -38,9 +38,9 @@ pub struct CPURegisters {
     pub pc: Word,
 }
 
-impl CPURegisters {
-    pub fn new(bootstrap: bool) -> CPURegisters {
-        return CPURegisters {
+impl CpuRegisters {
+    pub fn new(bootstrap: bool) -> CpuRegisters {
+        CpuRegisters {
             a: 0x01,
             b: 0x0,
             c: 0x13,
@@ -51,7 +51,7 @@ impl CPURegisters {
             l: 0x4d,
             pc: if bootstrap { 0x0001 } else { 0x0100 },
             sp: 0xFFFE,
-        };
+        }
     }
 
     pub fn read_byte(&self, register: &ByteRegister) -> Byte {

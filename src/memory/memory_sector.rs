@@ -27,7 +27,7 @@ impl MemorySector {
 
 impl ReadMemory for MemorySector {
     fn read_byte(&self, position: Word) -> Byte {
-        return self.data[position as usize];
+        self.data[position as usize]
     }
 }
 

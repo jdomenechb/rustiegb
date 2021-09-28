@@ -29,7 +29,7 @@ impl CartridgeMemorySector {
 
 impl ReadCartridgeMemory for CartridgeMemorySector {
     fn read_byte(&self, position: usize) -> Byte {
-        return self.data[position as usize];
+        self.data[position as usize]
     }
 
     fn read_word(&self, position: usize) -> Word {
