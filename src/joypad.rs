@@ -1,5 +1,5 @@
 use crate::configuration::RuntimeConfig;
-use crate::memory::memory::Memory;
+use crate::memory::Memory;
 use parking_lot::RwLock;
 use piston_window::Key;
 use std::sync::Arc;

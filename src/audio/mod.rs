@@ -5,9 +5,9 @@ use parking_lot::RwLock;
 use audio_unit_output::AudioUnitOutput;
 use description::{PulseDescription, WaveDescription};
 
-use crate::memory::memory::Memory;
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
+use crate::memory::Memory;
 
 pub mod audio_unit_output;
 mod description;
