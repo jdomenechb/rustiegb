@@ -15,7 +15,7 @@ impl Default for STATMode {
 }
 
 #[derive(Default)]
-pub struct STAT {
+pub struct Stat {
     pub lyc_ly_coincidence: bool,
     pub mode_2: bool,
     pub mode_1: bool,
@@ -32,7 +32,7 @@ pub struct STAT {
     mode: STATMode,
 }
 
-impl STAT {
+impl Stat {
     fn mode_number(&self) -> u8 {
         match self.mode {
             STATMode::HBlank => 0x0,
@@ -51,7 +51,7 @@ impl STAT {
     }
 }
 
-impl From<Byte> for STAT {
+impl From<Byte> for Stat {
     fn from(value: Byte) -> Self {
         Self {
             lyc_ly_coincidence: value & 0b1000000 == 0b1000000,
@@ -71,8 +71,8 @@ impl From<Byte> for STAT {
     }
 }
 
-impl From<&STAT> for Byte {
-    fn from(original: &STAT) -> Byte {
+impl From<&Stat> for Byte {
+    fn from(original: &Stat) -> Byte {
         ((original.lyc_ly_coincidence as Byte) << 6)
             | ((original.mode_2 as Byte) << 5)
             | ((original.mode_1 as Byte) << 4)

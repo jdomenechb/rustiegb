@@ -76,7 +76,7 @@ impl ReadMemory for Cartridge {
             return self.data.read_byte(position as usize);
         }
 
-        if position >= 0x4000 && position < 0x8000 {
+        if (0x4000..0x8000).contains(&position) {
             return self
                 .data
                 .read_byte(position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize);
@@ -85,7 +85,7 @@ impl ReadMemory for Cartridge {
         match self.header.cartridge_type {
             CartridgeType::Rom(false, false) => self.data.read_byte(position as usize),
             CartridgeType::Mbc1(_, _) => {
-                if position >= 0xA000 && position < 0xBFFF {
+                if (0xA000..0xBFFF).contains(&position) {
                     if !self.ram_enabled {
                         return 0xFF;
                     }
@@ -130,7 +130,7 @@ impl WriteMemory for Cartridge {
                 }
 
                 // Select ROM Bank Number
-                if position >= 0x2000 && position < 0x4000 {
+                if (0x2000..0x4000).contains(&position) {
                     self.selected_rom_bank = if value != 0 {
                         value as u16 & 0b11111
                     } else {
@@ -140,7 +140,7 @@ impl WriteMemory for Cartridge {
                     return;
                 }
 
-                if position >= 0x4000 && position < 0x6000 {
+                if (0x4000..0x6000).contains(&position) {
                     let new_value = value & 0b11;
 
                     if !self.ram_banking_mode {
@@ -153,12 +153,12 @@ impl WriteMemory for Cartridge {
                     return;
                 }
 
-                if position >= 0x6000 && position < 0x8000 {
+                if (0x6000..0x8000).contains(&position) {
                     self.ram_banking_mode = value != 0;
                     return;
                 }
 
-                if position >= 0xA000 && position < 0xC000 {
+                if (0xA000..0xC000).contains(&position) {
                     if self.ram_enabled {
                         self.ram.write_byte(
                             position as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
@@ -174,7 +174,7 @@ impl WriteMemory for Cartridge {
                     return;
                 }
                 // Select ROM Bank Number
-                if position >= 0x2000 && position < 0x4000 {
+                if (0x2000..0x4000).contains(&position) {
                     self.selected_rom_bank = if value != 0 {
                         value as u16 & 0b1111111
                     } else {
@@ -184,17 +184,13 @@ impl WriteMemory for Cartridge {
                     return;
                 }
 
-                if position >= 0x4000 && position < 0x6000 {
-                    if value <= 0x7 {
-                        self.selected_ram_bank = value;
-                        return;
-                    }
+                if (0x4000..0x6000).contains(&position) && value <= 0x7 {
+                    self.selected_ram_bank = value;
+                    return;
                 }
 
-                if position >= 0x6000 && position < 0x8000 {
-                    if !timer {
-                        return;
-                    }
+                if (0x6000..0x8000).contains(&position) && !timer {
+                    return;
                 }
             }
 
@@ -204,26 +200,26 @@ impl WriteMemory for Cartridge {
                 }
 
                 // Select ROM Bank Number - Low
-                if position >= 0x2000 && position < 0x3000 {
+                if (0x2000..0x3000).contains(&position) {
                     self.selected_rom_bank = value as Word & 0xFF;
 
                     return;
                 }
 
                 // Select ROM Bank Number - High
-                if position >= 0x3000 && position < 0x4000 {
-                    self.selected_rom_bank = ((value & 0x1) as Word) << 8 | self.selected_rom_bank;
+                if (0x3000..0x4000).contains(&position) {
+                    self.selected_rom_bank |= ((value & 0x1) as Word) << 8;
 
                     return;
                 }
 
                 // Select RAM Bank Number
-                if position >= 0x4000 && position < 0x6000 {
+                if (0x4000..0x6000).contains(&position) {
                     self.selected_ram_bank = value & 0xF;
                     return;
                 }
 
-                if position >= 0x6000 && position < 0xA000 {
+                if (0x6000..0xA000).contains(&position) {
                     println!(
                         "Attempt to write at Memory {:X}. ROM is not writable!!!",
                         position
@@ -242,7 +238,7 @@ impl WriteMemory for Cartridge {
 impl Cartridge {
     fn determine_ram_enable(&mut self, position: u16, value: u8) -> bool {
         if position < 0x2000 {
-            self.ram_enabled = if value & 0x0A == 0x0A { true } else { false };
+            self.ram_enabled = value & 0x0A == 0x0A;
             return true;
         }
 

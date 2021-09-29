@@ -32,12 +32,12 @@ impl PulseDescription {
 
         if self.remaining_volume_envelope_duration_in_1_64_s == 0 {
             match self.volume_envelope_direction {
-                VolumeEnvelopeDirection::UP => {
+                VolumeEnvelopeDirection::Up => {
                     if self.volume_envelope < 0xF {
                         self.volume_envelope += 1;
                     }
                 }
-                VolumeEnvelopeDirection::DOWN => {
+                VolumeEnvelopeDirection::Down => {
                     if self.volume_envelope > 0 {
                         self.volume_envelope -= 1;
                     }
@@ -51,8 +51,6 @@ impl PulseDescription {
         }
 
         self.remaining_volume_envelope_duration_in_1_64_s -= 1;
-
-        return;
     }
 
     pub fn exchange(&mut self, other: &Self) {
@@ -66,19 +64,19 @@ impl PulseDescription {
         self.volume_envelope_duration_in_1_64_s = other.volume_envelope_duration_in_1_64_s;
         self.remaining_volume_envelope_duration_in_1_64_s =
             other.remaining_volume_envelope_duration_in_1_64_s;
-        self.sweep = other.sweep.clone();
+        self.sweep = other.sweep;
     }
 }
 
 impl PartialEq for PulseDescription {
     fn eq(&self, other: &Self) -> bool {
-        return other.pulse_n == self.pulse_n
+        other.pulse_n == self.pulse_n
             && other.frequency == self.frequency
             && other.wave_duty_percent == self.wave_duty_percent
             && other.initial_volume_envelope == self.initial_volume_envelope
             && other.volume_envelope_direction == self.volume_envelope_direction
             && other.volume_envelope_duration_in_1_64_s == self.volume_envelope_duration_in_1_64_s
-            && other.sweep == self.sweep;
+            && other.sweep == self.sweep
     }
 }
 
@@ -91,7 +89,7 @@ impl Default for PulseDescription {
             wave_duty_percent: 0.0,
             initial_volume_envelope: 0,
             volume_envelope: 0,
-            volume_envelope_direction: VolumeEnvelopeDirection::UP,
+            volume_envelope_direction: VolumeEnvelopeDirection::Up,
             volume_envelope_duration_in_1_64_s: 0,
             remaining_volume_envelope_duration_in_1_64_s: 0,
             sweep: None,
@@ -131,7 +129,7 @@ impl WaveDescription {
 
     pub fn exchange(&mut self, other: &Self) {
         self.frequency = other.frequency;
-        self.output_level = other.output_level.clone();
+        self.output_level = other.output_level;
         self.wave = WavePatternRam {
             data: MemorySector::with_data(other.wave.data.data.clone()),
         };
@@ -149,12 +147,12 @@ impl WaveDescription {
 
 impl PartialEq for WaveDescription {
     fn eq(&self, other: &Self) -> bool {
-        return other.frequency == self.frequency
+        other.frequency == self.frequency
             && other.output_level == self.output_level
             && other.use_length == self.use_length
             && other.length == self.length
             && other.should_play == self.should_play
-            && other.wave.data.data == self.wave.data.data;
+            && other.wave.data.data == self.wave.data.data
     }
 }
 

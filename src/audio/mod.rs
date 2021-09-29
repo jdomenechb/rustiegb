@@ -5,9 +5,9 @@ use parking_lot::RwLock;
 use audio_unit_output::AudioUnitOutput;
 use description::{PulseDescription, WaveDescription};
 
-use crate::memory::memory::Memory;
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
+use crate::memory::Memory;
 
 pub mod audio_unit_output;
 mod description;
@@ -19,15 +19,15 @@ const CYCLES_1_64_SEC: u32 = 16384 * 4;
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum VolumeEnvelopeDirection {
-    UP,
-    DOWN,
+    Up,
+    Down,
 }
 
 impl From<bool> for VolumeEnvelopeDirection {
     fn from(value: bool) -> Self {
         match value {
-            false => Self::DOWN,
-            true => Self::UP,
+            false => Self::Down,
+            true => Self::Up,
         }
     }
 }
@@ -40,9 +40,9 @@ pub enum WaveOutputLevel {
     Vol25Percent,
 }
 
-impl Into<f32> for WaveOutputLevel {
-    fn into(self) -> f32 {
-        match self {
+impl From<WaveOutputLevel> for f32 {
+    fn from(wol: WaveOutputLevel) -> Self {
+        match wol {
             WaveOutputLevel::Mute => 0.0,
             WaveOutputLevel::Vol25Percent => 0.25,
             WaveOutputLevel::Vol50Percent => 0.5,

@@ -18,10 +18,10 @@ use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
 use crate::joypad::JoypadHandler;
-use cpu::cpu::CPU;
-use gpu::gpu::GPU;
+use cpu::Cpu;
+use gpu::Gpu;
 use image::ImageBuffer;
-use memory::memory::Memory;
+use memory::Memory;
 use parking_lot::RwLock;
 use piston_window::*;
 use std::sync::{mpsc, Arc};
@@ -50,8 +50,8 @@ fn main() {
     let joypad_handler = JoypadHandler::new(memory.clone(), runtime_config.clone());
 
     let canvas = Arc::new(RwLock::new(ImageBuffer::new(
-        GPU::PIXEL_WIDTH as u32,
-        GPU::PIXEL_HEIGHT as u32,
+        Gpu::PIXEL_WIDTH as u32,
+        Gpu::PIXEL_HEIGHT as u32,
     )));
 
     let memory_thread = memory.clone();
@@ -60,8 +60,8 @@ fn main() {
     let (sx, rx) = mpsc::channel();
 
     std::thread::spawn(move || {
-        let mut cpu = CPU::new(memory_thread.clone(), configuration.bootstrap);
-        let mut gpu = GPU::new(memory_thread.clone());
+        let mut cpu = Cpu::new(memory_thread.clone(), configuration.bootstrap);
+        let mut gpu = Gpu::new(memory_thread.clone());
 
         let audio_unit_output = Box::new(CpalAudioUnitOutput::new());
 
@@ -178,8 +178,8 @@ fn main() {
             let memory = memory.read();
 
             let pixel_size: (f64, f64) = (
-                render_args.window_size.get(0).unwrap() / (GPU::PIXEL_WIDTH as f64),
-                render_args.window_size.get(1).unwrap() / (GPU::PIXEL_HEIGHT as f64),
+                render_args.window_size.get(0).unwrap() / (Gpu::PIXEL_WIDTH as f64),
+                render_args.window_size.get(1).unwrap() / (Gpu::PIXEL_HEIGHT as f64),
             );
 
             window.draw_2d(&event, |context, graphics, device| {
