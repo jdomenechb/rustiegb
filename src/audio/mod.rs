@@ -19,15 +19,15 @@ const CYCLES_1_64_SEC: u32 = 16384 * 4;
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum VolumeEnvelopeDirection {
-    UP,
-    DOWN,
+    Up,
+    Down,
 }
 
 impl From<bool> for VolumeEnvelopeDirection {
     fn from(value: bool) -> Self {
         match value {
-            false => Self::DOWN,
-            true => Self::UP,
+            false => Self::Down,
+            true => Self::Up,
         }
     }
 }

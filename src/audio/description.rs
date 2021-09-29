@@ -32,12 +32,12 @@ impl PulseDescription {
 
         if self.remaining_volume_envelope_duration_in_1_64_s == 0 {
             match self.volume_envelope_direction {
-                VolumeEnvelopeDirection::UP => {
+                VolumeEnvelopeDirection::Up => {
                     if self.volume_envelope < 0xF {
                         self.volume_envelope += 1;
                     }
                 }
-                VolumeEnvelopeDirection::DOWN => {
+                VolumeEnvelopeDirection::Down => {
                     if self.volume_envelope > 0 {
                         self.volume_envelope -= 1;
                     }
@@ -89,7 +89,7 @@ impl Default for PulseDescription {
             wave_duty_percent: 0.0,
             initial_volume_envelope: 0,
             volume_envelope: 0,
-            volume_envelope_direction: VolumeEnvelopeDirection::UP,
+            volume_envelope_direction: VolumeEnvelopeDirection::Up,
             volume_envelope_duration_in_1_64_s: 0,
             remaining_volume_envelope_duration_in_1_64_s: 0,
             sweep: None,
