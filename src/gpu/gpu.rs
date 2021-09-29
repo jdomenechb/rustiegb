@@ -426,8 +426,9 @@ impl Gpu {
                 };
 
                 screen_row[current_screen_x as usize] = Some(color.to_rgba());
-                screen_x = current_screen_x;
             }
+
+            screen_x = limit - 1;
         }
     }
 }

@@ -13,7 +13,7 @@ pub struct CartridgeHeader {
 }
 
 impl CartridgeHeader {
-    pub fn new_from_data(data: &Vec<Byte>) -> Self {
+    pub fn new_from_data(data: &[Byte]) -> Self {
         let slice = &data[0x134..0x143];
         let title_chars = slice.iter().map(|b| *b as char).collect::<Vec<_>>();
 

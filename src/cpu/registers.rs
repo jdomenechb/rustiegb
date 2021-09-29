@@ -1,8 +1,6 @@
 use crate::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::{Byte, Word};
-use strum_macros;
 
-#[derive(strum_macros::ToString)]
 pub enum ByteRegister {
     A,
     B,
@@ -14,7 +12,6 @@ pub enum ByteRegister {
     L,
 }
 
-#[derive(strum_macros::ToString, Copy, Clone)]
 pub enum WordRegister {
     AF,
     BC,
