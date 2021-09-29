@@ -40,9 +40,9 @@ pub enum WaveOutputLevel {
     Vol25Percent,
 }
 
-impl Into<f32> for WaveOutputLevel {
-    fn into(self) -> f32 {
-        match self {
+impl From<WaveOutputLevel> for f32 {
+    fn from(wol: WaveOutputLevel) -> Self {
+        match wol {
             WaveOutputLevel::Mute => 0.0,
             WaveOutputLevel::Vol25Percent => 0.25,
             WaveOutputLevel::Vol50Percent => 0.5,

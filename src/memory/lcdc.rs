@@ -49,17 +49,6 @@ impl Lcdc {
         }
     }
 
-    pub fn to_byte(&self) -> Byte {
-        ((self.lcd_control_operation as Byte) << 7)
-            | ((self.window_tile_map_display_select as Byte) << 6)
-            | ((self.window_display as Byte) << 5)
-            | ((self.bg_and_window_tile_data_select as Byte) << 4)
-            | ((self.bg_tile_map_display_select as Byte) << 3)
-            | ((self.obj_sprite_size as Byte) << 2)
-            | ((self.obj_sprite_display as Byte) << 1)
-            | (self.bg_display as Byte)
-    }
-
     pub fn lcd_control_operation(&self) -> bool {
         self.lcd_control_operation
     }
