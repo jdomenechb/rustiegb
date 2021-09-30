@@ -2384,8 +2384,9 @@ mod test {
     use crate::cpu::Cpu;
     use crate::memory::Memory;
 
-    #[test]
-    fn test_inc_rr() {
+    #[test_case(0x0000, 0x0001)]
+    #[test_case(0xFFFF, 0x0000)]
+    fn test_inc_rr(a: Word, expected: Word) {
         let registers = [
             WordRegister::BC,
             WordRegister::DE,
@@ -2396,26 +2397,18 @@ mod test {
         let mut cpu = Cpu::new(Arc::new(RwLock::new(Memory::default())), false);
 
         for register in registers.iter() {
-            // 0x0000 to 0x0001
-            cpu.registers.write_word(register, 0x0000);
+            cpu.registers.write_word(register, a);
             let old_f = cpu.registers.read_byte(&ByteRegister::F);
 
             cpu.inc_rr(*register);
-            assert_eq!(cpu.registers.read_word(register), 0x0001);
-            assert_eq!(old_f, cpu.registers.read_byte(&ByteRegister::F));
-
-            // 0xFFFF to 0x0000
-            cpu.registers.write_word(register, 0xFFFF);
-            let old_f = cpu.registers.read_byte(&ByteRegister::F);
-
-            cpu.inc_rr(*register);
-            assert_eq!(cpu.registers.read_word(register), 0x0000);
+            assert_eq!(cpu.registers.read_word(register), expected);
             assert_eq!(old_f, cpu.registers.read_byte(&ByteRegister::F));
         }
     }
 
-    #[test]
-    fn test_dec_rr() {
+    #[test_case(0x0001, 0x0000)]
+    #[test_case(0x0000, 0xFFFF)]
+    fn test_dec_rr(a: Word, expected: Word) {
         let registers = [
             WordRegister::BC,
             WordRegister::DE,
@@ -2426,20 +2419,11 @@ mod test {
         let mut cpu = Cpu::new(Arc::new(RwLock::new(Memory::default())), false);
 
         for register in registers.iter() {
-            // 0x0001 to 0x0000
-            cpu.registers.write_word(register, 0x0001);
+            cpu.registers.write_word(register, a);
             let old_f = cpu.registers.read_byte(&ByteRegister::F);
 
             cpu.dec_rr(*register);
-            assert_eq!(cpu.registers.read_word(register), 0x0000);
-            assert_eq!(old_f, cpu.registers.read_byte(&ByteRegister::F));
-
-            // 0x0000 to 0xFFFF
-            cpu.registers.write_word(register, 0x0000);
-            let old_f = cpu.registers.read_byte(&ByteRegister::F);
-
-            cpu.dec_rr(*register);
-            assert_eq!(cpu.registers.read_word(register), 0xFFFF);
+            assert_eq!(cpu.registers.read_word(register), expected);
             assert_eq!(old_f, cpu.registers.read_byte(&ByteRegister::F));
         }
     }
