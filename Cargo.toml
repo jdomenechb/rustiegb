@@ -5,17 +5,17 @@ authors = ["Jordi Domènech <jdomenechbborges@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-piston_window = "0.116.0"
+piston_window = "0.120.0"
 clap = "2.33.3"
 gfx_device_gl = "0.16.2"
-image = "0.23.12"
+image = "0.23.14"
 readonly = "0.2.0"
-cpal = "0.13.1"
-anyhow = "1.0.35"
+cpal = "0.13.4"
+anyhow = "1.0.44"
 parking_lot = {version = "0.11.1"}
 
 [dev-dependencies]
 test-case = "1.2.0"
 
-[profile.release]
-debug = true
+#[profile.release]
+#debug = true
