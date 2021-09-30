@@ -2373,7 +2373,10 @@ impl Cpu {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
     use std::sync::Arc;
+    use test_case::test_case;
 
     use parking_lot::RwLock;
 
@@ -2441,74 +2444,36 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_add_hl_rr_non_hl() {
+    #[test_case(0xFFFF, 0x0001, 0x0000, false, false, true, true ; "sum overflows to 0")]
+    #[test_case(0x0000, 0x0001, 0x0001, true, false, false, false ; "sum results in 1")]
+    #[test_case(0x0FFF, 0x0001, 0x1000, true, false, true, false ; "sum results in 0x1000")]
+    #[test_case(0x1000, 0x0001, 0x1001, true, false, false, false ; "sum results in 0x1001")]
+    fn test_add_hl_rr_non_hl(
+        a: Word,
+        b: Word,
+        expected: Word,
+        previous_z: bool,
+        expected_n: bool,
+        expected_h: bool,
+        expected_c: bool,
+    ) {
         let registers = [WordRegister::BC, WordRegister::DE, WordRegister::SP];
-
         let mut cpu = Cpu::new(Arc::new(RwLock::new(Memory::default())), false);
 
         for register in registers.iter() {
-            cpu.registers.write_word(&WordRegister::HL, 0xFFFF);
-            cpu.registers.write_word(register, 0x0001);
-            cpu.registers.write_byte(&ByteRegister::F, 0xFF);
+            cpu.registers.write_word(&WordRegister::HL, a);
+            cpu.registers.write_word(register, b);
 
-            let old_flag_z = cpu.registers.is_flag_z();
-
-            cpu.add_hl_rr(*register);
-
-            assert_eq!(cpu.registers.read_word(&WordRegister::HL), 0x0000);
-            assert_eq!(old_flag_z, cpu.registers.is_flag_z());
-            assert_eq!(false, cpu.registers.is_flag_n());
-            assert_eq!(true, cpu.registers.is_flag_h());
-            assert_eq!(true, cpu.registers.is_flag_c());
-
-            /////////
-
-            cpu.registers.write_word(&WordRegister::HL, 0x0000);
-            cpu.registers.write_word(register, 0x0001);
-            cpu.registers.write_byte(&ByteRegister::F, 0xFF);
-
-            let old_flag_z = cpu.registers.is_flag_z();
+            // We check that flag z is preserved
+            cpu.registers.set_flag_z(previous_z);
 
             cpu.add_hl_rr(*register);
 
-            assert_eq!(cpu.registers.read_word(&WordRegister::HL), 0x0001);
-            assert_eq!(old_flag_z, cpu.registers.is_flag_z());
-            assert_eq!(false, cpu.registers.is_flag_n());
-            assert_eq!(false, cpu.registers.is_flag_h());
-            assert_eq!(false, cpu.registers.is_flag_c());
-
-            /////////
-
-            cpu.registers.write_word(&WordRegister::HL, 0x0FFF);
-            cpu.registers.write_word(register, 0x0001);
-            cpu.registers.write_byte(&ByteRegister::F, 0xFF);
-
-            let old_flag_z = cpu.registers.is_flag_z();
-
-            cpu.add_hl_rr(*register);
-
-            assert_eq!(cpu.registers.read_word(&WordRegister::HL), 0x1000);
-            assert_eq!(old_flag_z, cpu.registers.is_flag_z());
-            assert_eq!(false, cpu.registers.is_flag_n());
-            assert_eq!(true, cpu.registers.is_flag_h());
-            assert_eq!(false, cpu.registers.is_flag_c());
-
-            /////////
-
-            cpu.registers.write_word(&WordRegister::HL, 0x1000);
-            cpu.registers.write_word(register, 0x0001);
-            cpu.registers.write_byte(&ByteRegister::F, 0xFF);
-
-            let old_flag_z = cpu.registers.is_flag_z();
-
-            cpu.add_hl_rr(*register);
-
-            assert_eq!(cpu.registers.read_word(&WordRegister::HL), 0x1001);
-            assert_eq!(old_flag_z, cpu.registers.is_flag_z());
-            assert_eq!(false, cpu.registers.is_flag_n());
-            assert_eq!(false, cpu.registers.is_flag_h());
-            assert_eq!(false, cpu.registers.is_flag_c());
+            assert_eq!(cpu.registers.read_word(&WordRegister::HL), expected);
+            assert_eq!(previous_z, cpu.registers.is_flag_z());
+            assert_eq!(expected_n, cpu.registers.is_flag_n());
+            assert_eq!(expected_h, cpu.registers.is_flag_h());
+            assert_eq!(expected_c, cpu.registers.is_flag_c());
         }
     }
 }
