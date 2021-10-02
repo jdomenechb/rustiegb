@@ -304,21 +304,7 @@ impl Gpu {
                 let pixel = self.read_pixel_from_tile(tile_x, tile_bytes);
 
                 if pixel != 0x0 || pixel_to_write.is_none() {
-                    let pixel_color = match pixel {
-                        0b11 => bgp >> 6,
-                        0b10 => bgp >> 4,
-                        0b01 => bgp >> 2,
-                        0b00 => bgp,
-                        _ => panic!("Unrecognised color"),
-                    } & 0b11;
-
-                    let color = match pixel_color {
-                        0b00 => Color::white(),
-                        0b01 => Color::light_grey(),
-                        0b10 => Color::dark_grey(),
-                        0b11 => Color::black(),
-                        _ => panic!("Unrecognised color"),
-                    };
+                    let color = Color::from_pixel(pixel, bgp);
 
                     pixel_to_write = Some(color.to_rgba());
                 }
@@ -387,6 +373,12 @@ impl Gpu {
 
             let limit = min(sprite.x() as i16, Gpu::PIXEL_WIDTH as i16);
 
+            let palette = if !sprite.palette() {
+                palette0
+            } else {
+                palette1
+            };
+
             for current_screen_x in screen_x..limit {
                 let current_pixel_x: i16 =
                     current_screen_x as i16 + Gpu::PIXELS_PER_TILE as i16 - sprite.x() as i16;
@@ -408,26 +400,7 @@ impl Gpu {
                     continue;
                 }
 
-                let palette = if !sprite.palette() {
-                    palette0
-                } else {
-                    palette1
-                };
-
-                let pixel_color = match pixel {
-                    0b11 => palette >> 6,
-                    0b10 => palette >> 4,
-                    0b01 => palette >> 2,
-                    _ => panic!("Unrecognised color"),
-                } & 0b11;
-
-                let color = match pixel_color {
-                    0b00 => Color::white(),
-                    0b01 => Color::light_grey(),
-                    0b10 => Color::dark_grey(),
-                    0b11 => Color::black(),
-                    _ => panic!("Unrecognised color"),
-                };
+                let color = Color::from_pixel(pixel, palette);
 
                 screen_row[current_screen_x as usize] = Some(color.to_rgba());
             }
