@@ -372,6 +372,7 @@ impl Gpu {
             let tile_row = self.read_tile_row(sprite_addr, row);
 
             let limit = min(sprite.x() as i16, Gpu::PIXEL_WIDTH as i16);
+            let mut sprite_end = screen_x;
 
             let palette = if !sprite.palette() {
                 palette0
@@ -403,9 +404,10 @@ impl Gpu {
                 let color = Color::from_pixel(pixel, palette);
 
                 screen_row[current_screen_x as usize] = Some(color.to_rgba());
+                sprite_end = current_screen_x;
             }
 
-            screen_x = limit - 1;
+            screen_x = sprite_end;
         }
     }
 }
