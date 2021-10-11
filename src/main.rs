@@ -27,6 +27,7 @@ use piston_window::*;
 use std::sync::{mpsc, Arc};
 
 const APP_NAME: &str = "RustieGB";
+const WINDOW_SIZE_MULTIPLIER: u32 = 4;
 
 type Byte = u8;
 type Word = u16;
@@ -146,11 +147,17 @@ fn main() {
     });
 
     // --- Seting up window
-    let mut window: PistonWindow = WindowSettings::new(window_title, [640, 576])
-        .exit_on_esc(true)
-        .resizable(false)
-        .build()
-        .unwrap();
+    let mut window: PistonWindow = WindowSettings::new(
+        window_title,
+        [
+            Gpu::PIXEL_WIDTH as u32 * WINDOW_SIZE_MULTIPLIER,
+            Gpu::PIXEL_HEIGHT as u32 * WINDOW_SIZE_MULTIPLIER,
+        ],
+    )
+    .exit_on_esc(true)
+    .resizable(false)
+    .build()
+    .unwrap();
 
     let mut event_settings = EventSettings::new();
     event_settings.set_max_fps(60);
@@ -161,12 +168,11 @@ fn main() {
         encoder: window.factory.create_command_buffer().into(),
     };
 
-    let mut texture: G2dTexture = Texture::from_image(
-        &mut texture_context,
-        &canvas.read(),
-        &TextureSettings::new(),
-    )
-    .unwrap();
+    let texture_settings = &mut TextureSettings::new();
+    texture_settings.set_filter(Filter::Nearest);
+
+    let mut texture: G2dTexture =
+        Texture::from_image(&mut texture_context, &canvas.read(), texture_settings).unwrap();
 
     while let Some(event) = window.next() {
         if let Some(Button::Keyboard(key)) = event.press_args() {
