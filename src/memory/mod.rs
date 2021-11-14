@@ -72,6 +72,8 @@ pub struct Memory {
     nr13: Byte,
     // FF14
     nr14: Byte,
+    // FF15
+    nr20: Byte,
     // FF16
     nr21: Byte,
     // FF17
@@ -90,6 +92,8 @@ pub struct Memory {
     nr33: Byte,
     // FF1E
     nr34: Byte,
+    // FF1F
+    nr40: Byte,
     // FF20
     nr41: Byte,
     // FF21
@@ -180,6 +184,7 @@ impl Memory {
             nr12: 0xF3,
             nr13: 0x00,
             nr14: 0xBF,
+            nr20: 0xFF,
             nr21: 0x3F,
             nr22: 0x00,
             nr23: 0x00,
@@ -189,6 +194,7 @@ impl Memory {
             nr32: 0x9f,
             nr33: 0x00,
             nr34: 0xBF,
+            nr40: 0xFF,
             nr41: 0xFF,
             nr42: 0x00,
             nr43: 0x00,
@@ -223,18 +229,29 @@ impl Memory {
     }
 
     pub fn read_byte(&self, position: Word) -> Byte {
-        let byte = match position {
-            0xFF13 => None,
-            0xFF18 => None,
-            0xFF1D => None,
-            _ => self.internally_read_byte(position),
-        };
+        let byte = self
+            .internally_read_byte(position)
+            .expect(format!("ERROR: Memory address {:X} not readable", position).as_str());
 
-        if byte.is_none() {
-            panic!("ERROR: Memory address {:X} not readable", position);
+        match position {
+            0xFF10 => byte | 0b10000000, // 0x80
+            0xFF11 => byte | 0b00111111, // 0x3F
+            0xFF13 => byte | 0xFF,
+            0xFF14 => byte | 0b10111111, // 0xBF
+            0xFF15 => byte | 0xFF,
+            0xFF16 => byte | 0b00111111, // 0x3F
+            0xFF18 => byte | 0xFF,
+            0xFF19 => byte | 0b10111111, // 0xBF
+            0xFF1A => byte | 0b01111111, // 0x7F
+            0xFF1B => byte | 0xFF,
+            0xFF1C => byte | 0b10011111, // 0x9F
+            0xFF1D => byte | 0xFF,
+            0xFF1E => byte | 0b10111111, // 0xBF
+            0xFF1F => byte | 0xFF,
+            0xFF20 => byte | 0xFF,
+            0xFF23 => byte | 0b10111111, // 0xBF
+            _ => byte,
         }
-
-        byte.unwrap()
     }
 
     pub fn internally_read_byte(&self, position: Word) -> Option<Byte> {
@@ -333,6 +350,11 @@ impl Memory {
             return Some(self.nr14);
         }
 
+        // NR20
+        if position == 0xFF15 {
+            return Some(self.nr20);
+        }
+
         // NR21
         if position == 0xFF16 {
             return Some(self.nr21);
@@ -376,6 +398,11 @@ impl Memory {
         // NR34
         if position == 0xFF1E {
             return Some(self.nr34);
+        }
+
+        // NR40
+        if position == 0xFF1F {
+            return Some(self.nr40);
         }
 
         // NR41
@@ -628,8 +655,9 @@ impl Memory {
             return;
         }
 
-        // Ignore it, not used
+        // NR20
         if position == 0xFF15 {
+            self.nr20 = value;
             return;
         }
 
@@ -692,6 +720,12 @@ impl Memory {
             }
 
             self.nr34 = value;
+            return;
+        }
+
+        // NR40
+        if position == 0xFF1F {
+            self.nr40 = value;
             return;
         }
 
@@ -1026,5 +1060,62 @@ impl Memory {
             self.internally_read_byte(start_address - 3).unwrap(),
             sweep,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_correct_data_when_writing_audio_registers() {
+        let items = vec![
+            // NR10
+            (0xFF10, 0x80),
+            (0xFF11, 0x3F),
+            (0xFF12, 0x00),
+            (0xFF13, 0xFF),
+            (0xFF14, 0xBF),
+            // NR20
+            (0xFF15, 0xFF),
+            (0xFF16, 0x3F),
+            (0xFF17, 0x00),
+            (0xFF18, 0xFF),
+            (0xFF19, 0xBF),
+            // NR30
+            (0xFF1A, 0x7F),
+            (0xFF1B, 0xFF),
+            (0xFF1C, 0x9F),
+            (0xFF1D, 0xFF),
+            (0xFF1E, 0xBF),
+            // NR40
+            (0xFF1F, 0xFF),
+            (0xFF20, 0xFF),
+            (0xFF21, 0x00),
+            (0xFF22, 0x00),
+            (0xFF23, 0xBF),
+            // NR50
+            (0xFF24, 0x00),
+            (0xFF25, 0x00),
+        ];
+        let mut memory = Memory::default();
+
+        for item in items {
+            memory.write_byte(item.0, 0);
+
+            assert_eq!(
+                memory.internally_read_byte(item.0).unwrap(),
+                0,
+                "Wrong internal data when writing register {:X}",
+                item.0
+            );
+
+            assert_eq!(
+                memory.read_byte(item.0),
+                item.1,
+                "Wrong data when writing register {:X}",
+                item.0
+            );
+        }
     }
 }
