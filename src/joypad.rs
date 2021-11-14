@@ -65,6 +65,9 @@ impl JoypadHandler {
             Key::Space => {
                 self.runtime_config.write().user_speed_multiplier = 20;
             }
+            Key::R => {
+                self.runtime_config.write().set_reset(true);
+            }
             _ => {}
         };
     }

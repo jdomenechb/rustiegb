@@ -39,6 +39,10 @@ impl Cpu {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.registers.pc = 0x100;
+    }
+
     pub fn step(&mut self) -> u8 {
         self.pc_to_increment = -1;
         self.last_instruction_ccycles = 0;

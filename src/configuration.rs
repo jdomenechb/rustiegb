@@ -50,6 +50,7 @@ pub struct RuntimeConfig {
     pub user_speed_multiplier: i32,
     pub muted: bool,
     pub available_cycles: i32,
+    pub reset: bool,
 }
 
 impl Default for RuntimeConfig {
@@ -58,6 +59,7 @@ impl Default for RuntimeConfig {
             user_speed_multiplier: 1,
             muted: false,
             available_cycles: Cpu::AVAILABLE_CCYCLES_PER_FRAME,
+            reset: false,
         }
     }
 }
@@ -65,6 +67,14 @@ impl Default for RuntimeConfig {
 impl RuntimeConfig {
     pub fn toggle_mute(&mut self) {
         self.muted = !self.muted;
+    }
+
+    pub fn has_been_reset(&self) -> bool {
+        self.reset
+    }
+
+    pub fn set_reset(&mut self, value: bool) {
+        self.reset = value;
     }
 
     pub fn reset_available_ccycles(&mut self) {
