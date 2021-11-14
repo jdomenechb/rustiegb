@@ -150,6 +150,9 @@ pub struct Memory {
 }
 
 impl Memory {
+    const ADDR_NR52: Word = 0xFF26;
+    const ADDR_NR10: Word = 0xFF10;
+
     pub fn new(cartridge: Cartridge, bootstrap: bool) -> Memory {
         let bootstrap_rom = if bootstrap {
             let bootstrap_rom_path = "./DMG_ROM.bin";
@@ -232,8 +235,8 @@ impl Memory {
         let byte = self.internally_read_byte(position).unwrap_or(0xFF);
 
         match position {
-            0xFF10 => byte | 0b10000000, // 0x80
-            0xFF11 => byte | 0b00111111, // 0x3F
+            Self::ADDR_NR10 => byte | 0b10000000, // 0x80
+            0xFF11 => byte | 0b00111111,          // 0x3F
             0xFF13 => 0xFF,
             0xFF14 => byte | 0b10111111, // 0xBF
             0xFF15 => 0xFF,
@@ -247,7 +250,7 @@ impl Memory {
             0xFF1E => byte | 0b10111111, // 0xBF
             0xFF1F..=0xFF20 => 0xFF,
             0xFF23 => byte | 0b10111111, // 0xBF
-            0xFF26 => byte & 0b11110000 | 0b1110000,
+            Self::ADDR_NR52 => byte & 0b11110000 | 0b1110000,
             0xFF27..=0xFF2F => 0xFF,
             _ => byte,
         }
@@ -273,7 +276,7 @@ impl Memory {
             0xFF05 => Some(self.tima),
             0xFF06 => Some(self.tma),
             0xFF0F => Some((&self.interrupt_flag).into()),
-            0xFF10 => Some(self.nr10),
+            Self::ADDR_NR10 => Some(self.nr10),
             0xFF11 => Some(self.nr11),
             0xFF12 => Some(self.nr12),
             0xFF13 => Some(self.nr13),
@@ -295,7 +298,7 @@ impl Memory {
             0xFF23 => Some(self.nr44),
             0xFF24 => Some(self.nr50),
             0xFF25 => Some(self.nr51),
-            0xFF26 => Some(self.nr52),
+            Self::ADDR_NR52 => Some(self.nr52),
             0xFF30..=0xFF3F => Some(self.wave_pattern_ram.read_byte(position - 0xFF30)),
             0xFF40 => Some((&self.lcdc).into()),
             0xFF41 => Some((&self.stat).into()),
@@ -345,7 +348,7 @@ impl Memory {
             0xFF06 => self.tma = value,
             0xFF07 => self.timer_control = value.into(),
             0xFF0F => self.interrupt_flag = value.into(),
-            0xFF10 => self.nr10 = value,
+            Self::ADDR_NR10 => self.nr10 = value,
             0xFF11 => self.nr11 = value,
             0xFF12 => self.nr12 = value,
             0xFF13 => self.nr13 = value,
@@ -391,7 +394,34 @@ impl Memory {
             }
             0xFF24 => self.nr50 = value,
             0xFF25 => self.nr51 = value,
-            0xFF26 => self.nr52 = value,
+            Self::ADDR_NR52 => {
+                self.nr52 = value;
+
+                if value & 0b10000000 == 0 {
+                    self.nr10 = 0;
+                    self.nr11 = 0;
+                    self.nr12 = 0;
+                    self.nr13 = 0;
+                    self.nr14 = 0;
+                    self.nr20 = 0;
+                    self.nr21 = 0;
+                    self.nr22 = 0;
+                    self.nr23 = 0;
+                    self.nr24 = 0;
+                    self.nr30 = 0;
+                    self.nr31 = 0;
+                    self.nr32 = 0;
+                    self.nr33 = 0;
+                    self.nr34 = 0;
+                    self.nr40 = 0;
+                    self.nr41 = 0;
+                    self.nr42 = 0;
+                    self.nr43 = 0;
+                    self.nr44 = 0;
+                    self.nr50 = 0;
+                    self.nr51 = 0;
+                }
+            }
             0xFF27..=0xFF2F => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
@@ -577,7 +607,7 @@ impl Memory {
         let mut sweep = None;
         let start_address = match channel {
             1 => {
-                sweep = self.internally_read_byte(0xFF10);
+                sweep = self.internally_read_byte(Self::ADDR_NR10);
                 0xFF14
             }
             2 => 0xFF19,
@@ -602,11 +632,10 @@ impl Memory {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_correct_data_when_writing_audio_registers() {
+    fn check_basic_audio_registers_are_reset(memory: &mut Memory) {
         let items = vec![
             // NR10
-            (0xFF10, 0x80),
+            (Memory::ADDR_NR10, 0x80),
             (0xFF11, 0x3F),
             (0xFF12, 0x00),
             (0xFF13, 0xFF),
@@ -635,12 +664,7 @@ mod tests {
             // NR52 Skipped as it is special
         ];
 
-        let mut memory = Memory::default();
-
         for item in items {
-            memory.write_byte(item.0, 0xFF);
-            memory.write_byte(item.0, 0);
-
             assert_eq!(
                 memory.internally_read_byte(item.0),
                 Some(0),
@@ -655,9 +679,21 @@ mod tests {
                 item.0
             );
         }
+    }
+
+    #[test]
+    fn test_correct_data_when_writing_audio_registers() {
+        let mut memory = Memory::default();
+
+        for position in Memory::ADDR_NR10..=0xFF25 {
+            memory.write_byte(position, 0xFF);
+            memory.write_byte(position, 0);
+        }
+
+        check_basic_audio_registers_are_reset(&mut memory);
 
         // NR52
-        let position = 0xFF26;
+        let position = Memory::ADDR_NR52;
 
         memory.write_byte(position, 0xFF);
         memory.write_byte(position, 0);
@@ -731,5 +767,19 @@ mod tests {
                 position
             );
         }
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_all_audio_registers_are_reset() {
+        let mut memory = Memory::default();
+
+        for position in Memory::ADDR_NR10..=0xFF25 {
+            memory.write_byte(position, 0xFF);
+        }
+
+        memory.write_byte(Memory::ADDR_NR52, 0);
+        memory.write_byte(Memory::ADDR_NR52, 0b10000000);
+
+        check_basic_audio_registers_are_reset(&mut memory);
     }
 }
