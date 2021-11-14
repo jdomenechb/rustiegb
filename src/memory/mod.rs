@@ -247,6 +247,7 @@ impl Memory {
             0xFF1E => byte | 0b10111111, // 0xBF
             0xFF1F..=0xFF20 => 0xFF,
             0xFF23 => byte | 0b10111111, // 0xBF
+            0xFF26 => byte & 0b11110000 | 0b1110000,
             0xFF27..=0xFF2F => 0xFF,
             _ => byte,
         }
@@ -633,6 +634,7 @@ mod tests {
             (0xFF25, 0x00),
             // NR52 Skipped as it is special
         ];
+
         let mut memory = Memory::default();
 
         for item in items {
@@ -654,6 +656,43 @@ mod tests {
             );
         }
 
+        // NR52
+        let position = 0xFF26;
+
+        memory.write_byte(position, 0xFF);
+        memory.write_byte(position, 0);
+
+        assert_eq!(
+            memory.internally_read_byte(position),
+            Some(0),
+            "Wrong internal data when writing register {:X}",
+            position
+        );
+
+        assert_eq!(
+            memory.read_byte(position),
+            0x70,
+            "Wrong data when writing register {:X}",
+            position
+        );
+
+        memory.write_byte(position, 0xFF);
+
+        assert_eq!(
+            memory.internally_read_byte(position),
+            Some(0xFF),
+            "Wrong internal data when writing register {:X}",
+            position
+        );
+
+        assert_eq!(
+            memory.read_byte(position),
+            0xF0,
+            "Wrong data when writing register {:X}",
+            position
+        );
+
+        // Unused registers
         for position in 0xFF27..=0xFF2F {
             memory.write_byte(position, 0xFF);
             memory.write_byte(position, 0);
@@ -673,6 +712,7 @@ mod tests {
             );
         }
 
+        // WAVE
         for position in 0xFF30..0xFF40 {
             memory.write_byte(position, 0xFF);
             memory.write_byte(position, 0);
