@@ -229,27 +229,25 @@ impl Memory {
     }
 
     pub fn read_byte(&self, position: Word) -> Byte {
-        let byte = self
-            .internally_read_byte(position)
-            .expect(format!("ERROR: Memory address {:X} not readable", position).as_str());
+        let byte = self.internally_read_byte(position).unwrap_or(0xFF);
 
         match position {
             0xFF10 => byte | 0b10000000, // 0x80
             0xFF11 => byte | 0b00111111, // 0x3F
-            0xFF13 => byte | 0xFF,
+            0xFF13 => 0xFF,
             0xFF14 => byte | 0b10111111, // 0xBF
-            0xFF15 => byte | 0xFF,
+            0xFF15 => 0xFF,
             0xFF16 => byte | 0b00111111, // 0x3F
-            0xFF18 => byte | 0xFF,
+            0xFF18 => 0xFF,
             0xFF19 => byte | 0b10111111, // 0xBF
             0xFF1A => byte | 0b01111111, // 0x7F
-            0xFF1B => byte | 0xFF,
+            0xFF1B => 0xFF,
             0xFF1C => byte | 0b10011111, // 0x9F
             0xFF1D => byte | 0xFF,
             0xFF1E => byte | 0b10111111, // 0xBF
-            0xFF1F => byte | 0xFF,
-            0xFF20 => byte | 0xFF,
+            0xFF1F..=0xFF20 => 0xFF,
             0xFF23 => byte | 0b10111111, // 0xBF
+            0xFF27..=0xFF2F => 0xFF,
             _ => byte,
         }
     }
@@ -393,6 +391,9 @@ impl Memory {
             0xFF24 => self.nr50 = value,
             0xFF25 => self.nr51 = value,
             0xFF26 => self.nr52 = value,
+            0xFF27..=0xFF2F => {
+                println!("Attempt to write at an unused RAM position {:X}", position)
+            }
             0xFF30..=0xFF3F => self.wave_pattern_ram.write_byte(position - 0xFF30, value),
             0xFF40 => self.lcdc = value.into(),
             0xFF41 => self.stat = value.into(),
@@ -630,15 +631,17 @@ mod tests {
             // NR50
             (0xFF24, 0x00),
             (0xFF25, 0x00),
+            // NR52 Skipped as it is special
         ];
         let mut memory = Memory::default();
 
         for item in items {
+            memory.write_byte(item.0, 0xFF);
             memory.write_byte(item.0, 0);
 
             assert_eq!(
-                memory.internally_read_byte(item.0).unwrap(),
-                0,
+                memory.internally_read_byte(item.0),
+                Some(0),
                 "Wrong internal data when writing register {:X}",
                 item.0
             );
@@ -648,6 +651,44 @@ mod tests {
                 item.1,
                 "Wrong data when writing register {:X}",
                 item.0
+            );
+        }
+
+        for position in 0xFF27..=0xFF2F {
+            memory.write_byte(position, 0xFF);
+            memory.write_byte(position, 0);
+
+            assert_eq!(
+                memory.internally_read_byte(position),
+                None,
+                "Wrong internal data when writing register {:X}",
+                position
+            );
+
+            assert_eq!(
+                memory.read_byte(position),
+                0xFF,
+                "Wrong data when writing register {:X}",
+                position
+            );
+        }
+
+        for position in 0xFF30..0xFF40 {
+            memory.write_byte(position, 0xFF);
+            memory.write_byte(position, 0);
+
+            assert_eq!(
+                memory.internally_read_byte(position),
+                Some(0),
+                "Wrong internal data when writing register {:X}",
+                position
+            );
+
+            assert_eq!(
+                memory.read_byte(position),
+                0,
+                "Wrong data when writing register {:X}",
+                position
             );
         }
     }
