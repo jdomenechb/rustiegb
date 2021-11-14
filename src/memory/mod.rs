@@ -11,6 +11,7 @@ use crate::memory::joypad::Joypad;
 use crate::memory::lcdc::Lcdc;
 use crate::memory::ly::LY;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
+use crate::memory::nr52::NR52;
 use crate::memory::oam_memory_sector::OamMemorySector;
 use crate::memory::read_only_memory_sector::ReadOnlyMemorySector;
 use crate::memory::stat::{STATMode, Stat};
@@ -27,6 +28,7 @@ pub mod joypad;
 pub mod lcdc;
 mod ly;
 pub mod memory_sector;
+pub mod nr52;
 pub mod oam_entry;
 pub mod oam_memory_sector;
 pub mod read_only_memory_sector;
@@ -107,7 +109,7 @@ pub struct Memory {
     // FF25
     nr51: Byte,
     // FF26
-    nr52: Byte,
+    nr52: NR52,
     // Wave pattern ram (FF30 - FF3F)
     pub wave_pattern_ram: WavePatternRam,
     // FF40
@@ -204,7 +206,7 @@ impl Memory {
             nr44: 0xBF,
             nr50: 0x77,
             nr51: 0xf3,
-            nr52: 0xf1,
+            nr52: NR52::default(),
             wave_pattern_ram: WavePatternRam::default(),
             lcdc: Lcdc::new(),
             stat: Stat::default(),
@@ -298,7 +300,7 @@ impl Memory {
             0xFF23 => Some(self.nr44),
             0xFF24 => Some(self.nr50),
             0xFF25 => Some(self.nr51),
-            Self::ADDR_NR52 => Some(self.nr52),
+            Self::ADDR_NR52 => Some((&self.nr52).into()),
             0xFF30..=0xFF3F => Some(self.wave_pattern_ram.read_byte(position - 0xFF30)),
             0xFF40 => Some((&self.lcdc).into()),
             0xFF41 => Some((&self.stat).into()),
@@ -348,56 +350,144 @@ impl Memory {
             0xFF06 => self.tma = value,
             0xFF07 => self.timer_control = value.into(),
             0xFF0F => self.interrupt_flag = value.into(),
-            Self::ADDR_NR10 => self.nr10 = value,
-            0xFF11 => self.nr11 = value,
-            0xFF12 => self.nr12 = value,
-            0xFF13 => self.nr13 = value,
+            Self::ADDR_NR10 => {
+                if self.nr52.is_on() {
+                    self.nr10 = value;
+                }
+            }
+            0xFF11 => {
+                if self.nr52.is_on() {
+                    self.nr11 = value;
+                }
+            }
+            0xFF12 => {
+                if self.nr52.is_on() {
+                    self.nr12 = value;
+                }
+            }
+            0xFF13 => {
+                if self.nr52.is_on() {
+                    self.nr13 = value;
+                }
+            }
             0xFF14 => {
+                if !self.nr52.is_on() {
+                    return;
+                }
+
                 if value & 0b10000000 == 0b10000000 {
                     self.audio_1_triggered = true;
                 }
 
                 self.nr14 = value;
             }
-            0xFF15 => self.nr20 = value,
-            0xFF16 => self.nr21 = value,
-            0xFF17 => self.nr22 = value,
-            0xFF18 => self.nr23 = value,
+            0xFF15 => {
+                if self.nr52.is_on() {
+                    self.nr20 = value;
+                }
+            }
+            0xFF16 => {
+                if self.nr52.is_on() {
+                    self.nr21 = value;
+                }
+            }
+            0xFF17 => {
+                if self.nr52.is_on() {
+                    self.nr22 = value;
+                }
+            }
+            0xFF18 => {
+                if self.nr52.is_on() {
+                    self.nr23 = value;
+                }
+            }
             0xFF19 => {
+                if !self.nr52.is_on() {
+                    return;
+                }
+
                 if value & 0b10000000 == 0b10000000 {
                     self.audio_2_triggered = true;
                 }
 
                 self.nr24 = value;
             }
-            0xFF1A => self.nr30 = value,
-            0xFF1B => self.nr31 = value,
-            0xFF1C => self.nr32 = value,
-            0xFF1D => self.nr33 = value,
+            0xFF1A => {
+                if self.nr52.is_on() {
+                    self.nr30 = value;
+                }
+            }
+            0xFF1B => {
+                if self.nr52.is_on() {
+                    self.nr31 = value;
+                }
+            }
+            0xFF1C => {
+                if self.nr52.is_on() {
+                    self.nr32 = value;
+                }
+            }
+            0xFF1D => {
+                if self.nr52.is_on() {
+                    self.nr33 = value;
+                }
+            }
             0xFF1E => {
+                if !self.nr52.is_on() {
+                    return;
+                }
+
                 if value & 0b10000000 == 0b10000000 {
                     self.audio_3_triggered = true;
                 }
 
                 self.nr34 = value;
             }
-            0xFF1F => self.nr40 = value,
-            0xFF20 => self.nr41 = value,
-            0xFF21 => self.nr42 = value,
-            0xFF22 => self.nr43 = value,
+            0xFF1F => {
+                if self.nr52.is_on() {
+                    self.nr40 = value;
+                }
+            }
+            0xFF20 => {
+                if self.nr52.is_on() {
+                    self.nr41 = value;
+                }
+            }
+            0xFF21 => {
+                if self.nr52.is_on() {
+                    self.nr42 = value;
+                }
+            }
+            0xFF22 => {
+                if self.nr52.is_on() {
+                    self.nr43 = value;
+                }
+            }
             0xFF23 => {
+                if !self.nr52.is_on() {
+                    return;
+                }
+
                 if value & 0b10000000 == 0b10000000 {
                     self.audio_4_triggered = true;
                 }
 
                 self.nr44 = value;
             }
-            0xFF24 => self.nr50 = value,
-            0xFF25 => self.nr51 = value,
+            0xFF24 => {
+                if self.nr52.is_on() {
+                    self.nr50 = value;
+                }
+            }
+            0xFF25 => {
+                if self.nr52.is_on() {
+                    self.nr51 = value;
+                }
+            }
             Self::ADDR_NR52 => {
-                self.nr52 = value;
+                self.nr52 = value.into();
 
-                if value & 0b10000000 == 0 {
+                if self.nr52.is_on() {
                     self.nr10 = 0;
                     self.nr11 = 0;
                     self.nr12 = 0;
@@ -779,6 +869,19 @@ mod tests {
 
         memory.write_byte(Memory::ADDR_NR52, 0);
         memory.write_byte(Memory::ADDR_NR52, 0b10000000);
+
+        check_basic_audio_registers_are_reset(&mut memory);
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_audio_registers_ignore_writes() {
+        let mut memory = Memory::default();
+
+        memory.write_byte(Memory::ADDR_NR52, 0);
+
+        for position in Memory::ADDR_NR10..=0xFF25 {
+            memory.write_byte(position, 0xFF);
+        }
 
         check_basic_audio_registers_are_reset(&mut memory);
     }
