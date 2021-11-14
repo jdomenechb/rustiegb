@@ -260,267 +260,61 @@ impl Memory {
             return Some(self.bootstrap_rom.as_ref().unwrap().read_byte(position));
         }
 
-        // ROM
-        if position < 0x8000 {
-            return Some(self.cartridge.read_byte(position));
+        match position {
+            0..=0x7FFF => Some(self.cartridge.read_byte(position)),
+            0x8000..=0x9FFF => Some(self.video_ram.read_byte(position - 0x8000)),
+            0xA000..=0xBFFF => Some(self.switchable_ram_bank.read_byte(position - 0xA000)),
+            0xC000..=0xDFFF => Some(self.internal_ram_8k.read_byte(position - 0xC000)),
+            0xE000..=0xFDFF => Some(self.internal_ram_8k.read_byte(position - 0xE000)),
+            0xFE00..=0xFE9F => Some(self.oam_ram.read_byte(position - 0xFE00)),
+            0xFF00 => Some(self.p1.to_byte()),
+            0xFF01 => Some(self.serial_transfer_data),
+            0xFF02 => Some(self.sio_control),
+            0xFF04 => Some(self.div),
+            0xFF05 => Some(self.tima),
+            0xFF06 => Some(self.tma),
+            0xFF0F => Some((&self.interrupt_flag).into()),
+            0xFF10 => Some(self.nr10),
+            0xFF11 => Some(self.nr11),
+            0xFF12 => Some(self.nr12),
+            0xFF13 => Some(self.nr13),
+            0xFF14 => Some(self.nr14),
+            0xFF15 => Some(self.nr20),
+            0xFF16 => Some(self.nr21),
+            0xFF17 => Some(self.nr22),
+            0xFF18 => Some(self.nr23),
+            0xFF19 => Some(self.nr24),
+            0xFF1A => Some(self.nr30),
+            0xFF1B => Some(self.nr31),
+            0xFF1C => Some(self.nr32),
+            0xFF1D => Some(self.nr33),
+            0xFF1E => Some(self.nr34),
+            0xFF1F => Some(self.nr40),
+            0xFF20 => Some(self.nr41),
+            0xFF21 => Some(self.nr42),
+            0xFF22 => Some(self.nr43),
+            0xFF23 => Some(self.nr44),
+            0xFF24 => Some(self.nr50),
+            0xFF25 => Some(self.nr51),
+            0xFF26 => Some(self.nr52),
+            0xFF30..=0xFF3F => Some(self.wave_pattern_ram.read_byte(position - 0xFF30)),
+            0xFF40 => Some((&self.lcdc).into()),
+            0xFF41 => Some((&self.stat).into()),
+            0xFF42 => Some(self.scy),
+            0xFF43 => Some(self.scx),
+            0xFF44 => Some(self.ly.clone().into()),
+            0xFF45 => Some(self.lyc),
+            0xFF46 => Some(self.dma),
+            0xFF47 => Some(self.bgp),
+            0xFF48 => Some(self.obp1),
+            0xFF49 => Some(self.obp2),
+            0xFF4A => Some(self.wy),
+            0xFF4B => Some(self.wx),
+            0xFF4D => Some(self.key1),
+            0xFF80..=0xFFFE => Some(self.internal_ram.read_byte(position - 0xFF80)),
+            0xFFFF => Some((&self.interrupt_enable).into()),
+            _ => None,
         }
-
-        // Video RAM
-        if (0x8000..0xA000).contains(&position) {
-            return Some(self.video_ram.read_byte(position - 0x8000));
-        }
-
-        // 8k switchable RAM bank
-        if (0xA000..0xC000).contains(&position) {
-            return Some(self.switchable_ram_bank.read_byte(position - 0xA000));
-        }
-
-        // Internal RAM 8k
-        if (0xC000..0xE000).contains(&position) {
-            return Some(self.internal_ram_8k.read_byte(position - 0xC000));
-        }
-
-        // Echo of Internal RAM
-        if (0xE000..0xFE00).contains(&position) {
-            return Some(self.internal_ram_8k.read_byte(position - 0xE000));
-        }
-
-        // OAM Ram
-        if (0xFE00..0xFEA0).contains(&position) {
-            return Some(self.oam_ram.read_byte(position - 0xFE00));
-        }
-
-        // P1
-        if position == 0xFF00 {
-            return Some(self.p1.to_byte());
-        }
-
-        // Serial transfer data
-        if position == 0xFF01 {
-            return Some(self.serial_transfer_data);
-        }
-
-        // SIO control
-        if position == 0xFF02 {
-            return Some(self.sio_control);
-        }
-
-        // DIV register
-        if position == 0xFF04 {
-            return Some(self.div);
-        }
-
-        // TIMA
-        if position == 0xFF05 {
-            return Some(self.tima);
-        }
-
-        // TMA
-        if position == 0xFF06 {
-            return Some(self.tma);
-        }
-
-        // Interrupt flag
-        if position == 0xFF0F {
-            return Some((&self.interrupt_flag).into());
-        }
-
-        // NR10
-        if position == 0xFF10 {
-            return Some(self.nr10);
-        }
-
-        // NR11
-        if position == 0xFF11 {
-            return Some(self.nr11);
-        }
-
-        // NR12
-        if position == 0xFF12 {
-            return Some(self.nr12);
-        }
-
-        // NR13
-        if position == 0xFF13 {
-            return Some(self.nr13);
-        }
-
-        // NR14
-        if position == 0xFF14 {
-            return Some(self.nr14);
-        }
-
-        // NR20
-        if position == 0xFF15 {
-            return Some(self.nr20);
-        }
-
-        // NR21
-        if position == 0xFF16 {
-            return Some(self.nr21);
-        }
-
-        // NR22
-        if position == 0xFF17 {
-            return Some(self.nr22);
-        }
-
-        // NR22
-        if position == 0xFF18 {
-            return Some(self.nr23);
-        }
-
-        // NR24
-        if position == 0xFF19 {
-            return Some(self.nr24);
-        }
-
-        // NR30
-        if position == 0xFF1A {
-            return Some(self.nr30);
-        }
-
-        // NR31
-        if position == 0xFF1B {
-            return Some(self.nr31);
-        }
-
-        // NR32
-        if position == 0xFF1C {
-            return Some(self.nr32);
-        }
-
-        // NR33
-        if position == 0xFF1D {
-            return Some(self.nr33);
-        }
-
-        // NR34
-        if position == 0xFF1E {
-            return Some(self.nr34);
-        }
-
-        // NR40
-        if position == 0xFF1F {
-            return Some(self.nr40);
-        }
-
-        // NR41
-        if position == 0xFF20 {
-            return Some(self.nr41);
-        }
-
-        // NR42
-        if position == 0xFF21 {
-            return Some(self.nr42);
-        }
-
-        // NR43
-        if position == 0xFF22 {
-            return Some(self.nr43);
-        }
-
-        // NR44
-        if position == 0xFF23 {
-            return Some(self.nr44);
-        }
-
-        // NR50
-        if position == 0xFF24 {
-            return Some(self.nr50);
-        }
-
-        // NR51
-        if position == 0xFF25 {
-            return Some(self.nr51);
-        }
-
-        // NR52
-        if position == 0xFF26 {
-            return Some(self.nr52);
-        }
-
-        // Wave pattern RAM
-        if (0xFF30..0xFF40).contains(&position) {
-            return Some(self.wave_pattern_ram.read_byte(position - 0xFF30));
-        }
-
-        // LCDC
-        if position == 0xFF40 {
-            return Some((&self.lcdc).into());
-        }
-
-        // STAT
-        if position == 0xFF41 {
-            return Some((&self.stat).into());
-        }
-
-        // SCY
-        if position == 0xFF42 {
-            return Some(self.scy);
-        }
-
-        // SCX
-        if position == 0xFF43 {
-            return Some(self.scx);
-        }
-
-        // LY
-        if position == 0xFF44 {
-            return Some(self.ly.clone().into());
-        }
-
-        // LYC
-        if position == 0xFF45 {
-            return Some(self.lyc);
-        }
-
-        // DMA
-        if position == 0xFF46 {
-            return Some(self.dma);
-        }
-
-        // BGP
-        if position == 0xFF47 {
-            return Some(self.bgp);
-        }
-
-        // OBP1
-        if position == 0xFF48 {
-            return Some(self.obp1);
-        }
-
-        // OBP2
-        if position == 0xFF49 {
-            return Some(self.obp2);
-        }
-
-        // Window Y
-        if position == 0xFF4A {
-            return Some(self.wy);
-        }
-
-        // Window X
-        if position == 0xFF4B {
-            return Some(self.wx);
-        }
-
-        // KEY 1
-        if position == 0xFF4D {
-            return Some(self.key1);
-        }
-
-        // Internal RAM
-        if (0xFF80..0xFFFF).contains(&position) {
-            return Some(self.internal_ram.read_byte(position - 0xFF80));
-        }
-
-        // Interrupt enable
-        if position == 0xFFFF {
-            return Some((&self.interrupt_enable).into());
-        }
-
-        None
     }
 
     pub fn read_signed_byte(&self, position: Word) -> SignedByte {
