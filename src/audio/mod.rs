@@ -80,7 +80,7 @@ impl AudioUnit {
         {
             let mut memory = self.memory.write();
 
-            nr52 = memory.read_byte(Memory::ADDR_NR52);
+            nr52 = memory.read_byte(0xFF26);
             audio_triggers = memory.audio_has_been_trigered();
         }
 

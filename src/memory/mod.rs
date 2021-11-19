@@ -152,8 +152,8 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub const ADDR_NR52: Word = 0xFF26;
-    pub const ADDR_NR10: Word = 0xFF10;
+    const ADDR_NR52: Word = 0xFF26;
+    const ADDR_NR10: Word = 0xFF10;
 
     pub fn new(cartridge: Cartridge, bootstrap: bool) -> Memory {
         let bootstrap_rom = if bootstrap {
@@ -377,7 +377,6 @@ impl Memory {
 
                 if value & 0b10000000 == 0b10000000 {
                     self.audio_1_triggered = true;
-                    self.nr52.set_channel_active(1);
                 }
 
                 self.nr14 = value;
@@ -409,7 +408,6 @@ impl Memory {
 
                 if value & 0b10000000 == 0b10000000 {
                     self.audio_2_triggered = true;
-                    self.nr52.set_channel_active(2);
                 }
 
                 self.nr24 = value;
@@ -441,7 +439,6 @@ impl Memory {
 
                 if value & 0b10000000 == 0b10000000 {
                     self.audio_3_triggered = true;
-                    self.nr52.set_channel_active(3);
                 }
 
                 self.nr34 = value;
@@ -473,8 +470,6 @@ impl Memory {
 
                 if value & 0b10000000 == 0b10000000 {
                     self.audio_4_triggered = true;
-                    // TODO
-                    //self.nr52.set_channel_active(4);
                 }
 
                 self.nr44 = value;
