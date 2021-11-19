@@ -1,0 +1,188 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Super Mario Land",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "./roms/Super Mario Land (World).gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug LOZ LAwakening",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "./roms/Legend of Zelda, The - Link's Awakening.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Super Mario Land 2",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "./roms/super_mario_land_2.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Wario Land 2",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "./roms/wario_land_2.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Kirby's Dream Land",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "./roms/Kirby's Dream Land (USA, Europe).gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug BGB test",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "../../bin/bgb/bgbtest.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tetris with bootstrap",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "--bootstrap",
+                "roms/t.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Acceptance test",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "roms/gb-test-roms-master/dmg_sound/rom_singles/02-len ctr.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'rustiegb'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
