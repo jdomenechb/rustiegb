@@ -9,6 +9,14 @@ impl NR52 {
     pub fn is_on(&self) -> bool {
         self.nr52 & 0b10000000 == 0b10000000
     }
+
+    pub fn set_channel_active(&mut self, channel: u8) {
+        self.nr52 |= 0b1 << (channel - 1);
+    }
+
+    pub fn set_channel_inactive(&mut self, channel: u8) {
+        self.nr52 &= !(0b1 << (channel - 1));
+    }
 }
 
 impl From<Byte> for NR52 {
