@@ -67,10 +67,25 @@ impl From<Byte> for InterruptFlag {
 
 impl From<&InterruptFlag> for Byte {
     fn from(original: &InterruptFlag) -> Self {
-        ((original.p10_13_transition as Byte) << 4)
+        0b11100000
+            | ((original.p10_13_transition as Byte) << 4)
             | ((original.serial_io_transfer_complete as Byte) << 3)
             | ((original.timer_overflow as Byte) << 2)
             | ((original.lcd_stat as Byte) << 1)
             | (original.vblank as Byte)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ok() {
+        for number in 0..=0b11111 {
+            let item = InterruptFlag::from(number);
+
+            assert_eq!(Byte::from(&item), number | 0b11100000);
+        }
     }
 }

@@ -155,8 +155,9 @@ pub struct Memory {
 
 impl Memory {
     pub const ADDR_SIO_CONTROL: Word = 0xFF02;
-    pub const ADDR_NR52: Word = 0xFF26;
+    pub const ADDR_IF: Word = 0xFF0F;
     pub const ADDR_NR10: Word = 0xFF10;
+    pub const ADDR_NR52: Word = 0xFF26;
 
     pub fn new(cartridge: Cartridge, bootstrap: bool) -> Memory {
         let bootstrap_rom = if bootstrap {
@@ -280,7 +281,7 @@ impl Memory {
             0xFF04 => Some(self.div),
             0xFF05 => Some(self.tima),
             0xFF06 => Some(self.tma),
-            0xFF0F => Some((&self.interrupt_flag).into()),
+            Self::ADDR_IF => Some((&self.interrupt_flag).into()),
             Self::ADDR_NR10 => Some(self.nr10),
             0xFF11 => Some(self.nr11),
             0xFF12 => Some(self.nr12),
@@ -352,7 +353,7 @@ impl Memory {
             0xFF05 => self.tima = value,
             0xFF06 => self.tma = value,
             0xFF07 => self.timer_control = value.into(),
-            0xFF0F => self.interrupt_flag = value.into(),
+            Self::ADDR_IF => self.interrupt_flag = value.into(),
             Self::ADDR_NR10 => {
                 if self.nr52.is_on() {
                     self.nr10 = value;

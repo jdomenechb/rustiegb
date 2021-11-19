@@ -32,7 +32,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_from_ok() {
+    fn test_ok() {
         assert_eq!(Byte::from(&SioControl::from(0x00)), 0b1111110);
     }
 }
