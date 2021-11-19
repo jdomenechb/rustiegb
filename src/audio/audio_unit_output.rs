@@ -110,7 +110,7 @@ impl CpalAudioUnitOutput {
                 volume_envelope = description.volume_envelope;
             }
 
-            sample_clock = sample_clock + 1.0;
+            sample_clock += 1.0;
 
             let wave = if sample_clock % sample_in_period <= high_part_max {
                 1.0
@@ -158,7 +158,7 @@ impl CpalAudioUnitOutput {
             let mut wave_sample;
             let duration_not_finished: f32;
 
-            sample_clock = sample_clock + 1.0;
+            sample_clock += 1.0;
 
             {
                 let description = description.read();

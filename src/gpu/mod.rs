@@ -380,12 +380,6 @@ impl Gpu {
                 palette1
             };
 
-            let palette = if !sprite.palette() {
-                palette0
-            } else {
-                palette1
-            };
-
             for current_screen_x in screen_x..limit {
                 let current_pixel_x: i16 =
                     current_screen_x as i16 + Gpu::PIXELS_PER_TILE as i16 - sprite.x() as i16;
