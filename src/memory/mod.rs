@@ -14,6 +14,7 @@ use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::memory::nr52::NR52;
 use crate::memory::oam_memory_sector::OamMemorySector;
 use crate::memory::read_only_memory_sector::ReadOnlyMemorySector;
+use crate::memory::sio_control::SioControl;
 use crate::memory::stat::{STATMode, Stat};
 use crate::memory::timer_control::TimerControl;
 use crate::memory::video_ram_8k_memory_sector::VideoRam8kMemorySector;
@@ -32,6 +33,7 @@ pub mod nr52;
 pub mod oam_entry;
 pub mod oam_memory_sector;
 pub mod read_only_memory_sector;
+mod sio_control;
 pub mod stat;
 pub mod timer_control;
 pub mod video_ram_8k_memory_sector;
@@ -53,7 +55,7 @@ pub struct Memory {
     // FF01
     serial_transfer_data: Byte,
     // FF02
-    sio_control: Byte,
+    sio_control: SioControl,
     // FF04
     div: Byte,
     // FF05
@@ -152,6 +154,7 @@ pub struct Memory {
 }
 
 impl Memory {
+    pub const ADDR_SIO_CONTROL: Word = 0xFF02;
     pub const ADDR_NR52: Word = 0xFF26;
     pub const ADDR_NR10: Word = 0xFF10;
 
@@ -178,7 +181,7 @@ impl Memory {
             internal_ram_8k: InternalRam8kMemorySector::default(),
             p1: Joypad::new(),
             serial_transfer_data: 0,
-            sio_control: 0,
+            sio_control: SioControl::default(),
             div: 0,
             tima: 0,
             tma: 0,
@@ -273,7 +276,7 @@ impl Memory {
             0xFE00..=0xFE9F => Some(self.oam_ram.read_byte(position - 0xFE00)),
             0xFF00 => Some(self.p1.to_byte()),
             0xFF01 => Some(self.serial_transfer_data),
-            0xFF02 => Some(self.sio_control),
+            Self::ADDR_SIO_CONTROL => Some((&self.sio_control).into()),
             0xFF04 => Some(self.div),
             0xFF05 => Some(self.tima),
             0xFF06 => Some(self.tma),
@@ -344,7 +347,7 @@ impl Memory {
             }
             0xFF00 => self.p1.from_byte(value),
             0xFF01 => self.serial_transfer_data = value,
-            0xFF02 => self.sio_control = value,
+            Self::ADDR_SIO_CONTROL => self.sio_control = value.into(),
             0xFF04 => self.div = 0,
             0xFF05 => self.tima = value,
             0xFF06 => self.tma = value,
