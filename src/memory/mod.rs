@@ -6,6 +6,7 @@ use crate::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::memory::audio_registers::AudioRegisters;
 use crate::memory::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use crate::memory::internal_ram_memory_sector::InternalRamMemorySector;
+use crate::memory::interrupt_enable::InterruptEnable;
 use crate::memory::interrupt_flag::InterruptFlag;
 use crate::memory::joypad::Joypad;
 use crate::memory::lcdc::Lcdc;
@@ -24,6 +25,7 @@ use crate::{Byte, SignedByte, Word};
 pub mod audio_registers;
 pub mod internal_ram_8k_memory_sector;
 pub mod internal_ram_memory_sector;
+mod interrupt_enable;
 pub mod interrupt_flag;
 pub mod joypad;
 pub mod lcdc;
@@ -140,7 +142,7 @@ pub struct Memory {
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
     // FFFF
-    pub interrupt_enable: InterruptFlag,
+    pub interrupt_enable: InterruptEnable,
 
     // -- Other
     remaining_timer_cycles: u32,
@@ -159,6 +161,7 @@ impl Memory {
     pub const ADDR_NR10: Word = 0xFF10;
     pub const ADDR_NR52: Word = 0xFF26;
     pub const ADDR_STAT: Word = 0xFF41;
+    pub const ADDR_IE: Word = 0xFFFF;
 
     pub fn new(cartridge: Cartridge, bootstrap: bool) -> Memory {
         let bootstrap_rom = if bootstrap {
@@ -227,7 +230,7 @@ impl Memory {
             wx: 0x00,
             key1: 0x00,
             internal_ram: InternalRamMemorySector::default(),
-            interrupt_enable: InterruptFlag::new(),
+            interrupt_enable: InterruptEnable::default(),
             oam_ram: OamMemorySector::default(),
             remaining_timer_cycles: 0,
             remaining_div_cycles: 0,
@@ -321,7 +324,7 @@ impl Memory {
             0xFF4B => Some(self.wx),
             0xFF4D => Some(self.key1),
             0xFF80..=0xFFFE => Some(self.internal_ram.read_byte(position - 0xFF80)),
-            0xFFFF => Some((&self.interrupt_enable).into()),
+            Self::ADDR_IE => Some((&self.interrupt_enable).into()),
             _ => None,
         }
     }
@@ -555,7 +558,7 @@ impl Memory {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
             0xFF80..=0xFFFE => self.internal_ram.write_byte(position - 0xFF80, value),
-            0xFFFF => self.interrupt_enable = value.into(),
+            Self::ADDR_IE => self.interrupt_enable = value.into(),
             _ => panic!("ERROR: Memory address {:X} not writable", position),
         };
     }
@@ -623,7 +626,7 @@ impl Memory {
         self.bootstrap_rom = None;
     }
 
-    pub fn interrupt_enable(&self) -> &InterruptFlag {
+    pub fn interrupt_enable(&self) -> &InterruptEnable {
         &self.interrupt_enable
     }
 
