@@ -547,8 +547,6 @@ impl Memory {
                 for i in 0..0xA0 {
                     self.oam_ram.write_byte(i, self.read_byte(init_address + i));
                 }
-
-                self.dma = 0;
             }
             0xFF47 => self.bgp = value,
             0xFF48 => self.obp1 = value,
