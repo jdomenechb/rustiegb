@@ -136,8 +136,6 @@ pub struct Memory {
     // FF4A - FF4B
     pub wy: Byte,
     pub wx: Byte,
-    // FF4D - CGB ONLY
-    key1: Byte,
 
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
@@ -228,7 +226,6 @@ impl Memory {
             obp2: 0xFF,
             wy: 0x00,
             wx: 0x00,
-            key1: 0x00,
             internal_ram: InternalRamMemorySector::default(),
             interrupt_enable: InterruptEnable::default(),
             oam_ram: OamMemorySector::default(),
@@ -324,7 +321,7 @@ impl Memory {
             0xFF49 => Some(self.obp2),
             0xFF4A => Some(self.wy),
             0xFF4B => Some(self.wx),
-            0xFF4D => Some(self.key1),
+            0xFF4D => Some(0xFF),
             0xFF80..=0xFFFE => Some(self.internal_ram.read_byte(position - 0xFF80)),
             Self::ADDR_IE => Some((&self.interrupt_enable).into()),
             _ => None,
@@ -355,12 +352,14 @@ impl Memory {
             0xFF00 => self.p1.from_byte(value),
             0xFF01 => self.serial_transfer_data = value,
             Self::ADDR_SIO_CONTROL => self.sio_control = value.into(),
-            0xFF03 => {}
+            0xFF03 => println!("Attempt to write at an unused RAM position {:X}", position),
             0xFF04 => self.div = 0,
             0xFF05 => self.tima = value,
             0xFF06 => self.tma = value,
             0xFF07 => self.timer_control = value.into(),
-            0xFF08..=0xFF0E => {}
+            0xFF08..=0xFF0E => {
+                println!("Attempt to write at an unused RAM position {:X}", position)
+            }
             Self::ADDR_IF => self.interrupt_flag = value.into(),
             Self::ADDR_NR10 => {
                 if self.nr52.is_on() {
@@ -556,14 +555,11 @@ impl Memory {
             0xFF49 => self.obp2 = value,
             0xFF4A => self.wy = value,
             0xFF4B => self.wx = value,
-            0xFF4C => println!("Attempt to write at an unused RAM position {:X}", position),
-            0xFF4D => self.key1 = value,
-            0xFF4E..=0xFF7F => {
+            0xFF4C..=0xFF7F => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
             0xFF80..=0xFFFE => self.internal_ram.write_byte(position - 0xFF80, value),
             Self::ADDR_IE => self.interrupt_enable = value.into(),
-            _ => panic!("ERROR: Memory address {:X} not writable", position),
         };
     }
 
@@ -738,7 +734,6 @@ impl Memory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use piston_window::math::add;
 
     fn check_basic_audio_registers_are_reset(memory: &mut Memory) {
         let items = vec![
@@ -906,7 +901,9 @@ mod tests {
 
     #[test]
     fn test_unmapped_addresses() {
-        let addresses = vec![0xFF03, 0xFF08];
+        let mut addresses = vec![0xFF03];
+        let mut first_range: Vec<Word> = (0xFF08..=0xFF0E).collect();
+        addresses.append(&mut first_range);
 
         let mut memory = Memory::default();
 

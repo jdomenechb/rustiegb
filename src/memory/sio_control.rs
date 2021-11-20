@@ -5,8 +5,6 @@ pub struct SioControl {
     value: Byte,
 }
 
-impl SioControl {}
-
 impl From<Byte> for SioControl {
     fn from(value: Byte) -> Self {
         Self {
