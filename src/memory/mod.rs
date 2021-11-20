@@ -158,6 +158,7 @@ impl Memory {
     pub const ADDR_IF: Word = 0xFF0F;
     pub const ADDR_NR10: Word = 0xFF10;
     pub const ADDR_NR52: Word = 0xFF26;
+    pub const ADDR_STAT: Word = 0xFF41;
 
     pub fn new(cartridge: Cartridge, bootstrap: bool) -> Memory {
         let bootstrap_rom = if bootstrap {
@@ -307,7 +308,7 @@ impl Memory {
             Self::ADDR_NR52 => Some((&self.nr52).into()),
             0xFF30..=0xFF3F => Some(self.wave_pattern_ram.read_byte(position - 0xFF30)),
             0xFF40 => Some((&self.lcdc).into()),
-            0xFF41 => Some((&self.stat).into()),
+            Self::ADDR_STAT => Some((&self.stat).into()),
             0xFF42 => Some(self.scy),
             0xFF43 => Some(self.scx),
             0xFF44 => Some(self.ly.clone().into()),
@@ -526,7 +527,7 @@ impl Memory {
             }
             0xFF30..=0xFF3F => self.wave_pattern_ram.write_byte(position - 0xFF30, value),
             0xFF40 => self.lcdc = value.into(),
-            0xFF41 => self.stat = value.into(),
+            Self::ADDR_STAT => self.stat = value.into(),
             0xFF42 => self.scy = value,
             0xFF43 => self.scx = value,
             0xFF44 => self.ly = value.into(),

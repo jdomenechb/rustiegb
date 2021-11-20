@@ -73,11 +73,26 @@ impl From<Byte> for Stat {
 
 impl From<&Stat> for Byte {
     fn from(original: &Stat) -> Byte {
-        ((original.lyc_ly_coincidence as Byte) << 6)
+        0b10000000
+            | ((original.lyc_ly_coincidence as Byte) << 6)
             | ((original.mode_2 as Byte) << 5)
             | ((original.mode_1 as Byte) << 4)
             | ((original.mode_0 as Byte) << 3)
             | ((original.coincidence_flag as Byte) << 2)
             | original.mode_number()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ok() {
+        for number in 0..=0b1111111 {
+            let item = Stat::from(number);
+
+            assert_eq!(Byte::from(&item), number | 0b10000000);
+        }
     }
 }

@@ -23,7 +23,6 @@ pub enum WordRegister {
     SP,
 }
 
-#[derive(Debug)]
 pub struct CpuRegisters {
     pub a: Byte,
     f: Byte,
