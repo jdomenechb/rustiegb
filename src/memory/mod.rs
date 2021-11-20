@@ -282,9 +282,11 @@ impl Memory {
             0xFF00 => Some(self.p1.to_byte()),
             0xFF01 => Some(self.serial_transfer_data),
             Self::ADDR_SIO_CONTROL => Some((&self.sio_control).into()),
+            0xFF03 => Some(0xFF),
             0xFF04 => Some(self.div),
             0xFF05 => Some(self.tima),
             0xFF06 => Some(self.tma),
+            0xFF08..=0xFF0E => Some(0xFF),
             Self::ADDR_IF => Some((&self.interrupt_flag).into()),
             Self::ADDR_NR10 => Some(self.nr10),
             0xFF11 => Some(self.nr11),
@@ -353,10 +355,12 @@ impl Memory {
             0xFF00 => self.p1.from_byte(value),
             0xFF01 => self.serial_transfer_data = value,
             Self::ADDR_SIO_CONTROL => self.sio_control = value.into(),
+            0xFF03 => {}
             0xFF04 => self.div = 0,
             0xFF05 => self.tima = value,
             0xFF06 => self.tma = value,
             0xFF07 => self.timer_control = value.into(),
+            0xFF08..=0xFF0E => {}
             Self::ADDR_IF => self.interrupt_flag = value.into(),
             Self::ADDR_NR10 => {
                 if self.nr52.is_on() {
@@ -734,6 +738,7 @@ impl Memory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use piston_window::math::add;
 
     fn check_basic_audio_registers_are_reset(memory: &mut Memory) {
         let items = vec![
@@ -897,5 +902,19 @@ mod tests {
         }
 
         check_basic_audio_registers_are_reset(&mut memory);
+    }
+
+    #[test]
+    fn test_unmapped_addresses() {
+        let addresses = vec![0xFF03, 0xFF08];
+
+        let mut memory = Memory::default();
+
+        for address in addresses {
+            memory.write_byte(address, 0);
+
+            assert_eq!(memory.read_byte(address), 0xFF);
+            assert_eq!(memory.internally_read_byte(address), Some(0xFF));
+        }
     }
 }
