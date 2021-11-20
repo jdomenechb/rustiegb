@@ -2,7 +2,7 @@ use crate::memory::memory_sector::{MemorySector, ReadMemory, WriteMemory};
 use crate::memory::oam_entry::OamEntry;
 use crate::{Byte, Word};
 
-const OAM_MEMORY_SECTOR_SIZE: u16 = 0xA0;
+pub const OAM_MEMORY_SECTOR_SIZE: u16 = 0xA0;
 
 pub struct OamMemorySector {
     data: MemorySector,

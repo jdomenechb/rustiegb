@@ -4,6 +4,7 @@ use std::io::Read;
 use crate::cartridge::Cartridge;
 use crate::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::memory::audio_registers::AudioRegisters;
+use crate::memory::dma::Dma;
 use crate::memory::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use crate::memory::internal_ram_memory_sector::InternalRamMemorySector;
 use crate::memory::interrupt_enable::InterruptEnable;
@@ -13,7 +14,7 @@ use crate::memory::lcdc::Lcdc;
 use crate::memory::ly::LY;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::memory::nr52::NR52;
-use crate::memory::oam_memory_sector::OamMemorySector;
+use crate::memory::oam_memory_sector::{OamMemorySector, OAM_MEMORY_SECTOR_SIZE};
 use crate::memory::read_only_memory_sector::ReadOnlyMemorySector;
 use crate::memory::sio_control::SioControl;
 use crate::memory::stat::{STATMode, Stat};
@@ -23,6 +24,7 @@ use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, SignedByte, Word};
 
 pub mod audio_registers;
+mod dma;
 pub mod internal_ram_8k_memory_sector;
 pub mod internal_ram_memory_sector;
 mod interrupt_enable;
@@ -128,7 +130,7 @@ pub struct Memory {
     // FF45
     lyc: Byte,
     // FF46
-    dma: Byte,
+    dma: Dma,
     // FF47 - FF49
     bgp: Byte,
     obp1: Byte,
@@ -159,6 +161,7 @@ impl Memory {
     pub const ADDR_NR10: Word = 0xFF10;
     pub const ADDR_NR52: Word = 0xFF26;
     pub const ADDR_STAT: Word = 0xFF41;
+    pub const ADDR_DMA: Word = 0xFF46;
     pub const ADDR_IE: Word = 0xFFFF;
 
     pub fn new(cartridge: Cartridge, bootstrap: bool) -> Memory {
@@ -220,7 +223,7 @@ impl Memory {
             scx: 0x00,
             ly: LY::default(),
             lyc: 0x00,
-            dma: 0x00,
+            dma: Dma::default(),
             bgp: 0xFC,
             obp1: 0xFF,
             obp2: 0xFF,
@@ -315,7 +318,7 @@ impl Memory {
             0xFF43 => Some(self.scx),
             0xFF44 => Some(self.ly.clone().into()),
             0xFF45 => Some(self.lyc),
-            0xFF46 => Some(self.dma),
+            Self::ADDR_DMA => Some((&self.dma).into()),
             0xFF47 => Some(self.bgp),
             0xFF48 => Some(self.obp1),
             0xFF49 => Some(self.obp2),
@@ -538,16 +541,7 @@ impl Memory {
             0xFF43 => self.scx = value,
             0xFF44 => self.ly = value.into(),
             0xFF45 => self.lyc = value,
-            0xFF46 => {
-                self.dma = value;
-
-                // DMA Transfer
-                let init_address = (self.dma as Word) << 8 & 0xFF00;
-
-                for i in 0..0xA0 {
-                    self.oam_ram.write_byte(i, self.read_byte(init_address + i));
-                }
-            }
+            Self::ADDR_DMA => self.dma = value.into(),
             0xFF47 => self.bgp = value,
             0xFF48 => self.obp1 = value,
             0xFF49 => self.obp2 = value,
@@ -569,6 +563,14 @@ impl Memory {
     }
 
     pub fn step(&mut self, last_instruction_cycles: u8) {
+        if self.dma.step(last_instruction_cycles) {
+            let init_address = Word::from(&self.dma);
+
+            for i in 0..OAM_MEMORY_SECTOR_SIZE {
+                self.oam_ram.write_byte(i, self.read_byte(init_address + i));
+            }
+        }
+
         self.remaining_div_cycles += last_instruction_cycles as u32;
 
         while self.remaining_div_cycles as i16 - 256_i16 > 0 {
