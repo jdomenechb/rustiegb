@@ -8,18 +8,17 @@ pub struct Dma {
 
 impl Dma {
     pub fn step(&mut self, cycles: u8) -> bool {
-        if self.remaining_cycles <= 0 {
+        if self.remaining_cycles == 0 {
             return false;
         }
 
-        self.remaining_cycles -= cycles;
+        self.remaining_cycles = self.remaining_cycles.saturating_sub(cycles);
 
-        if self.remaining_cycles <= 0 {
-            self.remaining_cycles = 0;
+        if self.remaining_cycles == 0 {
             return true;
         }
 
-        return false;
+        false
     }
 }
 
@@ -40,6 +39,12 @@ impl From<&Dma> for Byte {
 
 impl From<&Dma> for Word {
     fn from(original: &Dma) -> Self {
-        (original.value as Word) << 8 & 0xFF00
+        let mut value = original.value;
+
+        if value > 0xDF {
+            value &= 0xDF;
+        }
+
+        (value as Word) << 8 & 0xFF00
     }
 }
