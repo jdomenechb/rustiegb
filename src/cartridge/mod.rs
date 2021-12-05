@@ -124,8 +124,8 @@ impl WriteMemory for Cartridge {
                 return;
             }
 
-            CartridgeType::Mbc1(_, _) => {
-                if self.determine_ram_enable(position, value) {
+            CartridgeType::Mbc1(ram, _) => {
+                if self.determine_ram_enable(position, value, ram) {
                     return;
                 }
 
@@ -169,10 +169,11 @@ impl WriteMemory for Cartridge {
                 }
             }
 
-            CartridgeType::Mbc3(timer, _, _) => {
-                if self.determine_ram_enable(position, value) {
+            CartridgeType::Mbc3(timer, ram, _) => {
+                if self.determine_ram_enable(position, value, ram) {
                     return;
                 }
+
                 // Select ROM Bank Number
                 if (0x2000..0x4000).contains(&position) {
                     self.selected_rom_bank = if value != 0 {
@@ -184,18 +185,26 @@ impl WriteMemory for Cartridge {
                     return;
                 }
 
-                if (0x4000..0x6000).contains(&position) && value <= 0x7 {
-                    self.selected_ram_bank = value;
-                    return;
+                if (0x4000..0x6000).contains(&position) {
+                    if value <= 0x7 {
+                        self.selected_ram_bank = value;
+                        return;
+                    }
+
+                    panic!("Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented", value, position, self.header.cartridge_type);
                 }
 
-                if (0x6000..0x8000).contains(&position) && !timer {
-                    return;
+                if (0x6000..0x8000).contains(&position) {
+                    if !timer {
+                        return;
+                    }
+
+                    panic!("Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented", value, position, self.header.cartridge_type);
                 }
             }
 
-            CartridgeType::Mbc5(_, _, _) => {
-                if self.determine_ram_enable(position, value) {
+            CartridgeType::Mbc5(_, ram, _) => {
+                if self.determine_ram_enable(position, value, ram) {
                     return;
                 }
 
@@ -236,9 +245,9 @@ impl WriteMemory for Cartridge {
 }
 
 impl Cartridge {
-    fn determine_ram_enable(&mut self, position: u16, value: u8) -> bool {
+    fn determine_ram_enable(&mut self, position: u16, value: u8, ram: bool) -> bool {
         if position < 0x2000 {
-            self.ram_enabled = value & 0x0A == 0x0A;
+            self.ram_enabled = ram && (value & 0x0A == 0x0A);
             return true;
         }
 
