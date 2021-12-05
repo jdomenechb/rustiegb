@@ -107,6 +107,26 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug Wario Land 2",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "./roms/wario_land_2.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug BGB test",
             "cargo": {
                 "args": [
