@@ -37,6 +37,8 @@ pub struct CpalAudioUnitOutput {
 }
 
 impl CpalAudioUnitOutput {
+    const MASTER_VOLUME: f32 = 0.5;
+
     pub fn new() -> Self {
         let host = cpal::default_host();
 
@@ -127,7 +129,7 @@ impl CpalAudioUnitOutput {
             config,
             move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 for frame in data.chunks_mut(channels) {
-                    let next_value = next_value();
+                    let next_value = next_value() * Self::MASTER_VOLUME;
                     let value: T = cpal::Sample::from::<f32>(&next_value);
                     for sample in frame.iter_mut() {
                         *sample = value;
@@ -201,7 +203,7 @@ impl CpalAudioUnitOutput {
             config,
             move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 for frame in data.chunks_mut(channels) {
-                    let next_value = next_value();
+                    let next_value = next_value() * Self::MASTER_VOLUME;
                     let value: T = cpal::Sample::from::<f32>(&next_value);
                     for sample in frame.iter_mut() {
                         *sample = value;
