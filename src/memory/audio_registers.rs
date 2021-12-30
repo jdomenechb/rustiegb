@@ -1,6 +1,6 @@
 use crate::audio::sweep::Sweep;
 use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
-use crate::Byte;
+use crate::{Byte, Word};
 
 #[readonly::make]
 pub struct AudioRegisters {
@@ -28,14 +28,8 @@ impl AudioRegisters {
         }
     }
 
-    pub fn calculate_frequency(&self) -> f32 {
-        let frequency = ((self.control as u16 & 0b111) << 8) | self.frequency as u16;
-        131072_f32 / (2048 - frequency) as f32
-    }
-
-    pub fn calculate_wave_frequency(&self) -> f32 {
-        let frequency = ((self.control as u16 & 0b111) << 8) | self.frequency as u16;
-        65536_f32 / (2048 - frequency) as f32
+    pub fn get_frequency(&self) -> Word {
+        ((self.control as u16 & 0b111) << 8) | self.frequency as u16
     }
 
     pub fn calculate_wave_duty_percent(&self) -> f32 {

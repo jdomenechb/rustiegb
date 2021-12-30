@@ -141,7 +141,7 @@ impl AudioUnit {
             memory.read_audio_registers(channel_n)
         };
 
-        let frequency = audio_registers.calculate_frequency();
+        let frequency = audio_registers.get_frequency();
 
         let initial_volume_envelope = audio_registers.get_volume_envelope();
         let volume_envelope_direction = audio_registers.get_volume_envelope_direction();
@@ -152,7 +152,6 @@ impl AudioUnit {
 
         let pulse_description = PulseDescription {
             pulse_n: channel_n,
-            frequency,
             current_frequency: frequency,
             wave_duty_percent,
             initial_volume_envelope,
@@ -161,6 +160,7 @@ impl AudioUnit {
             volume_envelope_duration_in_1_64_s,
             remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
             sweep,
+            stop: false,
         };
 
         self.auo.play_pulse(&pulse_description);
@@ -178,7 +178,7 @@ impl AudioUnit {
             }
         }
 
-        let frequency = audio_registers.calculate_wave_frequency();
+        let frequency = audio_registers.get_frequency();
         let wave_output_level = audio_registers.get_wave_output_level();
 
         let wave_description = WaveDescription::new(

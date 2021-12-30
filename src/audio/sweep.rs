@@ -9,31 +9,34 @@ pub enum SweepDirection {
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub struct Sweep {
-    pub time: Byte,
-    pub shifts: Byte,
-    pub direction: SweepDirection,
-    pub remaining_time: Byte,
-    pub happened: bool,
+    time: Byte,
+    shifts: Byte,
+    direction: SweepDirection,
+    remaining_time: Byte,
 }
 
 impl Sweep {
     pub fn step_128(&mut self, pulse_description: &mut PulseDescription) {
-        self.happened = false;
-
         if self.remaining_time == 0 {
             return;
         }
 
-        self.remaining_time -= 1;
+        if self.remaining_time > 0 {
+            self.remaining_time -= 1;
+        }
 
         if self.remaining_time == 0 {
-            self.remaining_time = self.time;
+            self.remaining_time = if self.time > 0 { self.time } else { 8 };
 
-            let to_add_sub = pulse_description.current_frequency / 2.0_f32.powf(self.shifts as f32);
+            let to_add_sub = pulse_description.current_frequency >> self.shifts;
 
             match self.direction {
                 SweepDirection::Add => pulse_description.current_frequency += to_add_sub,
                 SweepDirection::Sub => pulse_description.current_frequency -= to_add_sub,
+            }
+
+            if pulse_description.current_frequency > 2047 {
+                pulse_description.stop = true;
             }
         }
     }
@@ -52,7 +55,6 @@ impl From<Byte> for Sweep {
                 false => SweepDirection::Add,
             },
             remaining_time: time,
-            happened: false,
         }
     }
 }

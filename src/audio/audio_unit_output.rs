@@ -5,7 +5,6 @@ use cpal::{Device, Stream, SupportedStreamConfig};
 use parking_lot::RwLock;
 
 use crate::audio::description::{PulseDescription, WaveDescription};
-use crate::audio::sweep::SweepDirection;
 use crate::audio::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
 use crate::Word;
@@ -92,10 +91,10 @@ impl CpalAudioUnitOutput {
             let has_sweep;
 
             {
-                let mut description = description.write();
+                let description = description.read();
 
                 current_freq = description.current_frequency;
-                sample_in_period = sample_rate / description.current_frequency;
+                sample_in_period = sample_rate / description.calculate_frequency();
                 high_part_max = sample_in_period * description.wave_duty_percent;
                 volume_envelope = description.volume_envelope;
                 has_sweep = description.sweep.is_some();
@@ -104,7 +103,7 @@ impl CpalAudioUnitOutput {
             sample_clock += 1.0;
 
             if has_sweep {
-                if current_freq > 2047.0 || current_freq < 0.0 {
+                if current_freq > 2047 {
                     return 0.0;
                 }
             }
@@ -161,7 +160,7 @@ impl CpalAudioUnitOutput {
                 let description = description.read();
 
                 // How many samples are in one frequency oscillation
-                sample_in_period = sample_rate / description.frequency;
+                sample_in_period = sample_rate / description.calculate_frequency();
                 output_level = description.output_level;
                 duration_not_finished =
                     if !description.use_length || description.remaining_steps > 0 {
@@ -327,6 +326,10 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
 
     fn step_128(&mut self) {
         self.pulse_description_1.write().step_128();
+
+        if self.pulse_description_1.read().stop {
+            self.stream_1 = None;
+        }
     }
 
     fn step_256(&mut self) {
