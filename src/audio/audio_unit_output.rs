@@ -207,7 +207,13 @@ impl CpalAudioUnitOutput {
 
 impl AudioUnitOutput for CpalAudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription) {
-        if self.muted {
+        if self.muted || description.stop {
+            match description.pulse_n {
+                1 => self.stream_1 = None,
+                2 => self.stream_2 = None,
+                _ => panic!("Non pulse stream given"),
+            }
+
             return;
         }
 
@@ -320,10 +326,6 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
 
     fn step_128(&mut self) {
         self.pulse_description_1.write().step_128();
-
-        if self.pulse_description_1.read().stop {
-            self.stream_1 = None;
-        }
     }
 
     fn step_256(&mut self) {
