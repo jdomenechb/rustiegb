@@ -88,31 +88,26 @@ impl CpalAudioUnitOutput {
             let sample_in_period;
             let high_part_max;
             let volume_envelope;
+            let current_freq;
+            let has_sweep;
 
             {
                 let mut description = description.write();
 
-                if let Some(mut sweep) = description.sweep {
-                    if sweep.happened {
-                        let to_add_sub =
-                            description.current_frequency / 2.0_f32.powf(sweep.shifts as f32);
-                        match sweep.direction {
-                            SweepDirection::Add => description.current_frequency += to_add_sub,
-                            SweepDirection::Sub => description.current_frequency -= to_add_sub,
-                        }
-
-                        sweep.happened = false;
-
-                        description.sweep = Some(sweep);
-                    }
-                }
-
+                current_freq = description.current_frequency;
                 sample_in_period = sample_rate / description.current_frequency;
                 high_part_max = sample_in_period * description.wave_duty_percent;
                 volume_envelope = description.volume_envelope;
+                has_sweep = description.sweep.is_some();
             }
 
             sample_clock += 1.0;
+
+            if has_sweep {
+                if current_freq > 2047.0 || current_freq < 0.0 {
+                    return 0.0;
+                }
+            }
 
             let wave = if sample_clock % sample_in_period <= high_part_max {
                 1.0

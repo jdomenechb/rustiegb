@@ -1,3 +1,4 @@
+use crate::audio::description::PulseDescription;
 use crate::Byte;
 
 #[derive(Eq, PartialEq, Copy, Clone)]
@@ -16,7 +17,7 @@ pub struct Sweep {
 }
 
 impl Sweep {
-    pub fn step_128(&mut self) {
+    pub fn step_128(&mut self, pulse_description: &mut PulseDescription) {
         self.happened = false;
 
         if self.remaining_time == 0 {
@@ -28,7 +29,12 @@ impl Sweep {
         if self.remaining_time == 0 {
             self.remaining_time = self.time;
 
-            self.happened = true;
+            let to_add_sub = pulse_description.current_frequency / 2.0_f32.powf(self.shifts as f32);
+
+            match self.direction {
+                SweepDirection::Add => pulse_description.current_frequency += to_add_sub,
+                SweepDirection::Sub => pulse_description.current_frequency -= to_add_sub,
+            }
         }
     }
 }

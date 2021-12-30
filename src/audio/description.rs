@@ -20,7 +20,7 @@ pub struct PulseDescription {
 impl PulseDescription {
     pub fn step_128(&mut self) {
         if let Some(mut sweep) = self.sweep {
-            sweep.step_128();
+            sweep.step_128(self);
             self.sweep = Some(sweep);
         }
     }
