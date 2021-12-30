@@ -5,7 +5,6 @@ use cpal::{Device, Stream, SupportedStreamConfig};
 use parking_lot::RwLock;
 
 use crate::audio::description::{PulseDescription, WaveDescription};
-use crate::audio::sweep::SweepDirection;
 use crate::audio::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
 use crate::Word;
@@ -90,24 +89,9 @@ impl CpalAudioUnitOutput {
             let volume_envelope;
 
             {
-                let mut description = description.write();
+                let description = description.read();
 
-                if let Some(mut sweep) = description.sweep {
-                    if sweep.happened {
-                        let to_add_sub =
-                            description.current_frequency / 2.0_f32.powf(sweep.shifts as f32);
-                        match sweep.direction {
-                            SweepDirection::Add => description.current_frequency += to_add_sub,
-                            SweepDirection::Sub => description.current_frequency -= to_add_sub,
-                        }
-
-                        sweep.happened = false;
-
-                        description.sweep = Some(sweep);
-                    }
-                }
-
-                sample_in_period = sample_rate / description.current_frequency;
+                sample_in_period = sample_rate / description.calculate_frequency();
                 high_part_max = sample_in_period * description.wave_duty_percent;
                 volume_envelope = description.volume_envelope;
             }
@@ -166,7 +150,7 @@ impl CpalAudioUnitOutput {
                 let description = description.read();
 
                 // How many samples are in one frequency oscillation
-                sample_in_period = sample_rate / description.frequency;
+                sample_in_period = sample_rate / description.calculate_frequency();
                 output_level = description.output_level;
                 duration_not_finished =
                     if !description.use_length || description.remaining_steps > 0 {
@@ -219,7 +203,13 @@ impl CpalAudioUnitOutput {
 
 impl AudioUnitOutput for CpalAudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription) {
-        if self.muted {
+        if self.muted || description.stop {
+            match description.pulse_n {
+                1 => self.stream_1 = None,
+                2 => self.stream_2 = None,
+                _ => panic!("Non pulse stream given"),
+            }
+
             return;
         }
 
