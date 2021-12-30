@@ -102,12 +102,6 @@ impl CpalAudioUnitOutput {
 
             sample_clock += 1.0;
 
-            if has_sweep {
-                if current_freq > 2047 {
-                    return 0.0;
-                }
-            }
-
             let wave = if sample_clock % sample_in_period <= high_part_max {
                 1.0
             } else {

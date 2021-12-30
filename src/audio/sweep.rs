@@ -26,17 +26,33 @@ impl Sweep {
         }
 
         if self.remaining_time == 0 {
-            self.remaining_time = if self.time > 0 { self.time } else { 8 };
-
             let to_add_sub = pulse_description.current_frequency >> self.shifts;
 
-            match self.direction {
-                SweepDirection::Add => pulse_description.current_frequency += to_add_sub,
-                SweepDirection::Sub => pulse_description.current_frequency -= to_add_sub,
-            }
+            let has_overflow = match self.direction {
+                SweepDirection::Add => {
+                    let result = pulse_description
+                        .current_frequency
+                        .overflowing_add(to_add_sub);
 
-            if pulse_description.current_frequency > 2047 {
+                    pulse_description.current_frequency = result.0;
+
+                    result.1
+                }
+                SweepDirection::Sub => {
+                    let result = pulse_description
+                        .current_frequency
+                        .overflowing_sub(to_add_sub);
+
+                    pulse_description.current_frequency = result.0;
+
+                    result.1
+                }
+            };
+
+            if pulse_description.current_frequency > 2047 || has_overflow {
                 pulse_description.stop = true;
+            } else {
+                self.remaining_time = if self.time > 0 { self.time } else { 8 };
             }
         }
     }
