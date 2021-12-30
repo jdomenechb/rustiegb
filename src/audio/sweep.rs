@@ -28,28 +28,18 @@ impl Sweep {
         if self.remaining_time == 0 {
             let to_add_sub = pulse_description.current_frequency >> self.shifts;
 
-            let has_overflow = match self.direction {
-                SweepDirection::Add => {
-                    let result = pulse_description
-                        .current_frequency
-                        .overflowing_add(to_add_sub);
-
-                    pulse_description.current_frequency = result.0;
-
-                    result.1
-                }
-                SweepDirection::Sub => {
-                    let result = pulse_description
-                        .current_frequency
-                        .overflowing_sub(to_add_sub);
-
-                    pulse_description.current_frequency = result.0;
-
-                    result.1
-                }
+            let add_sub_result = match self.direction {
+                SweepDirection::Add => pulse_description
+                    .current_frequency
+                    .overflowing_add(to_add_sub),
+                SweepDirection::Sub => pulse_description
+                    .current_frequency
+                    .overflowing_sub(to_add_sub),
             };
 
-            if pulse_description.current_frequency > 2047 || has_overflow {
+            pulse_description.current_frequency = add_sub_result.0;
+
+            if pulse_description.current_frequency > 2047 || add_sub_result.1 {
                 pulse_description.stop = true;
             } else {
                 self.remaining_time = if self.time > 0 { self.time } else { 8 };

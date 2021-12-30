@@ -87,17 +87,13 @@ impl CpalAudioUnitOutput {
             let sample_in_period;
             let high_part_max;
             let volume_envelope;
-            let current_freq;
-            let has_sweep;
 
             {
                 let description = description.read();
 
-                current_freq = description.current_frequency;
                 sample_in_period = sample_rate / description.calculate_frequency();
                 high_part_max = sample_in_period * description.wave_duty_percent;
                 volume_envelope = description.volume_envelope;
-                has_sweep = description.sweep.is_some();
             }
 
             sample_clock += 1.0;
