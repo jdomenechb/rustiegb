@@ -78,7 +78,7 @@ impl AudioUnit {
             let mut memory = self.memory.write();
 
             nr52 = memory.read_byte(Memory::ADDR_NR52);
-            audio_triggers = memory.audio_has_been_trigered();
+            audio_triggers = memory.audio_control_reg_have_been_written();
         }
 
         self.clock_frame_sequencer(last_instruction_cycles);

@@ -149,10 +149,10 @@ pub struct Memory {
     remaining_div_cycles: u32,
 
     // Audio
-    audio_1_triggered: bool,
-    audio_2_triggered: bool,
-    audio_3_triggered: bool,
-    audio_4_triggered: bool,
+    audio_1_control_reg_written: bool,
+    audio_2_control_reg_written: bool,
+    audio_3_control_reg_written: bool,
+    audio_4_control_reg_written: bool,
 }
 
 impl Memory {
@@ -234,10 +234,10 @@ impl Memory {
             oam_ram: OamMemorySector::default(),
             remaining_timer_cycles: 0,
             remaining_div_cycles: 0,
-            audio_1_triggered: false,
-            audio_2_triggered: false,
-            audio_3_triggered: false,
-            audio_4_triggered: false,
+            audio_1_control_reg_written: false,
+            audio_2_control_reg_written: false,
+            audio_3_control_reg_written: false,
+            audio_4_control_reg_written: false,
         }
     }
 
@@ -483,7 +483,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_1_triggered = true;
+                    self.audio_1_control_reg_written = true;
                     self.nr52.set_channel_active(1);
                 }
 
@@ -515,7 +515,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_2_triggered = true;
+                    self.audio_2_control_reg_written = true;
                     self.nr52.set_channel_active(2);
                 }
 
@@ -547,7 +547,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_3_triggered = true;
+                    self.audio_3_control_reg_written = true;
                     self.nr52.set_channel_active(3);
                 }
 
@@ -579,7 +579,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_4_triggered = true;
+                    self.audio_4_control_reg_written = true;
                     // TODO
                     //self.nr52.set_channel_active(4);
                 }
@@ -783,18 +783,18 @@ impl Memory {
         }
     }
 
-    pub fn audio_has_been_trigered(&mut self) -> (bool, bool, bool, bool) {
+    pub fn audio_control_reg_have_been_written(&mut self) -> (bool, bool, bool, bool) {
         let to_return = (
-            self.audio_1_triggered,
-            self.audio_2_triggered,
-            self.audio_3_triggered,
-            self.audio_4_triggered,
+            self.audio_1_control_reg_written,
+            self.audio_2_control_reg_written,
+            self.audio_3_control_reg_written,
+            self.audio_4_control_reg_written,
         );
 
-        self.audio_1_triggered = false;
-        self.audio_2_triggered = false;
-        self.audio_3_triggered = false;
-        self.audio_4_triggered = false;
+        self.audio_1_control_reg_written = false;
+        self.audio_2_control_reg_written = false;
+        self.audio_3_control_reg_written = false;
+        self.audio_4_control_reg_written = false;
 
         to_return
     }
