@@ -63,8 +63,8 @@ impl AudioUnit {
         Self {
             auo: au,
             memory,
-            cycle_count: CYCLES_1_512_SEC,
-            frame_step: 7,
+            cycle_count: 0,
+            frame_step: 0,
         }
     }
 
@@ -180,6 +180,11 @@ impl AudioUnit {
             wave = WavePatternRam {
                 data: MemorySector::with_data(memory.wave_pattern_ram.data.data.clone()),
             }
+        }
+
+        if !audio_registers.is_set() {
+            self.auo.stop(3);
+            return;
         }
 
         let frequency = audio_registers.get_frequency();
