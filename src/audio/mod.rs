@@ -83,26 +83,25 @@ impl AudioUnit {
 
         self.clock_frame_sequencer(last_instruction_cycles);
 
-        let all_sound_trigger = nr52 & 0b10000000 == 0b10000000;
-
-        if !all_sound_trigger {
+        // NR52 controls the general output
+        if nr52 & 0b10000000 != 0b10000000 {
             self.stop_all();
             return;
         }
 
         // Sound 1
         if audio_triggers.0 {
-            self.read_pulse(1);
+            self.update_pulse(1);
         }
 
         // Sound 2
         if audio_triggers.1 {
-            self.read_pulse(2);
+            self.update_pulse(2);
         }
 
         // Sound 3
         if audio_triggers.2 {
-            self.read_wave();
+            self.update_wave();
         }
 
         // TODO: sound 4
@@ -133,7 +132,7 @@ impl AudioUnit {
         self.auo.stop_all();
     }
 
-    fn read_pulse(&mut self, channel_n: u8) {
+    fn update_pulse(&mut self, channel_n: u8) {
         let audio_registers = {
             let memory = self.memory.read();
             memory.read_audio_registers(channel_n)
@@ -149,26 +148,22 @@ impl AudioUnit {
         let sweep = audio_registers.get_sweep();
         let pulse_length = audio_registers.get_pulse_length();
 
-        let pulse_description = PulseDescription {
-            pulse_n: channel_n,
-            current_frequency: frequency,
+        let pulse_description = PulseDescription::new(
+            channel_n,
+            frequency,
             wave_duty_percent,
             initial_volume_envelope,
-            volume_envelope: initial_volume_envelope,
             volume_envelope_direction,
             volume_envelope_duration_in_1_64_s,
-            remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
             sweep,
-            stop: false,
-            use_length: audio_registers.is_length_used(),
-            length: pulse_length,
-            remaining_steps: 64 - pulse_length,
-        };
+            audio_registers.is_length_used(),
+            pulse_length,
+        );
 
         self.auo.play_pulse(&pulse_description);
     }
 
-    fn read_wave(&mut self) {
+    fn update_wave(&mut self) {
         let audio_registers;
         let wave;
 

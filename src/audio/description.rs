@@ -21,6 +21,34 @@ pub struct PulseDescription {
 }
 
 impl PulseDescription {
+    pub fn new(
+        pulse_n: u8,
+        frequency: Word,
+        wave_duty_percent: f32,
+        initial_volume_envelope: Byte,
+        volume_envelope_direction: VolumeEnvelopeDirection,
+        volume_envelope_duration_in_1_64_s: u8,
+        sweep: Option<Sweep>,
+        use_length: bool,
+        length: Byte,
+    ) -> Self {
+        Self {
+            pulse_n,
+            current_frequency: frequency,
+            wave_duty_percent,
+            initial_volume_envelope,
+            volume_envelope: initial_volume_envelope,
+            volume_envelope_direction,
+            volume_envelope_duration_in_1_64_s,
+            remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
+            sweep,
+            stop: false,
+            use_length,
+            length,
+            remaining_steps: 64 - length,
+        }
+    }
+
     pub fn step_128(&mut self) {
         if let Some(mut sweep) = self.sweep {
             sweep.step_128(self);

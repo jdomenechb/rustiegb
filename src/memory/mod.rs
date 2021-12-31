@@ -580,8 +580,7 @@ impl Memory {
 
                 if value & 0b10000000 == 0b10000000 {
                     self.audio_4_control_reg_written = true;
-                    // TODO
-                    //self.nr52.set_channel_active(4);
+                    self.nr52.set_channel_active(4);
                 }
 
                 self.nr44 = value;
