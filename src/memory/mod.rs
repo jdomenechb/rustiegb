@@ -433,6 +433,38 @@ impl Memory {
         //     self.write_freq_hi_register(position, value);
         // }
 
+        // if position == 0xFF1A {
+        //     println!("{:X}: {:b}", position, value);
+        //     println!(
+        //         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        //     );
+        // }
+        //
+        // if position == 0xFF1B {
+        //     println!("{:X}: {}", position, value);
+        //     println!(
+        //         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        //     );
+        // }
+        //
+        // if position == 0xFF1C {
+        //     println!("{:X}: {:b}", position, (value >> 5) & 0b11);
+        //     println!(
+        //         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        //     );
+        // }
+        //
+        // if position == 0xFF1D {
+        //     println!("{:X}: {}", position, value);
+        //     println!(
+        //         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        //     );
+        // }
+        //
+        // if position == 0xFF1E {
+        //     self.write_freq_hi_register(position, value);
+        // }
+
         match position {
             0..=0x7FFF => self.cartridge.write_byte(position, value),
             0x8000..=0x9FFF => self.video_ram.write_byte(position - 0x8000, value),
