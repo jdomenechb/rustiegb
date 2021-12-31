@@ -325,6 +325,8 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
     }
 
     fn step_256(&mut self) {
+        self.pulse_description_1.write().step_256();
+        self.pulse_description_2.write().step_256();
         self.wave_description.write().step_256();
     }
 }

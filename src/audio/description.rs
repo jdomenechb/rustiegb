@@ -15,6 +15,9 @@ pub struct PulseDescription {
     pub remaining_volume_envelope_duration_in_1_64_s: u8,
     pub sweep: Option<Sweep>,
     pub stop: bool,
+    pub use_length: bool,
+    pub length: Byte,
+    pub remaining_steps: Byte,
 }
 
 impl PulseDescription {
@@ -53,6 +56,16 @@ impl PulseDescription {
         self.remaining_volume_envelope_duration_in_1_64_s -= 1;
     }
 
+    pub fn step_256(&mut self) {
+        if self.use_length {
+            if self.remaining_steps > 0 {
+                self.remaining_steps -= 1;
+            } else {
+                self.stop = true;
+            }
+        }
+    }
+
     pub fn exchange(&mut self, other: &Self) {
         self.pulse_n = other.pulse_n;
         self.current_frequency = other.current_frequency;
@@ -65,6 +78,8 @@ impl PulseDescription {
             other.remaining_volume_envelope_duration_in_1_64_s;
         self.sweep = other.sweep;
         self.stop = false;
+        self.use_length = other.use_length;
+        self.length = other.length;
     }
 
     pub fn calculate_frequency(&self) -> f32 {
@@ -81,6 +96,8 @@ impl PartialEq for PulseDescription {
             && other.volume_envelope_direction == self.volume_envelope_direction
             && other.volume_envelope_duration_in_1_64_s == self.volume_envelope_duration_in_1_64_s
             && other.sweep == self.sweep
+            && other.use_length == other.use_length
+            && other.length == other.length
     }
 }
 
@@ -97,6 +114,9 @@ impl Default for PulseDescription {
             remaining_volume_envelope_duration_in_1_64_s: 0,
             sweep: None,
             stop: false,
+            use_length: false,
+            length: 0,
+            remaining_steps: 0,
         }
     }
 }

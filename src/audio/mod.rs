@@ -149,6 +149,7 @@ impl AudioUnit {
         let volume_envelope_duration_in_1_64_s = audio_registers.get_volume_envelope_duration_64();
         let wave_duty_percent = audio_registers.calculate_wave_duty_percent();
         let sweep = audio_registers.get_sweep();
+        let pulse_length = audio_registers.get_pulse_length();
 
         let pulse_description = PulseDescription {
             pulse_n: channel_n,
@@ -161,6 +162,9 @@ impl AudioUnit {
             remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
             sweep,
             stop: false,
+            use_length: audio_registers.is_length_used(),
+            length: pulse_length,
+            remaining_steps: 64 - pulse_length,
         };
 
         self.auo.play_pulse(&pulse_description);
@@ -185,9 +189,9 @@ impl AudioUnit {
             frequency,
             wave_output_level,
             wave,
-            audio_registers.get_use_length(),
-            audio_registers.get_length(),
-            audio_registers.get_should_play(),
+            audio_registers.is_length_used(),
+            audio_registers.get_wave_length(),
+            audio_registers.get_wave_should_play(),
         );
 
         self.auo.play_wave(&wave_description);
