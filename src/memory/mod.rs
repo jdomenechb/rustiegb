@@ -115,7 +115,7 @@ pub struct Memory {
     // FF25
     nr51: Byte,
     // FF26
-    nr52: NR52,
+    pub nr52: NR52,
     // Wave pattern ram (FF30 - FF3F)
     pub wave_pattern_ram: WavePatternRam,
     // FF40
@@ -820,6 +820,10 @@ impl Memory {
             self.internally_read_byte(start_address - 3).unwrap(),
             sweep,
         )
+    }
+
+    pub fn set_audio_channel_inactive(&mut self, channel_n: Byte) {
+        self.nr52.set_channel_inactive(channel_n);
     }
 }
 

@@ -105,6 +105,8 @@ impl AudioUnit {
         }
 
         // TODO: sound 4
+
+        self.auo.update(self.memory.clone());
     }
 
     fn clock_frame_sequencer(&mut self, last_instruction_cycles: u8) {
