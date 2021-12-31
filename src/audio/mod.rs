@@ -140,6 +140,11 @@ impl AudioUnit {
             memory.read_audio_registers(channel_n)
         };
 
+        if !audio_registers.is_set() {
+            self.auo.stop(channel_n);
+            return;
+        }
+
         let frequency = audio_registers.get_frequency();
 
         let initial_volume_envelope = audio_registers.get_volume_envelope();

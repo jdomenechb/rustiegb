@@ -66,6 +66,10 @@ impl AudioRegisters {
         }
     }
 
+    pub fn is_set(&self) -> bool {
+        self.control & 0b10000000 == 0b10000000
+    }
+
     pub fn is_length_used(&self) -> bool {
         self.control & 0b1000000 == 0b1000000
     }
