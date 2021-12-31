@@ -260,7 +260,7 @@ impl Memory {
             0xFF1E => byte | 0b10111111, // 0xBF
             0xFF1F..=0xFF20 => 0xFF,
             0xFF23 => byte | 0b10111111, // 0xBF
-            Self::ADDR_NR52 => byte & 0b11110000 | 0b1110000,
+            Self::ADDR_NR52 => byte | 0b1110000,
             0xFF27..=0xFF2F => 0xFF,
             _ => byte,
         }
@@ -628,7 +628,7 @@ impl Memory {
                 }
             }
             Self::ADDR_NR52 => {
-                self.nr52 = value.into();
+                self.nr52 = (value & 0b10000000).into();
 
                 if self.nr52.is_on() {
                     self.nr10 = 0;
@@ -947,7 +947,7 @@ mod tests {
 
         assert_eq!(
             memory.internally_read_byte(position),
-            Some(0xFF),
+            Some(0b10000000),
             "Wrong internal data when writing register {:X}",
             position
         );
