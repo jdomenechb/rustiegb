@@ -399,39 +399,39 @@ impl Memory {
     }
 
     pub fn write_byte(&mut self, position: Word, value: Byte) {
-        if position == 0xFF10 {
-            self.write_sweep_register(position, value);
-        }
-
-        if position == 0xFF11 || position == 0xFF13 {
-            println!("{:X}: {:b}", position, value);
-            println!(
-                "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-            );
-        }
-
-        if position == 0xFF12 {
-            self.write_envelope_register(position, value);
-        }
-
-        if position == 0xFF14 {
-            self.write_freq_hi_register(position, value);
-        }
-
-        if position == 0xFF16 || position == 0xFF18 {
-            println!("{:X}: {:b}", position, value);
-            println!(
-                "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-            );
-        }
-
-        if position == 0xFF17 {
-            self.write_envelope_register(position, value);
-        }
-
-        if position == 0xFF19 {
-            self.write_freq_hi_register(position, value);
-        }
+        // if position == 0xFF10 {
+        //     self.write_sweep_register(position, value);
+        // }
+        //
+        // if position == 0xFF11 || position == 0xFF13 {
+        //     println!("{:X}: {:b}", position, value);
+        //     println!(
+        //         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        //     );
+        // }
+        //
+        // if position == 0xFF12 {
+        //     self.write_envelope_register(position, value);
+        // }
+        //
+        // if position == 0xFF14 {
+        //     self.write_freq_hi_register(position, value);
+        // }
+        //
+        // if position == 0xFF16 || position == 0xFF18 {
+        //     println!("{:X}: {:b}", position, value);
+        //     println!(
+        //         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        //     );
+        // }
+        //
+        // if position == 0xFF17 {
+        //     self.write_envelope_register(position, value);
+        // }
+        //
+        // if position == 0xFF19 {
+        //     self.write_freq_hi_register(position, value);
+        // }
 
         match position {
             0..=0x7FFF => self.cartridge.write_byte(position, value),
