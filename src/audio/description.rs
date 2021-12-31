@@ -115,20 +115,6 @@ impl PulseDescription {
     }
 }
 
-impl PartialEq for PulseDescription {
-    fn eq(&self, other: &Self) -> bool {
-        other.pulse_n == self.pulse_n
-            && other.current_frequency == self.current_frequency
-            && other.wave_duty_percent == self.wave_duty_percent
-            && other.initial_volume_envelope == self.initial_volume_envelope
-            && other.volume_envelope_direction == self.volume_envelope_direction
-            && other.volume_envelope_duration_in_1_64_s == self.volume_envelope_duration_in_1_64_s
-            && other.sweep == self.sweep
-            && other.use_length == other.use_length
-            && other.length == other.length
-    }
-}
-
 impl Default for PulseDescription {
     fn default() -> Self {
         Self {
@@ -202,17 +188,6 @@ impl WaveDescription {
 
     pub fn calculate_frequency(&self) -> f32 {
         65536_f32 / (2048 - self.frequency) as f32
-    }
-}
-
-impl PartialEq for WaveDescription {
-    fn eq(&self, other: &Self) -> bool {
-        other.frequency == self.frequency
-            && other.output_level == self.output_level
-            && other.use_length == self.use_length
-            && other.length == self.length
-            && other.should_play == self.should_play
-            && other.wave.data.data == self.wave.data.data
     }
 }
 

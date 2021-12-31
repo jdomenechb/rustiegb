@@ -205,13 +205,7 @@ impl CpalAudioUnitOutput {
 
 impl AudioUnitOutput for CpalAudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription) {
-        if self.muted || description.stop {
-            match description.pulse_n {
-                1 => self.stream_1 = None,
-                2 => self.stream_2 = None,
-                _ => panic!("Non pulse stream given"),
-            }
-
+        if self.muted {
             return;
         }
 
@@ -219,27 +213,11 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
 
         match description.pulse_n {
             1 => {
-                let different = {
-                    let read_pd = self.pulse_description_1.read();
-                    *description != *read_pd
-                };
-
-                if different {
-                    self.pulse_description_1.write().exchange(description);
-                }
-
+                self.pulse_description_1.write().exchange(description);
                 stream = &self.stream_1;
             }
             2 => {
-                let different = {
-                    let read_pd = self.pulse_description_2.read();
-                    *description != *read_pd
-                };
-
-                if different {
-                    self.pulse_description_2.write().exchange(description);
-                }
-
+                self.pulse_description_2.write().exchange(description);
                 stream = &self.stream_2;
             }
             _ => panic!("Non pulse stream given"),
@@ -272,19 +250,9 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
             return;
         }
 
-        let stream;
-        let different;
+        let stream = &self.stream_3;
 
-        {
-            let read_pd = self.wave_description.read();
-            different = *description != *read_pd;
-        }
-
-        if different {
-            self.wave_description.write().exchange(description);
-        }
-
-        stream = &self.stream_3;
+        self.wave_description.write().exchange(description);
 
         if stream.is_none() {
             let stream = match self.config.sample_format() {
