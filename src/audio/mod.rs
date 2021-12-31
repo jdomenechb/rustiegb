@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
+use crate::Byte;
 use audio_unit_output::AudioUnitOutput;
 use description::{PulseDescription, WaveDescription};
 
@@ -13,9 +14,7 @@ pub mod audio_unit_output;
 mod description;
 pub mod sweep;
 
-const CYCLES_1_256_SEC: u16 = 16384;
-const CYCLES_1_128_SEC: u16 = 16384 * 2;
-const CYCLES_1_64_SEC: u32 = 16384 * 4;
+const CYCLES_1_512_SEC: u16 = 8192;
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum VolumeEnvelopeDirection {
@@ -56,8 +55,7 @@ pub struct AudioUnit {
     memory: Arc<RwLock<Memory>>,
 
     cycle_count: u16,
-    cycle_128_count: u16,
-    cycle_64_count: u32,
+    frame_step: Byte,
 }
 
 impl AudioUnit {
@@ -65,9 +63,8 @@ impl AudioUnit {
         Self {
             auo: au,
             memory,
-            cycle_count: 0,
-            cycle_128_count: 0,
-            cycle_64_count: 0,
+            cycle_count: CYCLES_1_512_SEC,
+            frame_step: 7,
         }
     }
 
@@ -84,27 +81,7 @@ impl AudioUnit {
             audio_triggers = memory.audio_has_been_trigered();
         }
 
-        self.cycle_count += last_instruction_cycles as u16;
-        self.cycle_128_count += last_instruction_cycles as u16;
-        self.cycle_64_count += last_instruction_cycles as u32;
-
-        if self.cycle_count > CYCLES_1_256_SEC {
-            self.cycle_count -= CYCLES_1_256_SEC;
-
-            self.auo.step_256();
-        }
-
-        if self.cycle_128_count > CYCLES_1_128_SEC {
-            self.cycle_128_count -= CYCLES_1_128_SEC;
-
-            self.auo.step_128();
-        }
-
-        if self.cycle_64_count > CYCLES_1_64_SEC {
-            self.cycle_64_count -= CYCLES_1_64_SEC;
-
-            self.auo.step_64();
-        }
+        self.clock_frame_sequencer(last_instruction_cycles);
 
         let all_sound_trigger = nr52 & 0b10000000 == 0b10000000;
 
@@ -129,6 +106,27 @@ impl AudioUnit {
         }
 
         // TODO: sound 4
+    }
+
+    fn clock_frame_sequencer(&mut self, last_instruction_cycles: u8) {
+        self.cycle_count += last_instruction_cycles as u16;
+
+        if self.cycle_count > CYCLES_1_512_SEC {
+            self.cycle_count -= CYCLES_1_512_SEC;
+            self.frame_step = (self.frame_step + 1) % 8;
+
+            if self.frame_step % 2 == 0 {
+                self.auo.step_256();
+            }
+
+            if self.frame_step == 7 {
+                self.auo.step_64();
+            }
+
+            if self.frame_step == 2 || self.frame_step == 6 {
+                self.auo.step_128()
+            }
+        }
     }
 
     fn stop_all(&mut self) {
