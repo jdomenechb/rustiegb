@@ -88,8 +88,10 @@ impl PulseDescription {
         if self.use_length {
             if self.remaining_steps > 0 {
                 self.remaining_steps -= 1;
-            } else {
-                self.stop = true;
+
+                if self.remaining_steps == 0 {
+                    self.stop = true;
+                }
             }
         }
     }
@@ -182,8 +184,10 @@ impl WaveDescription {
         if self.use_length {
             if self.remaining_steps > 0 {
                 self.remaining_steps -= 1;
-            } else {
-                self.should_play = false;
+
+                if self.remaining_steps == 0 {
+                    self.should_play = false;
+                }
             }
         }
     }
@@ -203,5 +207,44 @@ impl Default for WaveDescription {
             0xFF,
             false,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pdesc_stops_when_no_remaining_steps() {
+        let mut pd =
+            PulseDescription::new(1, 0, 0.0, 0, VolumeEnvelopeDirection::Up, 0, None, true, 63);
+
+        assert_eq!(pd.remaining_steps, 1);
+        assert_eq!(pd.stop, false);
+
+        pd.step_256();
+
+        assert_eq!(pd.remaining_steps, 0);
+        assert_eq!(pd.stop, true);
+    }
+
+    #[test]
+    fn test_wdesc_stops_when_no_remaining_steps() {
+        let mut wd = WaveDescription::new(
+            1,
+            WaveOutputLevel::Vol100Percent,
+            WavePatternRam::default(),
+            true,
+            255,
+            true,
+        );
+
+        assert_eq!(wd.remaining_steps, 1);
+        assert_eq!(wd.should_play, true);
+
+        wd.step_256();
+
+        assert_eq!(wd.remaining_steps, 0);
+        assert_eq!(wd.should_play, false);
     }
 }
