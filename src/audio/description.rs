@@ -105,9 +105,10 @@ impl PulseDescription {
         self.remaining_volume_envelope_duration_in_1_64_s =
             other.remaining_volume_envelope_duration_in_1_64_s;
         self.sweep = other.sweep;
-        self.stop = false;
+        self.stop = other.stop;
         self.use_length = other.use_length;
         self.length = other.length;
+        self.remaining_steps = other.remaining_steps;
     }
 
     pub fn calculate_frequency(&self) -> f32 {
@@ -172,6 +173,7 @@ impl WaveDescription {
             data: MemorySector::with_data(other.wave.data.data.clone()),
         };
         self.use_length = other.use_length;
+        self.length = other.length;
         self.remaining_steps = other.remaining_steps;
         self.should_play = other.should_play;
     }
