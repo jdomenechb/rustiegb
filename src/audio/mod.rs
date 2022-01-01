@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
+use crate::audio::description::VolumeEnvelopeDescription;
 use crate::Byte;
 use audio_unit_output::AudioUnitOutput;
 use description::{PulseDescription, WaveDescription};
@@ -20,6 +21,12 @@ const CYCLES_1_512_SEC: u16 = 8192;
 pub enum VolumeEnvelopeDirection {
     Up,
     Down,
+}
+
+impl Default for VolumeEnvelopeDirection {
+    fn default() -> Self {
+        VolumeEnvelopeDirection::Up
+    }
 }
 
 impl From<bool> for VolumeEnvelopeDirection {
@@ -164,9 +171,11 @@ impl AudioUnit {
         let pulse_description = PulseDescription::new(
             frequency,
             wave_duty_percent,
-            initial_volume_envelope,
-            volume_envelope_direction,
-            volume_envelope_duration_in_1_64_s,
+            VolumeEnvelopeDescription::new(
+                initial_volume_envelope,
+                volume_envelope_direction,
+                volume_envelope_duration_in_1_64_s,
+            ),
             sweep,
             audio_registers.is_length_used(),
             pulse_length,

@@ -4,14 +4,36 @@ use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, Word};
 
-pub struct PulseDescription {
-    pub current_frequency: Word,
-    pub wave_duty_percent: f32,
+#[derive(Default)]
+pub struct VolumeEnvelopeDescription {
     pub initial_volume_envelope: Byte,
     pub volume_envelope: Byte,
     pub volume_envelope_direction: VolumeEnvelopeDirection,
     pub volume_envelope_duration_in_1_64_s: u8,
     pub remaining_volume_envelope_duration_in_1_64_s: u8,
+}
+
+impl VolumeEnvelopeDescription {
+    pub fn new(
+        volume_envelope: Byte,
+        volume_envelope_direction: VolumeEnvelopeDirection,
+        volume_envelope_duration_in_1_64_s: u8,
+    ) -> Self {
+        Self {
+            volume_envelope,
+            initial_volume_envelope: volume_envelope,
+            volume_envelope_direction,
+            volume_envelope_duration_in_1_64_s,
+            remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct PulseDescription {
+    pub current_frequency: Word,
+    pub wave_duty_percent: f32,
+    pub volume_envelope: VolumeEnvelopeDescription,
     pub sweep: Option<Sweep>,
     pub stop: bool,
     pub use_length: bool,
@@ -23,9 +45,7 @@ impl PulseDescription {
     pub fn new(
         frequency: Word,
         wave_duty_percent: f32,
-        initial_volume_envelope: Byte,
-        volume_envelope_direction: VolumeEnvelopeDirection,
-        volume_envelope_duration_in_1_64_s: u8,
+        volume_envelope: VolumeEnvelopeDescription,
         sweep: Option<Sweep>,
         use_length: bool,
         length: Byte,
@@ -33,11 +53,7 @@ impl PulseDescription {
         let mut value = Self {
             current_frequency: frequency,
             wave_duty_percent,
-            initial_volume_envelope,
-            volume_envelope: initial_volume_envelope,
-            volume_envelope_direction,
-            volume_envelope_duration_in_1_64_s,
-            remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
+            volume_envelope,
             sweep,
             stop: false,
             use_length,
@@ -58,31 +74,37 @@ impl PulseDescription {
     }
 
     pub fn step_64(&mut self) {
-        if self.volume_envelope_duration_in_1_64_s == 0 {
+        if self.volume_envelope.volume_envelope_duration_in_1_64_s == 0 {
             return;
         }
 
-        if self.remaining_volume_envelope_duration_in_1_64_s == 0 {
-            match self.volume_envelope_direction {
+        if self
+            .volume_envelope
+            .remaining_volume_envelope_duration_in_1_64_s
+            == 0
+        {
+            match self.volume_envelope.volume_envelope_direction {
                 VolumeEnvelopeDirection::Up => {
-                    if self.volume_envelope < 0xF {
-                        self.volume_envelope += 1;
+                    if self.volume_envelope.volume_envelope < 0xF {
+                        self.volume_envelope.volume_envelope += 1;
                     }
                 }
                 VolumeEnvelopeDirection::Down => {
-                    if self.volume_envelope > 0 {
-                        self.volume_envelope -= 1;
+                    if self.volume_envelope.volume_envelope > 0 {
+                        self.volume_envelope.volume_envelope -= 1;
                     }
                 }
             }
 
-            self.remaining_volume_envelope_duration_in_1_64_s =
-                self.volume_envelope_duration_in_1_64_s;
+            self.volume_envelope
+                .remaining_volume_envelope_duration_in_1_64_s =
+                self.volume_envelope.volume_envelope_duration_in_1_64_s;
 
             return;
         }
 
-        self.remaining_volume_envelope_duration_in_1_64_s -= 1;
+        self.volume_envelope
+            .remaining_volume_envelope_duration_in_1_64_s -= 1;
     }
 
     pub fn step_256(&mut self) {
@@ -98,12 +120,11 @@ impl PulseDescription {
     pub fn exchange(&mut self, other: &Self) {
         self.current_frequency = other.current_frequency;
         self.wave_duty_percent = other.wave_duty_percent;
-        self.initial_volume_envelope = other.initial_volume_envelope;
-        self.volume_envelope = other.volume_envelope;
-        self.volume_envelope_direction = other.volume_envelope_direction;
-        self.volume_envelope_duration_in_1_64_s = other.volume_envelope_duration_in_1_64_s;
-        self.remaining_volume_envelope_duration_in_1_64_s =
-            other.remaining_volume_envelope_duration_in_1_64_s;
+        self.volume_envelope = VolumeEnvelopeDescription::new(
+            other.volume_envelope.volume_envelope,
+            other.volume_envelope.volume_envelope_direction,
+            other.volume_envelope.volume_envelope_duration_in_1_64_s,
+        );
         self.sweep = other.sweep;
         self.stop = other.stop;
         self.use_length = other.use_length;
@@ -118,25 +139,6 @@ impl PulseDescription {
     pub fn reload_length(&mut self, length: Byte) {
         self.length = length;
         self.remaining_steps = 64 - length;
-    }
-}
-
-impl Default for PulseDescription {
-    fn default() -> Self {
-        Self {
-            current_frequency: 0,
-            wave_duty_percent: 0.0,
-            initial_volume_envelope: 0,
-            volume_envelope: 0,
-            volume_envelope_direction: VolumeEnvelopeDirection::Up,
-            volume_envelope_duration_in_1_64_s: 0,
-            remaining_volume_envelope_duration_in_1_64_s: 0,
-            sweep: None,
-            stop: false,
-            use_length: false,
-            length: 0,
-            remaining_steps: 0,
-        }
     }
 }
 
@@ -226,7 +228,7 @@ mod tests {
     #[test]
     fn test_pdesc_stops_when_no_remaining_steps() {
         let mut pd =
-            PulseDescription::new(1, 0, 0.0, 0, VolumeEnvelopeDirection::Up, 0, None, true, 63);
+            PulseDescription::new(1, 0.0, VolumeEnvelopeDescription::default(), None, true, 63);
 
         assert_eq!(pd.remaining_steps, 1);
         assert_eq!(pd.stop, false);
