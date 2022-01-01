@@ -60,6 +60,12 @@ impl Cpu {
                 instruction = memory.read_byte(self.registers.pc);
             }
 
+            // if self.registers.pc == 0xC21F {
+            //     let meh = 4;
+            // }
+            //
+            // println!("{:X}", self.registers.pc);
+
             match instruction {
                 0x00 => self.nop(),
                 0x01 => self.ld_rr_nn(WordRegister::BC),
