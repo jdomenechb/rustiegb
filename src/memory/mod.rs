@@ -43,6 +43,11 @@ pub mod timer_control;
 pub mod video_ram_8k_memory_sector;
 pub mod wave_pattern_ram;
 
+pub struct AudioRegWritten {
+    pub control: bool,
+    pub length: bool,
+}
+
 #[readonly::make]
 #[derive(Default)]
 pub struct Memory {
@@ -704,24 +709,29 @@ impl Memory {
 
     pub fn audio_reg_have_been_written(
         &mut self,
-    ) -> ((bool, bool), (bool, bool), (bool, bool), (bool, bool)) {
+    ) -> (
+        AudioRegWritten,
+        AudioRegWritten,
+        AudioRegWritten,
+        AudioRegWritten,
+    ) {
         let to_return = (
-            (
-                self.audio_1_control_reg_written,
-                self.audio_1_length_reg_written,
-            ),
-            (
-                self.audio_2_control_reg_written,
-                self.audio_2_length_reg_written,
-            ),
-            (
-                self.audio_3_control_reg_written,
-                self.audio_3_length_reg_written,
-            ),
-            (
-                self.audio_4_control_reg_written,
-                self.audio_4_length_reg_written,
-            ),
+            AudioRegWritten {
+                control: self.audio_1_control_reg_written,
+                length: self.audio_1_length_reg_written,
+            },
+            AudioRegWritten {
+                control: self.audio_2_control_reg_written,
+                length: self.audio_2_length_reg_written,
+            },
+            AudioRegWritten {
+                control: self.audio_3_control_reg_written,
+                length: self.audio_3_length_reg_written,
+            },
+            AudioRegWritten {
+                control: self.audio_4_control_reg_written,
+                length: self.audio_4_length_reg_written,
+            },
         );
 
         self.audio_1_control_reg_written = false;

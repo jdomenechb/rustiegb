@@ -90,18 +90,18 @@ impl AudioUnit {
         }
 
         // Sound 1
-        if audio_triggers.0 .0 || audio_triggers.0 .1 {
-            self.update_pulse(1, audio_triggers.0 .1);
+        if audio_triggers.0.control || audio_triggers.0.length {
+            self.update_pulse(1, audio_triggers.0.length);
         }
 
         // Sound 2
-        if audio_triggers.1 .0 || audio_triggers.1 .1 {
-            self.update_pulse(2, audio_triggers.1 .1);
+        if audio_triggers.1.control || audio_triggers.1.length {
+            self.update_pulse(2, audio_triggers.1.length);
         }
 
         // Sound 3
-        if audio_triggers.2 .0 || audio_triggers.2 .1 {
-            self.update_wave(audio_triggers.2 .1);
+        if audio_triggers.2.control || audio_triggers.2.length {
+            self.update_wave(audio_triggers.2.length);
         }
 
         // TODO: sound 4
