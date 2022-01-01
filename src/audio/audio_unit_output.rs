@@ -10,7 +10,7 @@ use crate::memory::memory_sector::ReadMemory;
 use crate::{Byte, Memory, Word};
 
 pub trait AudioUnitOutput {
-    fn play_pulse(&mut self, description: &PulseDescription);
+    fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription);
     fn play_wave(&mut self, description: &WaveDescription);
     fn stop(&mut self, channel_n: u8);
     fn stop_all(&mut self);
@@ -205,14 +205,14 @@ impl CpalAudioUnitOutput {
 }
 
 impl AudioUnitOutput for CpalAudioUnitOutput {
-    fn play_pulse(&mut self, description: &PulseDescription) {
+    fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription) {
         if self.muted {
             return;
         }
 
         let stream;
 
-        match description.pulse_n {
+        match channel_n {
             1 => {
                 self.pulse_description_1.write().exchange(description);
                 stream = &self.stream_1;
@@ -227,17 +227,17 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         if stream.is_none() {
             let stream = match self.config.sample_format() {
                 cpal::SampleFormat::F32 => self
-                    .run_pulse::<f32>(&self.config.clone().into(), description.pulse_n)
+                    .run_pulse::<f32>(&self.config.clone().into(), channel_n)
                     .unwrap(),
                 cpal::SampleFormat::I16 => self
-                    .run_pulse::<i16>(&self.config.clone().into(), description.pulse_n)
+                    .run_pulse::<i16>(&self.config.clone().into(), channel_n)
                     .unwrap(),
                 cpal::SampleFormat::U16 => self
-                    .run_pulse::<u16>(&self.config.clone().into(), description.pulse_n)
+                    .run_pulse::<u16>(&self.config.clone().into(), channel_n)
                     .unwrap(),
             };
 
-            match description.pulse_n {
+            match channel_n {
                 1 => self.stream_1 = Some(stream),
                 2 => self.stream_2 = Some(stream),
                 _ => panic!("Non pulse stream given"),

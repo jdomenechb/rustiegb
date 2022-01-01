@@ -5,7 +5,6 @@ use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, Word};
 
 pub struct PulseDescription {
-    pub pulse_n: u8,
     pub current_frequency: Word,
     pub wave_duty_percent: f32,
     pub initial_volume_envelope: Byte,
@@ -22,7 +21,6 @@ pub struct PulseDescription {
 
 impl PulseDescription {
     pub fn new(
-        pulse_n: u8,
         frequency: Word,
         wave_duty_percent: f32,
         initial_volume_envelope: Byte,
@@ -33,7 +31,6 @@ impl PulseDescription {
         length: Byte,
     ) -> Self {
         let mut value = Self {
-            pulse_n,
             current_frequency: frequency,
             wave_duty_percent,
             initial_volume_envelope,
@@ -99,7 +96,6 @@ impl PulseDescription {
     }
 
     pub fn exchange(&mut self, other: &Self) {
-        self.pulse_n = other.pulse_n;
         self.current_frequency = other.current_frequency;
         self.wave_duty_percent = other.wave_duty_percent;
         self.initial_volume_envelope = other.initial_volume_envelope;
@@ -128,7 +124,6 @@ impl PulseDescription {
 impl Default for PulseDescription {
     fn default() -> Self {
         Self {
-            pulse_n: 0,
             current_frequency: 0,
             wave_duty_percent: 0.0,
             initial_volume_envelope: 0,

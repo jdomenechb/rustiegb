@@ -162,7 +162,6 @@ impl AudioUnit {
         let sweep = audio_registers.get_sweep();
 
         let pulse_description = PulseDescription::new(
-            channel_n,
             frequency,
             wave_duty_percent,
             initial_volume_envelope,
@@ -173,7 +172,7 @@ impl AudioUnit {
             pulse_length,
         );
 
-        self.auo.play_pulse(&pulse_description);
+        self.auo.play_pulse(channel_n, &pulse_description);
     }
 
     fn update_wave(&mut self, only_length: bool) {
