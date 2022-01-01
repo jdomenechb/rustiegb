@@ -153,6 +153,11 @@ pub struct Memory {
     audio_2_control_reg_written: bool,
     audio_3_control_reg_written: bool,
     audio_4_control_reg_written: bool,
+
+    audio_1_length_reg_written: bool,
+    audio_2_length_reg_written: bool,
+    audio_3_length_reg_written: bool,
+    audio_4_length_reg_written: bool,
 }
 
 impl Memory {
@@ -238,6 +243,10 @@ impl Memory {
             audio_2_control_reg_written: false,
             audio_3_control_reg_written: false,
             audio_4_control_reg_written: false,
+            audio_1_length_reg_written: false,
+            audio_2_length_reg_written: false,
+            audio_3_length_reg_written: false,
+            audio_4_length_reg_written: false,
         }
     }
 
@@ -497,6 +506,7 @@ impl Memory {
             0xFF11 => {
                 if self.nr52.is_on() {
                     self.nr11 = value;
+                    self.audio_1_length_reg_written = true;
                 }
             }
             0xFF12 => {
@@ -529,6 +539,7 @@ impl Memory {
             0xFF16 => {
                 if self.nr52.is_on() {
                     self.nr21 = value;
+                    self.audio_2_length_reg_written = true;
                 }
             }
             0xFF17 => {
@@ -561,6 +572,7 @@ impl Memory {
             0xFF1B => {
                 if self.nr52.is_on() {
                     self.nr31 = value;
+                    self.audio_3_length_reg_written = true;
                 }
             }
             0xFF1C => {
@@ -593,6 +605,7 @@ impl Memory {
             0xFF20 => {
                 if self.nr52.is_on() {
                     self.nr41 = value;
+                    self.audio_4_length_reg_written = true;
                 }
             }
             0xFF21 => {
@@ -814,18 +827,36 @@ impl Memory {
         }
     }
 
-    pub fn audio_control_reg_have_been_written(&mut self) -> (bool, bool, bool, bool) {
+    pub fn audio_reg_have_been_written(
+        &mut self,
+    ) -> ((bool, bool), (bool, bool), (bool, bool), (bool, bool)) {
         let to_return = (
-            self.audio_1_control_reg_written,
-            self.audio_2_control_reg_written,
-            self.audio_3_control_reg_written,
-            self.audio_4_control_reg_written,
+            (
+                self.audio_1_control_reg_written,
+                self.audio_1_length_reg_written,
+            ),
+            (
+                self.audio_2_control_reg_written,
+                self.audio_2_length_reg_written,
+            ),
+            (
+                self.audio_3_control_reg_written,
+                self.audio_3_length_reg_written,
+            ),
+            (
+                self.audio_4_control_reg_written,
+                self.audio_4_length_reg_written,
+            ),
         );
 
         self.audio_1_control_reg_written = false;
         self.audio_2_control_reg_written = false;
         self.audio_3_control_reg_written = false;
         self.audio_4_control_reg_written = false;
+        self.audio_1_length_reg_written = false;
+        self.audio_2_length_reg_written = false;
+        self.audio_3_length_reg_written = false;
+        self.audio_4_length_reg_written = false;
 
         to_return
     }

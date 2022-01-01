@@ -7,7 +7,7 @@ use parking_lot::RwLock;
 use crate::audio::description::{PulseDescription, WaveDescription};
 use crate::audio::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
-use crate::{Memory, Word};
+use crate::{Byte, Memory, Word};
 
 pub trait AudioUnitOutput {
     fn play_pulse(&mut self, description: &PulseDescription);
@@ -19,6 +19,7 @@ pub trait AudioUnitOutput {
     fn step_128(&mut self);
     fn step_256(&mut self);
     fn update(&mut self, memory: Arc<RwLock<Memory>>);
+    fn reload_length(&mut self, channel_n: u8, length: Byte);
 }
 
 pub struct CpalAudioUnitOutput {
@@ -330,5 +331,14 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         }
 
         // TODO: Noise channel
+    }
+
+    fn reload_length(&mut self, channel_n: u8, pulse_length: Byte) {
+        match channel_n {
+            1 => self.pulse_description_1.write().reload_length(pulse_length),
+            2 => self.pulse_description_2.write().reload_length(pulse_length),
+            3 => self.wave_description.write().reload_length(pulse_length),
+            _ => panic!("Invalid channel provided"),
+        }
     }
 }

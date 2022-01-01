@@ -78,7 +78,7 @@ impl AudioUnit {
             let mut memory = self.memory.write();
 
             nr52 = memory.read_byte(Memory::ADDR_NR52);
-            audio_triggers = memory.audio_control_reg_have_been_written();
+            audio_triggers = memory.audio_reg_have_been_written();
         }
 
         self.clock_frame_sequencer(last_instruction_cycles);
@@ -90,18 +90,18 @@ impl AudioUnit {
         }
 
         // Sound 1
-        if audio_triggers.0 {
-            self.update_pulse(1);
+        if audio_triggers.0 .0 || audio_triggers.0 .1 {
+            self.update_pulse(1, audio_triggers.0 .1);
         }
 
         // Sound 2
-        if audio_triggers.1 {
-            self.update_pulse(2);
+        if audio_triggers.1 .0 || audio_triggers.1 .1 {
+            self.update_pulse(2, audio_triggers.1 .1);
         }
 
         // Sound 3
-        if audio_triggers.2 {
-            self.update_wave();
+        if audio_triggers.2 .0 || audio_triggers.2 .1 {
+            self.update_wave(audio_triggers.2 .1);
         }
 
         // TODO: sound 4
@@ -134,7 +134,7 @@ impl AudioUnit {
         self.auo.stop_all();
     }
 
-    fn update_pulse(&mut self, channel_n: u8) {
+    fn update_pulse(&mut self, channel_n: u8, only_length: bool) {
         let audio_registers = {
             let memory = self.memory.read();
             memory.read_audio_registers(channel_n)
@@ -142,6 +142,13 @@ impl AudioUnit {
 
         if !audio_registers.is_set() {
             self.auo.stop(channel_n);
+            return;
+        }
+
+        let pulse_length = audio_registers.get_pulse_length();
+
+        if only_length {
+            self.auo.reload_length(channel_n, pulse_length);
             return;
         }
 
@@ -153,7 +160,6 @@ impl AudioUnit {
         let volume_envelope_duration_in_1_64_s = audio_registers.get_volume_envelope_duration_64();
         let wave_duty_percent = audio_registers.calculate_wave_duty_percent();
         let sweep = audio_registers.get_sweep();
-        let pulse_length = audio_registers.get_pulse_length();
 
         let pulse_description = PulseDescription::new(
             channel_n,
@@ -170,7 +176,7 @@ impl AudioUnit {
         self.auo.play_pulse(&pulse_description);
     }
 
-    fn update_wave(&mut self) {
+    fn update_wave(&mut self, only_length: bool) {
         let audio_registers;
         let wave;
 
@@ -187,6 +193,13 @@ impl AudioUnit {
             return;
         }
 
+        let length = audio_registers.get_wave_length();
+
+        if only_length {
+            self.auo.reload_length(3, length);
+            return;
+        }
+
         let frequency = audio_registers.get_frequency();
         let wave_output_level = audio_registers.get_wave_output_level();
 
@@ -195,7 +208,7 @@ impl AudioUnit {
             wave_output_level,
             wave,
             audio_registers.is_length_used(),
-            audio_registers.get_wave_length(),
+            length,
             audio_registers.get_wave_should_play(),
         );
 

@@ -32,7 +32,7 @@ impl PulseDescription {
         use_length: bool,
         length: Byte,
     ) -> Self {
-        Self {
+        let mut value = Self {
             pulse_n,
             current_frequency: frequency,
             wave_duty_percent,
@@ -45,8 +45,12 @@ impl PulseDescription {
             stop: false,
             use_length,
             length,
-            remaining_steps: 64 - length,
-        }
+            remaining_steps: 0,
+        };
+
+        value.reload_length(length);
+
+        value
     }
 
     pub fn step_128(&mut self) {
@@ -116,6 +120,11 @@ impl PulseDescription {
     pub fn calculate_frequency(&self) -> f32 {
         131072_f32 / (2048.0 - self.current_frequency as f32)
     }
+
+    pub fn reload_length(&mut self, length: Byte) {
+        self.length = length;
+        self.remaining_steps = 64 - length;
+    }
 }
 
 impl Default for PulseDescription {
@@ -157,15 +166,19 @@ impl WaveDescription {
         length: Byte,
         should_play: bool,
     ) -> Self {
-        Self {
+        let mut value = Self {
             frequency,
             output_level,
             wave,
             use_length,
             length,
-            remaining_steps: 256 - length as Word,
+            remaining_steps: 0,
             should_play,
-        }
+        };
+
+        value.reload_length(length);
+
+        value
     }
 
     pub fn exchange(&mut self, other: &Self) {
@@ -194,6 +207,11 @@ impl WaveDescription {
 
     pub fn calculate_frequency(&self) -> f32 {
         65536_f32 / (2048 - self.frequency) as f32
+    }
+
+    pub fn reload_length(&mut self, length: Byte) {
+        self.length = length;
+        self.remaining_steps = 256 - length as Word;
     }
 }
 
