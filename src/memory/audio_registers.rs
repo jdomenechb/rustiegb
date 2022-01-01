@@ -92,7 +92,7 @@ impl AudioRegisters {
 
     pub fn get_sweep(&self) -> Option<Sweep> {
         if let Some(sweep) = self.sweep {
-            return Some(Sweep::from(sweep));
+            return Some(Sweep::new(sweep, self.get_frequency()));
         }
 
         None

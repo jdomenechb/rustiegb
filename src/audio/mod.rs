@@ -168,7 +168,7 @@ impl AudioUnit {
         let wave_duty_percent = audio_registers.calculate_wave_duty_percent();
         let sweep = audio_registers.get_sweep();
 
-        let pulse_description = PulseDescription::new(
+        let mut pulse_description = PulseDescription::new(
             frequency,
             wave_duty_percent,
             VolumeEnvelopeDescription::new(
@@ -180,6 +180,12 @@ impl AudioUnit {
             audio_registers.is_length_used(),
             pulse_length,
         );
+
+        if let Some(mut s) = sweep {
+            if s.has_shifts() {
+                s.calculate_new_frequency(&mut pulse_description);
+            }
+        }
 
         self.auo.play_pulse(channel_n, &pulse_description);
     }

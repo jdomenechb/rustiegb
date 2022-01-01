@@ -1,5 +1,5 @@
 use crate::audio::description::PulseDescription;
-use crate::Byte;
+use crate::{Byte, Word};
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum SweepDirection {
@@ -12,55 +12,70 @@ pub struct Sweep {
     time: Byte,
     shifts: Byte,
     direction: SweepDirection,
-    remaining_time: Byte,
+    timer: Byte,
+    enabled: bool,
+    shadow_frequency: Word,
 }
 
 impl Sweep {
-    pub fn step_128(&mut self, pulse_description: &mut PulseDescription) {
-        if self.remaining_time == 0 {
-            return;
-        }
-
-        if self.remaining_time > 0 {
-            self.remaining_time -= 1;
-        }
-
-        if self.remaining_time == 0 {
-            let to_add_sub = pulse_description.current_frequency >> self.shifts;
-
-            let add_sub_result = match self.direction {
-                SweepDirection::Add => pulse_description
-                    .current_frequency
-                    .overflowing_add(to_add_sub),
-                SweepDirection::Sub => pulse_description
-                    .current_frequency
-                    .overflowing_sub(to_add_sub),
-            };
-
-            pulse_description.current_frequency = add_sub_result.0;
-
-            if pulse_description.current_frequency > 2047 || add_sub_result.1 {
-                pulse_description.stop = true;
-            } else {
-                self.remaining_time = if self.time > 0 { self.time } else { 8 };
-            }
-        }
-    }
-}
-
-impl From<Byte> for Sweep {
-    fn from(obj: Byte) -> Self {
-        let shifts = obj & 0b111;
-        let time = (obj >> 4) & 0b111;
+    pub fn new(sweep_register: Byte, frequency: Word) -> Self {
+        let shifts = sweep_register & 0b111;
+        let time = (sweep_register >> 4) & 0b111;
 
         Self {
             time,
             shifts,
-            direction: match obj & 0b1000 == 0b1000 {
+            direction: match sweep_register & 0b1000 == 0b1000 {
                 true => SweepDirection::Sub,
                 false => SweepDirection::Add,
             },
-            remaining_time: time,
+            timer: if time > 0 { time } else { 8 },
+            enabled: time > 0 || shifts > 0,
+            shadow_frequency: frequency,
         }
+    }
+
+    pub fn step_128(&mut self, pulse_description: &mut PulseDescription) {
+        if self.timer == 0 {
+            return;
+        }
+
+        if self.timer > 0 {
+            self.timer -= 1;
+        }
+
+        if self.timer == 0 {
+            self.timer = if self.time > 0 { self.time } else { 8 };
+
+            if self.enabled && self.time > 0 {
+                let new_frequency = self.calculate_new_frequency(pulse_description);
+
+                if new_frequency < 2048 && self.shifts > 0 {
+                    self.shadow_frequency = new_frequency;
+                    pulse_description.current_frequency = new_frequency;
+
+                    self.calculate_new_frequency(pulse_description);
+                }
+            }
+        }
+    }
+
+    pub fn calculate_new_frequency(&mut self, pulse_description: &mut PulseDescription) -> u16 {
+        let to_add_sub = self.shadow_frequency >> self.shifts;
+
+        let new_frequency = match self.direction {
+            SweepDirection::Add => self.shadow_frequency.wrapping_add(to_add_sub),
+            SweepDirection::Sub => self.shadow_frequency.wrapping_add(to_add_sub),
+        };
+
+        if new_frequency > 2047 {
+            pulse_description.stop = true;
+        }
+
+        new_frequency
+    }
+
+    pub fn has_shifts(&self) -> bool {
+        self.shifts > 0
     }
 }
