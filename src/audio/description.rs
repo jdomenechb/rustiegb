@@ -6,7 +6,6 @@ use crate::{Byte, Word};
 
 #[derive(Default)]
 pub struct VolumeEnvelopeDescription {
-    pub initial_volume_envelope: Byte,
     pub volume_envelope: Byte,
     pub volume_envelope_direction: VolumeEnvelopeDirection,
     pub volume_envelope_duration_in_1_64_s: u8,
@@ -21,7 +20,6 @@ impl VolumeEnvelopeDescription {
     ) -> Self {
         Self {
             volume_envelope,
-            initial_volume_envelope: volume_envelope,
             volume_envelope_direction,
             volume_envelope_duration_in_1_64_s,
             remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
@@ -34,11 +32,11 @@ pub struct PulseDescription {
     pub current_frequency: Word,
     pub wave_duty_percent: f32,
     pub volume_envelope: VolumeEnvelopeDescription,
-    pub sweep: Option<Sweep>,
+    sweep: Option<Sweep>,
     pub stop: bool,
-    pub use_length: bool,
-    pub length: Byte,
-    pub remaining_steps: Byte,
+    use_length: bool,
+    length: Byte,
+    remaining_steps: Byte,
 }
 
 impl PulseDescription {
