@@ -66,15 +66,23 @@ impl AudioRegisters {
         }
     }
 
-    pub fn get_use_length(&self) -> bool {
+    pub fn is_set(&self) -> bool {
+        self.control & 0b10000000 == 0b10000000
+    }
+
+    pub fn is_length_used(&self) -> bool {
         self.control & 0b1000000 == 0b1000000
     }
 
-    pub fn get_length(&self) -> Byte {
+    pub fn get_wave_length(&self) -> Byte {
         self.length
     }
 
-    pub fn get_should_play(&self) -> bool {
+    pub fn get_pulse_length(&self) -> Byte {
+        self.length & 0b111111
+    }
+
+    pub fn get_wave_should_play(&self) -> bool {
         if let Some(sweep) = self.sweep {
             return sweep & 0b10000000 == 0b10000000;
         }

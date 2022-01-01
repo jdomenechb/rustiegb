@@ -7,16 +7,19 @@ use parking_lot::RwLock;
 use crate::audio::description::{PulseDescription, WaveDescription};
 use crate::audio::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
-use crate::Word;
+use crate::{Byte, Memory, Word};
 
 pub trait AudioUnitOutput {
-    fn play_pulse(&mut self, description: &PulseDescription);
+    fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription);
     fn play_wave(&mut self, description: &WaveDescription);
+    fn stop(&mut self, channel_n: u8);
     fn stop_all(&mut self);
     fn set_mute(&mut self, muted: bool);
     fn step_64(&mut self);
     fn step_128(&mut self);
     fn step_256(&mut self);
+    fn update(&mut self, memory: Arc<RwLock<Memory>>);
+    fn reload_length(&mut self, channel_n: u8, length: Byte);
 }
 
 pub struct CpalAudioUnitOutput {
@@ -93,7 +96,7 @@ impl CpalAudioUnitOutput {
 
                 sample_in_period = sample_rate / description.calculate_frequency();
                 high_part_max = sample_in_period * description.wave_duty_percent;
-                volume_envelope = description.volume_envelope;
+                volume_envelope = description.volume_envelope.volume_envelope;
             }
 
             sample_clock += 1.0;
@@ -202,42 +205,20 @@ impl CpalAudioUnitOutput {
 }
 
 impl AudioUnitOutput for CpalAudioUnitOutput {
-    fn play_pulse(&mut self, description: &PulseDescription) {
-        if self.muted || description.stop {
-            match description.pulse_n {
-                1 => self.stream_1 = None,
-                2 => self.stream_2 = None,
-                _ => panic!("Non pulse stream given"),
-            }
-
+    fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription) {
+        if self.muted {
             return;
         }
 
         let stream;
 
-        match description.pulse_n {
+        match channel_n {
             1 => {
-                let different = {
-                    let read_pd = self.pulse_description_1.read();
-                    *description != *read_pd
-                };
-
-                if different {
-                    self.pulse_description_1.write().exchange(description);
-                }
-
+                self.pulse_description_1.write().exchange(description);
                 stream = &self.stream_1;
             }
             2 => {
-                let different = {
-                    let read_pd = self.pulse_description_2.read();
-                    *description != *read_pd
-                };
-
-                if different {
-                    self.pulse_description_2.write().exchange(description);
-                }
-
+                self.pulse_description_2.write().exchange(description);
                 stream = &self.stream_2;
             }
             _ => panic!("Non pulse stream given"),
@@ -246,17 +227,17 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         if stream.is_none() {
             let stream = match self.config.sample_format() {
                 cpal::SampleFormat::F32 => self
-                    .run_pulse::<f32>(&self.config.clone().into(), description.pulse_n)
+                    .run_pulse::<f32>(&self.config.clone().into(), channel_n)
                     .unwrap(),
                 cpal::SampleFormat::I16 => self
-                    .run_pulse::<i16>(&self.config.clone().into(), description.pulse_n)
+                    .run_pulse::<i16>(&self.config.clone().into(), channel_n)
                     .unwrap(),
                 cpal::SampleFormat::U16 => self
-                    .run_pulse::<u16>(&self.config.clone().into(), description.pulse_n)
+                    .run_pulse::<u16>(&self.config.clone().into(), channel_n)
                     .unwrap(),
             };
 
-            match description.pulse_n {
+            match channel_n {
                 1 => self.stream_1 = Some(stream),
                 2 => self.stream_2 = Some(stream),
                 _ => panic!("Non pulse stream given"),
@@ -270,19 +251,9 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
             return;
         }
 
-        let stream;
-        let different;
+        let stream = &self.stream_3;
 
-        {
-            let read_pd = self.wave_description.read();
-            different = *description != *read_pd;
-        }
-
-        if different {
-            self.wave_description.write().exchange(description);
-        }
-
-        stream = &self.stream_3;
+        self.wave_description.write().exchange(description);
 
         if stream.is_none() {
             let stream = match self.config.sample_format() {
@@ -298,6 +269,16 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
             };
 
             self.stream_3 = Some(stream);
+        }
+    }
+
+    fn stop(&mut self, channel_n: u8) {
+        match channel_n {
+            1 => self.stream_1 = None,
+            2 => self.stream_2 = None,
+            3 => self.stream_3 = None,
+            4 => self.stream_4 = None,
+            _ => panic!("Invalid channel number"),
         }
     }
 
@@ -325,6 +306,39 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
     }
 
     fn step_256(&mut self) {
+        self.pulse_description_1.write().step_256();
+        self.pulse_description_2.write().step_256();
         self.wave_description.write().step_256();
+    }
+
+    fn update(&mut self, memory: Arc<RwLock<Memory>>) {
+        if self.pulse_description_1.read().stop {
+            self.stop(1);
+
+            memory.write().set_audio_channel_inactive(1);
+        }
+
+        if self.pulse_description_2.read().stop {
+            self.stop(2);
+
+            memory.write().set_audio_channel_inactive(2);
+        }
+
+        if !self.wave_description.read().should_play {
+            self.stop(3);
+
+            memory.write().set_audio_channel_inactive(3);
+        }
+
+        // TODO: Noise channel
+    }
+
+    fn reload_length(&mut self, channel_n: u8, pulse_length: Byte) {
+        match channel_n {
+            1 => self.pulse_description_1.write().reload_length(pulse_length),
+            2 => self.pulse_description_2.write().reload_length(pulse_length),
+            3 => self.wave_description.write().reload_length(pulse_length),
+            _ => panic!("Invalid channel provided"),
+        }
     }
 }

@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
+use crate::audio::description::VolumeEnvelopeDescription;
+use crate::Byte;
 use audio_unit_output::AudioUnitOutput;
 use description::{PulseDescription, WaveDescription};
 
@@ -13,14 +15,18 @@ pub mod audio_unit_output;
 mod description;
 pub mod sweep;
 
-const CYCLES_1_256_SEC: u16 = 16384;
-const CYCLES_1_128_SEC: u16 = 16384 * 2;
-const CYCLES_1_64_SEC: u32 = 16384 * 4;
+const CYCLES_1_512_SEC: u16 = 8192;
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum VolumeEnvelopeDirection {
     Up,
     Down,
+}
+
+impl Default for VolumeEnvelopeDirection {
+    fn default() -> Self {
+        VolumeEnvelopeDirection::Up
+    }
 }
 
 impl From<bool> for VolumeEnvelopeDirection {
@@ -56,8 +62,7 @@ pub struct AudioUnit {
     memory: Arc<RwLock<Memory>>,
 
     cycle_count: u16,
-    cycle_128_count: u16,
-    cycle_64_count: u32,
+    frame_step: Byte,
 }
 
 impl AudioUnit {
@@ -66,8 +71,7 @@ impl AudioUnit {
             auo: au,
             memory,
             cycle_count: 0,
-            cycle_128_count: 0,
-            cycle_64_count: 0,
+            frame_step: 0,
         }
     }
 
@@ -81,65 +85,79 @@ impl AudioUnit {
             let mut memory = self.memory.write();
 
             nr52 = memory.read_byte(Memory::ADDR_NR52);
-            audio_triggers = memory.audio_has_been_trigered();
+            audio_triggers = memory.audio_reg_have_been_written();
         }
 
-        self.cycle_count += last_instruction_cycles as u16;
-        self.cycle_128_count += last_instruction_cycles as u16;
-        self.cycle_64_count += last_instruction_cycles as u32;
+        self.clock_frame_sequencer(last_instruction_cycles);
 
-        if self.cycle_count > CYCLES_1_256_SEC {
-            self.cycle_count -= CYCLES_1_256_SEC;
-
-            self.auo.step_256();
-        }
-
-        if self.cycle_128_count > CYCLES_1_128_SEC {
-            self.cycle_128_count -= CYCLES_1_128_SEC;
-
-            self.auo.step_128();
-        }
-
-        if self.cycle_64_count > CYCLES_1_64_SEC {
-            self.cycle_64_count -= CYCLES_1_64_SEC;
-
-            self.auo.step_64();
-        }
-
-        let all_sound_trigger = nr52 & 0b10000000 == 0b10000000;
-
-        if !all_sound_trigger {
+        // NR52 controls the general output
+        if nr52 & 0b10000000 != 0b10000000 {
             self.stop_all();
             return;
         }
 
         // Sound 1
-        if audio_triggers.0 {
-            self.read_pulse(1);
+        if audio_triggers.0.control || audio_triggers.0.length {
+            self.update_pulse(1, audio_triggers.0.length);
         }
 
         // Sound 2
-        if audio_triggers.1 {
-            self.read_pulse(2);
+        if audio_triggers.1.control || audio_triggers.1.length {
+            self.update_pulse(2, audio_triggers.1.length);
         }
 
         // Sound 3
-        if audio_triggers.2 {
-            self.read_wave();
+        if audio_triggers.2.control || audio_triggers.2.length {
+            self.update_wave(audio_triggers.2.length);
         }
 
         // TODO: sound 4
+
+        self.auo.update(self.memory.clone());
+    }
+
+    fn clock_frame_sequencer(&mut self, last_instruction_cycles: u8) {
+        self.cycle_count += last_instruction_cycles as u16;
+
+        if self.cycle_count > CYCLES_1_512_SEC {
+            self.cycle_count -= CYCLES_1_512_SEC;
+            self.frame_step = (self.frame_step + 1) % 8;
+
+            if self.frame_step % 2 == 0 {
+                self.auo.step_256();
+            }
+
+            if self.frame_step == 7 {
+                self.auo.step_64();
+            }
+
+            if self.frame_step == 2 || self.frame_step == 6 {
+                self.auo.step_128()
+            }
+        }
     }
 
     fn stop_all(&mut self) {
         self.auo.stop_all();
     }
 
-    fn read_pulse(&mut self, channel_n: u8) {
+    fn update_pulse(&mut self, channel_n: u8, only_length: bool) {
         let audio_registers = {
             let memory = self.memory.read();
             memory.read_audio_registers(channel_n)
         };
+
+        if !audio_registers.is_set() {
+            self.auo.stop(channel_n);
+            return;
+        }
+
+        let pulse_length = audio_registers.get_pulse_length();
+
+        if only_length {
+            self.auo.reload_length(channel_n, pulse_length);
+            return;
+        }
 
         let frequency = audio_registers.get_frequency();
 
@@ -150,23 +168,23 @@ impl AudioUnit {
         let wave_duty_percent = audio_registers.calculate_wave_duty_percent();
         let sweep = audio_registers.get_sweep();
 
-        let pulse_description = PulseDescription {
-            pulse_n: channel_n,
-            current_frequency: frequency,
+        let pulse_description = PulseDescription::new(
+            frequency,
             wave_duty_percent,
-            initial_volume_envelope,
-            volume_envelope: initial_volume_envelope,
-            volume_envelope_direction,
-            volume_envelope_duration_in_1_64_s,
-            remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
+            VolumeEnvelopeDescription::new(
+                initial_volume_envelope,
+                volume_envelope_direction,
+                volume_envelope_duration_in_1_64_s,
+            ),
             sweep,
-            stop: false,
-        };
+            audio_registers.is_length_used(),
+            pulse_length,
+        );
 
-        self.auo.play_pulse(&pulse_description);
+        self.auo.play_pulse(channel_n, &pulse_description);
     }
 
-    fn read_wave(&mut self) {
+    fn update_wave(&mut self, only_length: bool) {
         let audio_registers;
         let wave;
 
@@ -178,6 +196,18 @@ impl AudioUnit {
             }
         }
 
+        if !audio_registers.is_set() {
+            self.auo.stop(3);
+            return;
+        }
+
+        let length = audio_registers.get_wave_length();
+
+        if only_length {
+            self.auo.reload_length(3, length);
+            return;
+        }
+
         let frequency = audio_registers.get_frequency();
         let wave_output_level = audio_registers.get_wave_output_level();
 
@@ -185,9 +215,9 @@ impl AudioUnit {
             frequency,
             wave_output_level,
             wave,
-            audio_registers.get_use_length(),
-            audio_registers.get_length(),
-            audio_registers.get_should_play(),
+            audio_registers.is_length_used(),
+            length,
+            audio_registers.get_wave_should_play(),
         );
 
         self.auo.play_wave(&wave_description);

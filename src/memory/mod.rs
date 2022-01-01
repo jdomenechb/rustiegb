@@ -43,6 +43,11 @@ pub mod timer_control;
 pub mod video_ram_8k_memory_sector;
 pub mod wave_pattern_ram;
 
+pub struct AudioRegWritten {
+    pub control: bool,
+    pub length: bool,
+}
+
 #[readonly::make]
 #[derive(Default)]
 pub struct Memory {
@@ -115,7 +120,7 @@ pub struct Memory {
     // FF25
     nr51: Byte,
     // FF26
-    nr52: NR52,
+    pub nr52: NR52,
     // Wave pattern ram (FF30 - FF3F)
     pub wave_pattern_ram: WavePatternRam,
     // FF40
@@ -149,10 +154,15 @@ pub struct Memory {
     remaining_div_cycles: u32,
 
     // Audio
-    audio_1_triggered: bool,
-    audio_2_triggered: bool,
-    audio_3_triggered: bool,
-    audio_4_triggered: bool,
+    audio_1_control_reg_written: bool,
+    audio_2_control_reg_written: bool,
+    audio_3_control_reg_written: bool,
+    audio_4_control_reg_written: bool,
+
+    audio_1_length_reg_written: bool,
+    audio_2_length_reg_written: bool,
+    audio_3_length_reg_written: bool,
+    audio_4_length_reg_written: bool,
 }
 
 impl Memory {
@@ -234,10 +244,14 @@ impl Memory {
             oam_ram: OamMemorySector::default(),
             remaining_timer_cycles: 0,
             remaining_div_cycles: 0,
-            audio_1_triggered: false,
-            audio_2_triggered: false,
-            audio_3_triggered: false,
-            audio_4_triggered: false,
+            audio_1_control_reg_written: false,
+            audio_2_control_reg_written: false,
+            audio_3_control_reg_written: false,
+            audio_4_control_reg_written: false,
+            audio_1_length_reg_written: false,
+            audio_2_length_reg_written: false,
+            audio_3_length_reg_written: false,
+            audio_4_length_reg_written: false,
         }
     }
 
@@ -260,7 +274,7 @@ impl Memory {
             0xFF1E => byte | 0b10111111, // 0xBF
             0xFF1F..=0xFF20 => 0xFF,
             0xFF23 => byte | 0b10111111, // 0xBF
-            Self::ADDR_NR52 => byte & 0b11110000 | 0b1110000,
+            Self::ADDR_NR52 => byte | 0b1110000,
             0xFF27..=0xFF2F => 0xFF,
             _ => byte,
         }
@@ -372,6 +386,7 @@ impl Memory {
             0xFF11 => {
                 if self.nr52.is_on() {
                     self.nr11 = value;
+                    self.audio_1_length_reg_written = true;
                 }
             }
             0xFF12 => {
@@ -390,7 +405,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_1_triggered = true;
+                    self.audio_1_control_reg_written = true;
                     self.nr52.set_channel_active(1);
                 }
 
@@ -404,6 +419,7 @@ impl Memory {
             0xFF16 => {
                 if self.nr52.is_on() {
                     self.nr21 = value;
+                    self.audio_2_length_reg_written = true;
                 }
             }
             0xFF17 => {
@@ -422,7 +438,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_2_triggered = true;
+                    self.audio_2_control_reg_written = true;
                     self.nr52.set_channel_active(2);
                 }
 
@@ -436,6 +452,7 @@ impl Memory {
             0xFF1B => {
                 if self.nr52.is_on() {
                     self.nr31 = value;
+                    self.audio_3_length_reg_written = true;
                 }
             }
             0xFF1C => {
@@ -454,7 +471,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_3_triggered = true;
+                    self.audio_3_control_reg_written = true;
                     self.nr52.set_channel_active(3);
                 }
 
@@ -468,6 +485,7 @@ impl Memory {
             0xFF20 => {
                 if self.nr52.is_on() {
                     self.nr41 = value;
+                    self.audio_4_length_reg_written = true;
                 }
             }
             0xFF21 => {
@@ -486,9 +504,8 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_4_triggered = true;
-                    // TODO
-                    //self.nr52.set_channel_active(4);
+                    self.audio_4_control_reg_written = true;
+                    self.nr52.set_channel_active(4);
                 }
 
                 self.nr44 = value;
@@ -504,7 +521,7 @@ impl Memory {
                 }
             }
             Self::ADDR_NR52 => {
-                self.nr52 = value.into();
+                self.nr52 = (value & 0b10000000).into();
 
                 if self.nr52.is_on() {
                     self.nr10 = 0;
@@ -690,18 +707,41 @@ impl Memory {
         }
     }
 
-    pub fn audio_has_been_trigered(&mut self) -> (bool, bool, bool, bool) {
+    pub fn audio_reg_have_been_written(
+        &mut self,
+    ) -> (
+        AudioRegWritten,
+        AudioRegWritten,
+        AudioRegWritten,
+        AudioRegWritten,
+    ) {
         let to_return = (
-            self.audio_1_triggered,
-            self.audio_2_triggered,
-            self.audio_3_triggered,
-            self.audio_4_triggered,
+            AudioRegWritten {
+                control: self.audio_1_control_reg_written,
+                length: self.audio_1_length_reg_written,
+            },
+            AudioRegWritten {
+                control: self.audio_2_control_reg_written,
+                length: self.audio_2_length_reg_written,
+            },
+            AudioRegWritten {
+                control: self.audio_3_control_reg_written,
+                length: self.audio_3_length_reg_written,
+            },
+            AudioRegWritten {
+                control: self.audio_4_control_reg_written,
+                length: self.audio_4_length_reg_written,
+            },
         );
 
-        self.audio_1_triggered = false;
-        self.audio_2_triggered = false;
-        self.audio_3_triggered = false;
-        self.audio_4_triggered = false;
+        self.audio_1_control_reg_written = false;
+        self.audio_2_control_reg_written = false;
+        self.audio_3_control_reg_written = false;
+        self.audio_4_control_reg_written = false;
+        self.audio_1_length_reg_written = false;
+        self.audio_2_length_reg_written = false;
+        self.audio_3_length_reg_written = false;
+        self.audio_4_length_reg_written = false;
 
         to_return
     }
@@ -728,6 +768,10 @@ impl Memory {
             self.internally_read_byte(start_address - 3).unwrap(),
             sweep,
         )
+    }
+
+    pub fn set_audio_channel_inactive(&mut self, channel_n: Byte) {
+        self.nr52.set_channel_inactive(channel_n);
     }
 }
 
@@ -819,7 +863,7 @@ mod tests {
 
         assert_eq!(
             memory.internally_read_byte(position),
-            Some(0xFF),
+            Some(0b10000000),
             "Wrong internal data when writing register {:X}",
             position
         );
