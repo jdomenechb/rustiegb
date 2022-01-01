@@ -89,13 +89,11 @@ impl PulseDescription {
     }
 
     pub fn step_256(&mut self) {
-        if self.use_length {
-            if self.remaining_steps > 0 {
-                self.remaining_steps -= 1;
+        if self.use_length && self.remaining_steps > 0 {
+            self.remaining_steps -= 1;
 
-                if self.remaining_steps == 0 {
-                    self.stop = true;
-                }
+            if self.remaining_steps == 0 {
+                self.stop = true;
             }
         }
     }
@@ -194,13 +192,11 @@ impl WaveDescription {
     }
 
     pub fn step_256(&mut self) {
-        if self.use_length {
-            if self.remaining_steps > 0 {
-                self.remaining_steps -= 1;
+        if self.use_length && self.remaining_steps > 0 {
+            self.remaining_steps -= 1;
 
-                if self.remaining_steps == 0 {
-                    self.should_play = false;
-                }
+            if self.remaining_steps == 0 {
+                self.should_play = false;
             }
         }
     }
