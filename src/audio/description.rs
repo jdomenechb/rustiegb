@@ -31,7 +31,7 @@ impl VolumeEnvelopeDescription {
 
 #[derive(Default)]
 pub struct PulseDescription {
-    pub current_frequency: Word,
+    pub frequency: Word,
     pub wave_duty_percent: f32,
     pub volume_envelope: VolumeEnvelopeDescription,
     sweep: Option<Sweep>,
@@ -51,7 +51,7 @@ impl PulseDescription {
         length: Byte,
     ) -> Self {
         let mut value = Self {
-            current_frequency: frequency,
+            frequency,
             wave_duty_percent,
             volume_envelope,
             sweep: None,
@@ -119,7 +119,7 @@ impl PulseDescription {
     }
 
     pub fn exchange(&mut self, other: &Self) {
-        self.current_frequency = other.current_frequency;
+        self.frequency = other.frequency;
         self.wave_duty_percent = other.wave_duty_percent;
         self.volume_envelope = VolumeEnvelopeDescription::new(
             other.volume_envelope.volume_envelope,
@@ -134,7 +134,7 @@ impl PulseDescription {
     }
 
     pub fn calculate_frequency(&self) -> f32 {
-        131072_f32 / (2048.0 - self.current_frequency as f32)
+        131072_f32 / (2048.0 - self.frequency as f32)
     }
 
     pub fn reload_length(&mut self, length: Byte) {

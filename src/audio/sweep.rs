@@ -58,7 +58,7 @@ impl Sweep {
 
                 if new_frequency < 2048 && self.shifts > 0 {
                     self.shadow_frequency = new_frequency;
-                    pulse_description.current_frequency = new_frequency;
+                    pulse_description.frequency = new_frequency;
 
                     {
                         memory.write().update_audio_1_frequency(new_frequency);
