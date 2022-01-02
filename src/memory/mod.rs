@@ -773,6 +773,11 @@ impl Memory {
     pub fn set_audio_channel_inactive(&mut self, channel_n: Byte) {
         self.nr52.set_channel_inactive(channel_n);
     }
+
+    pub fn update_audio_1_frequency(&mut self, frequency: Word) {
+        self.nr13 = (frequency & 0xFF) as Byte;
+        self.nr14 = (self.nr14 & 0b11111000) | ((frequency >> 8) & 0b111) as Byte;
+    }
 }
 
 #[cfg(test)]

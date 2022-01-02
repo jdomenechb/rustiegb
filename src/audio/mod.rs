@@ -132,7 +132,7 @@ impl AudioUnit {
             }
 
             if self.frame_step == 2 || self.frame_step == 6 {
-                self.auo.step_128()
+                self.auo.step_128(self.memory.clone())
             }
         }
     }

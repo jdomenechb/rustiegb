@@ -1,5 +1,7 @@
 use crate::audio::description::PulseDescription;
-use crate::{Byte, Word};
+use crate::{Byte, Memory, Word};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum SweepDirection {
@@ -35,7 +37,11 @@ impl Sweep {
         }
     }
 
-    pub fn step_128(&mut self, pulse_description: &mut PulseDescription) {
+    pub fn step_128(
+        &mut self,
+        memory: Arc<RwLock<Memory>>,
+        pulse_description: &mut PulseDescription,
+    ) {
         if self.timer == 0 {
             return;
         }
@@ -53,6 +59,10 @@ impl Sweep {
                 if new_frequency < 2048 && self.shifts > 0 {
                     self.shadow_frequency = new_frequency;
                     pulse_description.current_frequency = new_frequency;
+
+                    {
+                        memory.write().update_audio_1_frequency(new_frequency);
+                    }
 
                     self.calculate_new_frequency(pulse_description);
                 }

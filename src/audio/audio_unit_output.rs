@@ -16,7 +16,7 @@ pub trait AudioUnitOutput {
     fn stop_all(&mut self);
     fn set_mute(&mut self, muted: bool);
     fn step_64(&mut self);
-    fn step_128(&mut self);
+    fn step_128(&mut self, memory: Arc<RwLock<Memory>>);
     fn step_256(&mut self);
     fn update(&mut self, memory: Arc<RwLock<Memory>>);
     fn reload_length(&mut self, channel_n: u8, length: Byte);
@@ -301,8 +301,8 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         self.pulse_description_2.write().step_64();
     }
 
-    fn step_128(&mut self) {
-        self.pulse_description_1.write().step_128();
+    fn step_128(&mut self, memory: Arc<RwLock<Memory>>) {
+        self.pulse_description_1.write().step_128(memory);
     }
 
     fn step_256(&mut self) {

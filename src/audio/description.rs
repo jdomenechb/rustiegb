@@ -2,7 +2,9 @@ use crate::audio::sweep::Sweep;
 use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
-use crate::{Byte, Word};
+use crate::{Byte, Memory, Word};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 #[derive(Default)]
 pub struct VolumeEnvelopeDescription {
@@ -64,9 +66,9 @@ impl PulseDescription {
         value
     }
 
-    pub fn step_128(&mut self) {
+    pub fn step_128(&mut self, memory: Arc<RwLock<Memory>>) {
         if let Some(mut sweep) = self.sweep {
-            sweep.step_128(self);
+            sweep.step_128(memory, self);
             self.sweep = Some(sweep);
         }
     }

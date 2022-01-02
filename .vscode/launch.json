@@ -188,6 +188,26 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug Acceptance test2",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "roms/gb-test-roms-master/dmg_sound/rom_singles/01-registers.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'rustiegb'",
             "cargo": {
                 "args": [
