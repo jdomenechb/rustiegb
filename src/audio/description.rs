@@ -54,7 +54,7 @@ impl PulseDescription {
             current_frequency: frequency,
             wave_duty_percent,
             volume_envelope,
-            sweep,
+            sweep: None,
             stop: false,
             use_length,
             length,
@@ -62,6 +62,7 @@ impl PulseDescription {
         };
 
         value.reload_length(length);
+        value.reload_sweep(sweep);
 
         value
     }
@@ -139,6 +140,14 @@ impl PulseDescription {
     pub fn reload_length(&mut self, length: Byte) {
         self.length = length;
         self.remaining_steps = 64 - length;
+    }
+
+    pub fn reload_sweep(&mut self, sweep: Option<Sweep>) {
+        self.sweep = sweep;
+
+        if let Some(mut s) = sweep {
+            s.check_first_calculate_new_frequency(self);
+        }
     }
 }
 

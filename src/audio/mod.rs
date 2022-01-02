@@ -9,7 +9,7 @@ use description::{PulseDescription, WaveDescription};
 
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
-use crate::memory::Memory;
+use crate::memory::{AudioRegWritten, Memory};
 
 pub mod audio_unit_output;
 mod description;
@@ -97,18 +97,18 @@ impl AudioUnit {
         }
 
         // Sound 1
-        if audio_triggers.0.control || audio_triggers.0.length {
-            self.update_pulse(1, audio_triggers.0.length);
+        if audio_triggers.0.has_change() {
+            self.update_pulse(1, &audio_triggers.0);
         }
 
         // Sound 2
-        if audio_triggers.1.control || audio_triggers.1.length {
-            self.update_pulse(2, audio_triggers.1.length);
+        if audio_triggers.1.has_change() {
+            self.update_pulse(2, &audio_triggers.1);
         }
 
         // Sound 3
-        if audio_triggers.2.control || audio_triggers.2.length {
-            self.update_wave(audio_triggers.2.length);
+        if audio_triggers.2.has_change() {
+            self.update_wave(&audio_triggers.2);
         }
 
         // TODO: sound 4
@@ -141,7 +141,7 @@ impl AudioUnit {
         self.auo.stop_all();
     }
 
-    fn update_pulse(&mut self, channel_n: u8, only_length: bool) {
+    fn update_pulse(&mut self, channel_n: u8, changes: &AudioRegWritten) {
         let audio_registers = {
             let memory = self.memory.read();
             memory.read_audio_registers(channel_n)
@@ -154,8 +154,15 @@ impl AudioUnit {
 
         let pulse_length = audio_registers.get_pulse_length();
 
-        if only_length {
+        if changes.length {
             self.auo.reload_length(channel_n, pulse_length);
+            return;
+        }
+
+        let sweep = audio_registers.get_sweep();
+
+        if changes.sweep {
+            self.auo.reload_sweep(sweep);
             return;
         }
 
@@ -166,9 +173,8 @@ impl AudioUnit {
 
         let volume_envelope_duration_in_1_64_s = audio_registers.get_volume_envelope_duration_64();
         let wave_duty_percent = audio_registers.calculate_wave_duty_percent();
-        let sweep = audio_registers.get_sweep();
 
-        let mut pulse_description = PulseDescription::new(
+        let pulse_description = PulseDescription::new(
             frequency,
             wave_duty_percent,
             VolumeEnvelopeDescription::new(
@@ -181,16 +187,10 @@ impl AudioUnit {
             pulse_length,
         );
 
-        if let Some(mut s) = sweep {
-            if s.has_shifts() {
-                s.calculate_new_frequency(&mut pulse_description);
-            }
-        }
-
         self.auo.play_pulse(channel_n, &pulse_description);
     }
 
-    fn update_wave(&mut self, only_length: bool) {
+    fn update_wave(&mut self, changes: &AudioRegWritten) {
         let audio_registers;
         let wave;
 
@@ -209,7 +209,7 @@ impl AudioUnit {
 
         let length = audio_registers.get_wave_length();
 
-        if only_length {
+        if changes.length {
             self.auo.reload_length(3, length);
             return;
         }

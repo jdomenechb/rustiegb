@@ -43,9 +43,17 @@ pub mod timer_control;
 pub mod video_ram_8k_memory_sector;
 pub mod wave_pattern_ram;
 
+#[derive(Default, Copy, Clone)]
 pub struct AudioRegWritten {
     pub control: bool,
     pub length: bool,
+    pub sweep: bool,
+}
+
+impl AudioRegWritten {
+    pub fn has_change(&self) -> bool {
+        self.control || self.length || self.sweep
+    }
 }
 
 #[readonly::make]
@@ -154,15 +162,10 @@ pub struct Memory {
     remaining_div_cycles: u32,
 
     // Audio
-    audio_1_control_reg_written: bool,
-    audio_2_control_reg_written: bool,
-    audio_3_control_reg_written: bool,
-    audio_4_control_reg_written: bool,
-
-    audio_1_length_reg_written: bool,
-    audio_2_length_reg_written: bool,
-    audio_3_length_reg_written: bool,
-    audio_4_length_reg_written: bool,
+    audio_1_reg_written: AudioRegWritten,
+    audio_2_reg_written: AudioRegWritten,
+    audio_3_reg_written: AudioRegWritten,
+    audio_4_reg_written: AudioRegWritten,
 }
 
 impl Memory {
@@ -244,14 +247,10 @@ impl Memory {
             oam_ram: OamMemorySector::default(),
             remaining_timer_cycles: 0,
             remaining_div_cycles: 0,
-            audio_1_control_reg_written: false,
-            audio_2_control_reg_written: false,
-            audio_3_control_reg_written: false,
-            audio_4_control_reg_written: false,
-            audio_1_length_reg_written: false,
-            audio_2_length_reg_written: false,
-            audio_3_length_reg_written: false,
-            audio_4_length_reg_written: false,
+            audio_1_reg_written: AudioRegWritten::default(),
+            audio_2_reg_written: AudioRegWritten::default(),
+            audio_3_reg_written: AudioRegWritten::default(),
+            audio_4_reg_written: AudioRegWritten::default(),
         }
     }
 
@@ -381,12 +380,13 @@ impl Memory {
             Self::ADDR_NR10 => {
                 if self.nr52.is_on() {
                     self.nr10 = value;
+                    self.audio_1_reg_written.sweep = true;
                 }
             }
             0xFF11 => {
                 if self.nr52.is_on() {
                     self.nr11 = value;
-                    self.audio_1_length_reg_written = true;
+                    self.audio_1_reg_written.length = true;
                 }
             }
             0xFF12 => {
@@ -405,7 +405,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_1_control_reg_written = true;
+                    self.audio_1_reg_written.control = true;
                     self.nr52.set_channel_active(1);
                 }
 
@@ -419,7 +419,7 @@ impl Memory {
             0xFF16 => {
                 if self.nr52.is_on() {
                     self.nr21 = value;
-                    self.audio_2_length_reg_written = true;
+                    self.audio_2_reg_written.length = true;
                 }
             }
             0xFF17 => {
@@ -438,7 +438,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_2_control_reg_written = true;
+                    self.audio_2_reg_written.control = true;
                     self.nr52.set_channel_active(2);
                 }
 
@@ -452,7 +452,7 @@ impl Memory {
             0xFF1B => {
                 if self.nr52.is_on() {
                     self.nr31 = value;
-                    self.audio_3_length_reg_written = true;
+                    self.audio_3_reg_written.length = true;
                 }
             }
             0xFF1C => {
@@ -471,7 +471,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_3_control_reg_written = true;
+                    self.audio_3_reg_written.control = true;
                     self.nr52.set_channel_active(3);
                 }
 
@@ -485,7 +485,7 @@ impl Memory {
             0xFF20 => {
                 if self.nr52.is_on() {
                     self.nr41 = value;
-                    self.audio_4_length_reg_written = true;
+                    self.audio_4_reg_written.length = true;
                 }
             }
             0xFF21 => {
@@ -504,7 +504,7 @@ impl Memory {
                 }
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_4_control_reg_written = true;
+                    self.audio_4_reg_written.control = true;
                     self.nr52.set_channel_active(4);
                 }
 
@@ -716,32 +716,16 @@ impl Memory {
         AudioRegWritten,
     ) {
         let to_return = (
-            AudioRegWritten {
-                control: self.audio_1_control_reg_written,
-                length: self.audio_1_length_reg_written,
-            },
-            AudioRegWritten {
-                control: self.audio_2_control_reg_written,
-                length: self.audio_2_length_reg_written,
-            },
-            AudioRegWritten {
-                control: self.audio_3_control_reg_written,
-                length: self.audio_3_length_reg_written,
-            },
-            AudioRegWritten {
-                control: self.audio_4_control_reg_written,
-                length: self.audio_4_length_reg_written,
-            },
+            self.audio_1_reg_written.clone(),
+            self.audio_2_reg_written.clone(),
+            self.audio_3_reg_written.clone(),
+            self.audio_4_reg_written.clone(),
         );
 
-        self.audio_1_control_reg_written = false;
-        self.audio_2_control_reg_written = false;
-        self.audio_3_control_reg_written = false;
-        self.audio_4_control_reg_written = false;
-        self.audio_1_length_reg_written = false;
-        self.audio_2_length_reg_written = false;
-        self.audio_3_length_reg_written = false;
-        self.audio_4_length_reg_written = false;
+        self.audio_1_reg_written = AudioRegWritten::default();
+        self.audio_2_reg_written = AudioRegWritten::default();
+        self.audio_3_reg_written = AudioRegWritten::default();
+        self.audio_4_reg_written = AudioRegWritten::default();
 
         to_return
     }

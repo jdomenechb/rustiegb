@@ -5,6 +5,7 @@ use cpal::{Device, Stream, SupportedStreamConfig};
 use parking_lot::RwLock;
 
 use crate::audio::description::{PulseDescription, WaveDescription};
+use crate::audio::sweep::Sweep;
 use crate::audio::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
 use crate::{Byte, Memory, Word};
@@ -20,6 +21,7 @@ pub trait AudioUnitOutput {
     fn step_256(&mut self);
     fn update(&mut self, memory: Arc<RwLock<Memory>>);
     fn reload_length(&mut self, channel_n: u8, length: Byte);
+    fn reload_sweep(&mut self, sweep: Option<Sweep>);
 }
 
 pub struct CpalAudioUnitOutput {
@@ -340,5 +342,9 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
             3 => self.wave_description.write().reload_length(pulse_length),
             _ => panic!("Invalid channel provided"),
         }
+    }
+
+    fn reload_sweep(&mut self, sweep: Option<Sweep>) {
+        self.pulse_description_1.write().reload_sweep(sweep);
     }
 }

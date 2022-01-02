@@ -85,7 +85,12 @@ impl Sweep {
         new_frequency
     }
 
-    pub fn has_shifts(&self) -> bool {
-        self.shifts > 0
+    pub fn check_first_calculate_new_frequency(
+        &mut self,
+        pulse_description: &mut PulseDescription,
+    ) {
+        if self.shifts > 0 {
+            self.calculate_new_frequency(pulse_description);
+        }
     }
 }
