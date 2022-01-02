@@ -151,7 +151,11 @@ impl PulseDescription {
     pub fn reload_sweep(&mut self, sweep: Option<Sweep>) {
         if let Some(s) = sweep {
             if let Some(mut s2) = self.sweep {
-                s2.exchange(s);
+                if s2.negate_is_disabled_after_calculation(&s) {
+                    self.stop = true;
+                }
+
+                s2.exchange(&s);
                 self.sweep = Some(s2);
             }
         }

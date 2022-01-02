@@ -142,6 +142,6 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid cartridge type value")]
     fn test_from_ko() {
-        CartridgeType::from(0x50);
+        let _ = CartridgeType::from(0x50);
     }
 }

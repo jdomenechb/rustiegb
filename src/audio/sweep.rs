@@ -17,6 +17,7 @@ pub struct Sweep {
     timer: Byte,
     enabled: bool,
     shadow_frequency: Word,
+    calculated: bool,
 }
 
 impl Sweep {
@@ -34,6 +35,7 @@ impl Sweep {
             timer: if time > 0 { time } else { 8 },
             enabled: time > 0 || shifts > 0,
             shadow_frequency: frequency,
+            calculated: false,
         }
     }
 
@@ -71,6 +73,8 @@ impl Sweep {
     }
 
     pub fn calculate_new_frequency(&mut self, pulse_description: &mut PulseDescription) -> u16 {
+        self.calculated = true;
+
         let to_add_sub = self.shadow_frequency >> self.shifts;
 
         let new_frequency = match self.direction {
@@ -94,11 +98,18 @@ impl Sweep {
         }
     }
 
-    pub fn exchange(&mut self, other: Self) {
+    pub fn negate_is_disabled_after_calculation(&self, other: &Self) -> bool {
+        self.calculated
+            && self.direction == SweepDirection::Sub
+            && other.direction == SweepDirection::Add
+    }
+
+    pub fn exchange(&mut self, other: &Self) {
         self.time = other.time;
         self.direction = other.direction;
         self.shifts = other.shifts;
-        self.timer = other.timer;
-        self.shadow_frequency = other.shadow_frequency;
+        self.calculated = false;
+        //self.timer = other.timer;
+        //self.shadow_frequency = other.shadow_frequency;
     }
 }
