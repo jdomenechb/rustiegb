@@ -93,4 +93,12 @@ impl Sweep {
             self.calculate_new_frequency(pulse_description);
         }
     }
+
+    pub fn exchange(&mut self, other: Self) {
+        self.time = other.time;
+        self.direction = other.direction;
+        self.shifts = other.shifts;
+        self.timer = other.timer;
+        self.shadow_frequency = other.shadow_frequency;
+    }
 }
