@@ -147,11 +147,6 @@ impl AudioUnit {
             memory.read_audio_registers(channel_n)
         };
 
-        if !audio_registers.is_set() {
-            self.auo.stop(channel_n);
-            return;
-        }
-
         let pulse_length = audio_registers.get_pulse_length();
 
         if changes.length {
@@ -166,21 +161,14 @@ impl AudioUnit {
             return;
         }
 
-        let frequency = audio_registers.get_frequency();
-
-        let initial_volume_envelope = audio_registers.get_volume_envelope();
-        let volume_envelope_direction = audio_registers.get_volume_envelope_direction();
-
-        let volume_envelope_duration_in_1_64_s = audio_registers.get_volume_envelope_duration_64();
-        let wave_duty_percent = audio_registers.calculate_wave_duty_percent();
-
         let pulse_description = PulseDescription::new(
-            frequency,
-            wave_duty_percent,
+            audio_registers.is_set(),
+            audio_registers.get_frequency(),
+            audio_registers.calculate_wave_duty_percent(),
             VolumeEnvelopeDescription::new(
-                initial_volume_envelope,
-                volume_envelope_direction,
-                volume_envelope_duration_in_1_64_s,
+                audio_registers.get_volume_envelope(),
+                audio_registers.get_volume_envelope_direction(),
+                audio_registers.get_volume_envelope_duration_64(),
             ),
             sweep,
             audio_registers.is_length_used(),
@@ -202,11 +190,6 @@ impl AudioUnit {
             }
         }
 
-        if !audio_registers.is_set() {
-            self.auo.stop(3);
-            return;
-        }
-
         let length = audio_registers.get_wave_length();
 
         if changes.length {
@@ -218,6 +201,7 @@ impl AudioUnit {
         let wave_output_level = audio_registers.get_wave_output_level();
 
         let wave_description = WaveDescription::new(
+            audio_registers.is_set(),
             frequency,
             wave_output_level,
             wave,

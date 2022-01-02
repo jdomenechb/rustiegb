@@ -13,7 +13,6 @@ use crate::{Byte, Memory, Word};
 pub trait AudioUnitOutput {
     fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription);
     fn play_wave(&mut self, description: &WaveDescription);
-    fn stop(&mut self, channel_n: u8);
     fn stop_all(&mut self);
     fn set_mute(&mut self, muted: bool);
     fn step_64(&mut self);
@@ -86,22 +85,24 @@ impl CpalAudioUnitOutput {
             _ => panic!("Invalid pulse number"),
         };
 
-        let mut sample_clock = 0f32;
-
-        let mut next_value = move || {
+        let next_value = move || {
             let sample_in_period;
             let high_part_max;
             let volume_envelope;
+            let sample_clock;
 
             {
-                let description = description.read();
+                let mut description = description.write();
+
+                if !description.set || description.stop {
+                    return 0.0;
+                }
 
                 sample_in_period = sample_rate / description.calculate_frequency();
                 high_part_max = sample_in_period * description.wave_duty_percent;
                 volume_envelope = description.volume_envelope.volume_envelope;
+                sample_clock = description.next_sample_clock()
             }
-
-            sample_clock += 1.0;
 
             let wave = if sample_clock % sample_in_period <= high_part_max {
                 1.0
@@ -141,18 +142,21 @@ impl CpalAudioUnitOutput {
 
         let description = self.wave_description.clone();
 
-        let mut sample_clock = 0f32;
-
-        let mut next_value = move || {
+        let next_value = move || {
             let sample_in_period;
             let output_level;
             let mut wave_sample;
             let duration_not_finished: f32;
-
-            sample_clock += 1.0;
+            let sample_clock;
 
             {
-                let description = description.read();
+                let mut description = description.write();
+
+                if !description.set || !description.should_play {
+                    return 0.0;
+                }
+
+                sample_clock = description.next_sample_clock();
 
                 // How many samples are in one frequency oscillation
                 sample_in_period = sample_rate / description.calculate_frequency();
@@ -253,11 +257,9 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
             return;
         }
 
-        let stream = &self.stream_3;
-
         self.wave_description.write().exchange(description);
 
-        if stream.is_none() {
+        if self.stream_3.is_none() {
             let stream = match self.config.sample_format() {
                 cpal::SampleFormat::F32 => {
                     self.run_wave::<f32>(&self.config.clone().into()).unwrap()
@@ -271,16 +273,6 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
             };
 
             self.stream_3 = Some(stream);
-        }
-    }
-
-    fn stop(&mut self, channel_n: u8) {
-        match channel_n {
-            1 => self.stream_1 = None,
-            2 => self.stream_2 = None,
-            3 => self.stream_3 = None,
-            4 => self.stream_4 = None,
-            _ => panic!("Invalid channel number"),
         }
     }
 
@@ -315,20 +307,14 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
 
     fn update(&mut self, memory: Arc<RwLock<Memory>>) {
         if self.pulse_description_1.read().stop {
-            self.stop(1);
-
             memory.write().set_audio_channel_inactive(1);
         }
 
         if self.pulse_description_2.read().stop {
-            self.stop(2);
-
             memory.write().set_audio_channel_inactive(2);
         }
 
         if !self.wave_description.read().should_play {
-            self.stop(3);
-
             memory.write().set_audio_channel_inactive(3);
         }
 

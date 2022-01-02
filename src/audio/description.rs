@@ -31,6 +31,7 @@ impl VolumeEnvelopeDescription {
 
 #[derive(Default)]
 pub struct PulseDescription {
+    pub set: bool,
     pub frequency: Word,
     pub wave_duty_percent: f32,
     pub volume_envelope: VolumeEnvelopeDescription,
@@ -39,10 +40,12 @@ pub struct PulseDescription {
     use_length: bool,
     length: Byte,
     remaining_steps: Byte,
+    sample_clock: f32,
 }
 
 impl PulseDescription {
     pub fn new(
+        set: bool,
         frequency: Word,
         wave_duty_percent: f32,
         volume_envelope: VolumeEnvelopeDescription,
@@ -51,6 +54,7 @@ impl PulseDescription {
         length: Byte,
     ) -> Self {
         let mut value = Self {
+            set,
             frequency,
             wave_duty_percent,
             volume_envelope,
@@ -59,6 +63,7 @@ impl PulseDescription {
             use_length,
             length,
             remaining_steps: 0,
+            sample_clock: 0.0,
         };
 
         value.reload_length(length);
@@ -119,6 +124,7 @@ impl PulseDescription {
     }
 
     pub fn exchange(&mut self, other: &Self) {
+        self.set = other.set;
         self.frequency = other.frequency;
         self.wave_duty_percent = other.wave_duty_percent;
         self.volume_envelope = VolumeEnvelopeDescription::new(
@@ -131,6 +137,7 @@ impl PulseDescription {
         self.use_length = other.use_length;
         self.length = other.length;
         self.remaining_steps = other.remaining_steps;
+        self.sample_clock = 0.0;
     }
 
     pub fn calculate_frequency(&self) -> f32 {
@@ -149,9 +156,17 @@ impl PulseDescription {
             s.check_first_calculate_new_frequency(self);
         }
     }
+
+    pub fn next_sample_clock(&mut self) -> f32 {
+        let value = self.sample_clock;
+        self.sample_clock += 1.0;
+
+        value
+    }
 }
 
 pub struct WaveDescription {
+    pub set: bool,
     pub frequency: u16,
     pub output_level: WaveOutputLevel,
     pub wave: WavePatternRam,
@@ -159,10 +174,12 @@ pub struct WaveDescription {
     pub length: Byte,
     pub remaining_steps: Word,
     pub should_play: bool,
+    sample_clock: f32,
 }
 
 impl WaveDescription {
     pub fn new(
+        set: bool,
         frequency: u16,
         output_level: WaveOutputLevel,
         wave: WavePatternRam,
@@ -171,6 +188,7 @@ impl WaveDescription {
         should_play: bool,
     ) -> Self {
         let mut value = Self {
+            set,
             frequency,
             output_level,
             wave,
@@ -178,6 +196,7 @@ impl WaveDescription {
             length,
             remaining_steps: 0,
             should_play,
+            sample_clock: 0.0,
         };
 
         value.reload_length(length);
@@ -186,6 +205,7 @@ impl WaveDescription {
     }
 
     pub fn exchange(&mut self, other: &Self) {
+        self.set = other.set;
         self.frequency = other.frequency;
         self.output_level = other.output_level;
         self.wave = WavePatternRam {
@@ -195,6 +215,7 @@ impl WaveDescription {
         self.length = other.length;
         self.remaining_steps = other.remaining_steps;
         self.should_play = other.should_play;
+        self.sample_clock = 0.0;
     }
 
     pub fn step_256(&mut self) {
@@ -215,11 +236,19 @@ impl WaveDescription {
         self.length = length;
         self.remaining_steps = 256 - length as Word;
     }
+
+    pub fn next_sample_clock(&mut self) -> f32 {
+        let value = self.sample_clock;
+        self.sample_clock += 1.0;
+
+        value
+    }
 }
 
 impl Default for WaveDescription {
     fn default() -> Self {
         Self::new(
+            true,
             0,
             WaveOutputLevel::Mute,
             WavePatternRam::default(),
@@ -236,8 +265,15 @@ mod tests {
 
     #[test]
     fn test_pdesc_stops_when_no_remaining_steps() {
-        let mut pd =
-            PulseDescription::new(1, 0.0, VolumeEnvelopeDescription::default(), None, true, 63);
+        let mut pd = PulseDescription::new(
+            true,
+            1,
+            0.0,
+            VolumeEnvelopeDescription::default(),
+            None,
+            true,
+            63,
+        );
 
         assert_eq!(pd.remaining_steps, 1);
         assert_eq!(pd.stop, false);
@@ -251,6 +287,7 @@ mod tests {
     #[test]
     fn test_wdesc_stops_when_no_remaining_steps() {
         let mut wd = WaveDescription::new(
+            true,
             1,
             WaveOutputLevel::Vol100Percent,
             WavePatternRam::default(),
