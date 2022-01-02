@@ -92,7 +92,7 @@ impl PulseDescription {
         };
 
         value.reload_length(length);
-        value.reload_sweep(sweep);
+        value.reload_sweep(sweep, true);
 
         value
     }
@@ -144,11 +144,13 @@ impl PulseDescription {
         self.remaining_steps = 64 - length;
     }
 
-    pub fn reload_sweep(&mut self, sweep: Option<Sweep>) {
+    pub fn reload_sweep(&mut self, sweep: Option<Sweep>, trigger: bool) {
         self.sweep = sweep;
 
-        if let Some(mut s) = sweep {
-            s.check_first_calculate_new_frequency(self);
+        if trigger {
+            if let Some(mut s) = sweep {
+                s.check_first_calculate_new_frequency(self);
+            }
         }
     }
 

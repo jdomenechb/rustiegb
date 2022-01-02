@@ -331,6 +331,6 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
     }
 
     fn reload_sweep(&mut self, sweep: Option<Sweep>) {
-        self.pulse_description_1.write().reload_sweep(sweep);
+        self.pulse_description_1.write().reload_sweep(sweep, false);
     }
 }
