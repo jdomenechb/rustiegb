@@ -98,7 +98,7 @@ impl Sweep {
         self.time = other.time;
         self.direction = other.direction;
         self.shifts = other.shifts;
-        self.timer = other.timer;
-        self.shadow_frequency = other.shadow_frequency;
+        //self.timer = other.timer;
+        //self.shadow_frequency = other.shadow_frequency;
     }
 }

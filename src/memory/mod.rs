@@ -43,7 +43,7 @@ pub mod timer_control;
 pub mod video_ram_8k_memory_sector;
 pub mod wave_pattern_ram;
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Clone)]
 pub struct AudioRegWritten {
     pub control: bool,
     pub length: bool,
