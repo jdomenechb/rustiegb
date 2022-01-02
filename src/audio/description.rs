@@ -8,23 +8,48 @@ use std::sync::Arc;
 
 #[derive(Default)]
 pub struct VolumeEnvelopeDescription {
-    pub volume_envelope: Byte,
-    pub volume_envelope_direction: VolumeEnvelopeDirection,
-    pub volume_envelope_duration_in_1_64_s: u8,
-    pub remaining_volume_envelope_duration_in_1_64_s: u8,
+    pub initial_volume: Byte,
+    pub current_volume: Byte,
+    pub direction: VolumeEnvelopeDirection,
+    pub period: u8,
+    pub period_timer: u8,
 }
 
 impl VolumeEnvelopeDescription {
-    pub fn new(
-        volume_envelope: Byte,
-        volume_envelope_direction: VolumeEnvelopeDirection,
-        volume_envelope_duration_in_1_64_s: u8,
-    ) -> Self {
+    pub fn new(initial_volume: Byte, direction: VolumeEnvelopeDirection, period: u8) -> Self {
         Self {
-            volume_envelope,
-            volume_envelope_direction,
-            volume_envelope_duration_in_1_64_s,
-            remaining_volume_envelope_duration_in_1_64_s: volume_envelope_duration_in_1_64_s,
+            initial_volume,
+            current_volume: initial_volume,
+            direction,
+            period,
+            period_timer: period,
+        }
+    }
+
+    pub fn step_64(&mut self) {
+        if self.period == 0 {
+            return;
+        }
+
+        if self.period_timer != 0 {
+            self.period_timer -= 1;
+
+            if self.period_timer == 0 {
+                self.period_timer = self.period;
+
+                match self.direction {
+                    VolumeEnvelopeDirection::Up => {
+                        if self.current_volume < 0xF {
+                            self.current_volume += 1;
+                        }
+                    }
+                    VolumeEnvelopeDirection::Down => {
+                        if self.current_volume > 0 {
+                            self.current_volume -= 1;
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -80,37 +105,7 @@ impl PulseDescription {
     }
 
     pub fn step_64(&mut self) {
-        if self.volume_envelope.volume_envelope_duration_in_1_64_s == 0 {
-            return;
-        }
-
-        if self
-            .volume_envelope
-            .remaining_volume_envelope_duration_in_1_64_s
-            == 0
-        {
-            match self.volume_envelope.volume_envelope_direction {
-                VolumeEnvelopeDirection::Up => {
-                    if self.volume_envelope.volume_envelope < 0xF {
-                        self.volume_envelope.volume_envelope += 1;
-                    }
-                }
-                VolumeEnvelopeDirection::Down => {
-                    if self.volume_envelope.volume_envelope > 0 {
-                        self.volume_envelope.volume_envelope -= 1;
-                    }
-                }
-            }
-
-            self.volume_envelope
-                .remaining_volume_envelope_duration_in_1_64_s =
-                self.volume_envelope.volume_envelope_duration_in_1_64_s;
-
-            return;
-        }
-
-        self.volume_envelope
-            .remaining_volume_envelope_duration_in_1_64_s -= 1;
+        self.volume_envelope.step_64();
     }
 
     pub fn step_256(&mut self) {
@@ -128,9 +123,9 @@ impl PulseDescription {
         self.frequency = other.frequency;
         self.wave_duty_percent = other.wave_duty_percent;
         self.volume_envelope = VolumeEnvelopeDescription::new(
-            other.volume_envelope.volume_envelope,
-            other.volume_envelope.volume_envelope_direction,
-            other.volume_envelope.volume_envelope_duration_in_1_64_s,
+            other.volume_envelope.initial_volume,
+            other.volume_envelope.direction,
+            other.volume_envelope.period,
         );
         self.sweep = other.sweep;
         self.stop = other.stop;

@@ -40,7 +40,7 @@ pub struct CpalAudioUnitOutput {
 }
 
 impl CpalAudioUnitOutput {
-    const MASTER_VOLUME: f32 = 0.5;
+    const MASTER_VOLUME: f32 = 0.25;
 
     pub fn new() -> Self {
         let host = cpal::default_host();
@@ -100,17 +100,17 @@ impl CpalAudioUnitOutput {
 
                 sample_in_period = sample_rate / description.calculate_frequency();
                 high_part_max = sample_in_period * description.wave_duty_percent;
-                volume_envelope = description.volume_envelope.volume_envelope;
+                volume_envelope = description.volume_envelope.current_volume;
                 sample_clock = description.next_sample_clock()
             }
 
             let wave = if sample_clock % sample_in_period <= high_part_max {
                 1.0
             } else {
-                -1.0
+                0.0
             };
 
-            wave * volume_envelope as f32 / 0xF as f32 * volume_envelope as f32 / 14.0
+            (wave * volume_envelope as f32) / 7.5 - 1.0
         };
 
         let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
