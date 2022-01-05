@@ -92,7 +92,7 @@ impl AudioUnit {
 
         // NR52 controls the general output
         if nr52 & 0b10000000 != 0b10000000 {
-            self.stop_all();
+            self.auo.stop_all();
             return;
         }
 
@@ -135,10 +135,6 @@ impl AudioUnit {
                 self.auo.step_128(self.memory.clone())
             }
         }
-    }
-
-    fn stop_all(&mut self) {
-        self.auo.stop_all();
     }
 
     fn update_pulse(&mut self, channel_n: u8, changes: &AudioRegWritten) {
