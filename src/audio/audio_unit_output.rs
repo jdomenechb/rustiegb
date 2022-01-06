@@ -203,13 +203,16 @@ impl CpalAudioUnitOutput {
         T: cpal::Sample,
     {
         let device = &self.device;
+        let sample_rate = config.sample_rate.0 as f32;
         let channels = config.channels as usize;
 
         let description = self.noise_description.clone();
 
         let next_value = move || {
-            let lsfr;
+            let sample_in_period;
             let volume_envelope;
+            let sample_clock;
+            let wave;
 
             {
                 let mut description = description.write();
@@ -218,11 +221,17 @@ impl CpalAudioUnitOutput {
                     return 0.0;
                 }
 
-                lsfr = description.lfsr;
                 volume_envelope = description.volume_envelope.current_volume;
-            }
 
-            let wave = (lsfr & 0b1) as f32;
+                sample_in_period = sample_rate / (description.calculate_frequency() * 8.0);
+                sample_clock = description.next_sample_clock();
+
+                if sample_clock % sample_in_period == 0.0 {
+                    description.update_lfsr();
+                }
+
+                wave = (!(description.lfsr & 0b1) & 0b1) as f32;
+            }
 
             (wave * volume_envelope as f32) / 7.5 - 1.0
         };
@@ -348,10 +357,6 @@ impl CpalAudioUnitOutput {
             self.stop_all();
             self.muted = muted;
         }
-    }
-
-    pub fn step(&mut self, last_instruction_cycles: u8) {
-        self.noise_description.write().step(last_instruction_cycles);
     }
 
     pub fn step_64(&mut self) {

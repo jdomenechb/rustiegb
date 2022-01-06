@@ -119,8 +119,6 @@ impl AudioUnit {
     }
 
     fn clock_frame_sequencer(&mut self, last_instruction_cycles: u8) {
-        self.auo.step(last_instruction_cycles);
-
         self.cycle_count += last_instruction_cycles as u16;
 
         if self.cycle_count > CYCLES_1_512_SEC {

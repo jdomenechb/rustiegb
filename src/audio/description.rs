@@ -288,8 +288,7 @@ pub struct NoiseDescription {
     length: Byte,
     remaining_steps: Word,
     sample_clock: f32,
-    frequency_timer: Word,
-    pub lfsr: Word, // 15 bit
+    pub lfsr: Word,
 }
 
 impl NoiseDescription {
@@ -313,12 +312,10 @@ impl NoiseDescription {
             length,
             remaining_steps: 0,
             sample_clock: 0.0,
-            frequency_timer: 0,
             lfsr: 0,
         };
 
         value.reload_length(length);
-        value.reset_frequency_timer();
 
         value
     }
@@ -340,26 +337,6 @@ impl NoiseDescription {
         self.sample_clock = 0.0;
     }
 
-    pub fn step(&mut self, last_instruction_cycles: Byte) {
-        let (_, overflow) = self
-            .frequency_timer
-            .overflowing_sub(last_instruction_cycles as u16);
-
-        if overflow {
-            let tmp = last_instruction_cycles as Word - self.frequency_timer;
-            self.reset_frequency_timer();
-            self.frequency_timer -= tmp as u16;
-
-            let xor_result = (self.lfsr & 0b01) ^ ((self.lfsr & 0b10) >> 1);
-            self.lfsr = (self.lfsr >> 1) | (xor_result << 14);
-
-            if self.poly_step {
-                self.lfsr &= !(1 << 6);
-                self.lfsr |= xor_result << 6
-            }
-        }
-    }
-
     pub fn step_64(&mut self) {
         self.volume_envelope.step_64();
     }
@@ -379,21 +356,33 @@ impl NoiseDescription {
         self.remaining_steps = 256 - length as Word;
     }
 
-    pub fn reset_frequency_timer(&mut self) {
-        self.frequency_timer = if self.poly_div_ratio > 0 {
-            (self.poly_div_ratio as Word) << 4
-        } else {
-            8
-        };
-
-        self.frequency_timer <<= self.poly_shift_clock_freq;
-    }
-
     pub fn next_sample_clock(&mut self) -> f32 {
         let value = self.sample_clock;
         self.sample_clock += 1.0;
 
         value
+    }
+
+    pub fn calculate_frequency(&self) -> f32 {
+        let freq = 524288;
+
+        let divisor = (if self.poly_div_ratio > 0 {
+            self.poly_div_ratio << 4
+        } else {
+            8
+        }) << self.poly_shift_clock_freq;
+
+        return freq as f32 / divisor as f32;
+    }
+
+    pub fn update_lfsr(&mut self) {
+        let xor_result = (self.lfsr & 0b01) ^ ((self.lfsr & 0b10) >> 1);
+        self.lfsr = (self.lfsr >> 1) | (xor_result << 14);
+
+        if self.poly_step {
+            self.lfsr &= !(1 << 6);
+            self.lfsr |= xor_result << 6
+        }
     }
 }
 
