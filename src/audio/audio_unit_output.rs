@@ -10,21 +10,6 @@ use crate::audio::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
 use crate::{Byte, Memory, Word};
 
-pub trait AudioUnitOutput {
-    fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription);
-    fn play_wave(&mut self, description: &WaveDescription);
-    fn play_noise(&mut self, description: &NoiseDescription);
-    fn stop_all(&mut self);
-    fn set_mute(&mut self, muted: bool);
-    fn step(&mut self, last_instruction_cycles: u8);
-    fn step_64(&mut self);
-    fn step_128(&mut self, memory: Arc<RwLock<Memory>>);
-    fn step_256(&mut self);
-    fn update(&mut self, memory: Arc<RwLock<Memory>>);
-    fn reload_length(&mut self, channel_n: u8, length: Byte);
-    fn reload_sweep(&mut self, sweep: Option<Sweep>);
-}
-
 pub struct CpalAudioUnitOutput {
     device: Device,
     config: SupportedStreamConfig,
@@ -260,10 +245,8 @@ impl CpalAudioUnitOutput {
 
         Ok(stream)
     }
-}
 
-impl AudioUnitOutput for CpalAudioUnitOutput {
-    fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription) {
+    pub fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription) {
         if self.muted {
             return;
         }
@@ -303,7 +286,7 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         }
     }
 
-    fn play_wave(&mut self, description: &WaveDescription) {
+    pub fn play_wave(&mut self, description: &WaveDescription) {
         if self.muted || !description.should_play {
             self.stream_3 = None;
             return;
@@ -328,7 +311,7 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         }
     }
 
-    fn play_noise(&mut self, description: &NoiseDescription) {
+    pub fn play_noise(&mut self, description: &NoiseDescription) {
         if self.muted || description.stop {
             self.stream_4 = None;
             return;
@@ -353,42 +336,42 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         }
     }
 
-    fn stop_all(&mut self) {
+    pub fn stop_all(&mut self) {
         self.stream_1 = None;
         self.stream_2 = None;
         self.stream_3 = None;
         self.stream_4 = None;
     }
 
-    fn set_mute(&mut self, muted: bool) {
+    pub fn set_mute(&mut self, muted: bool) {
         if self.muted != muted {
             self.stop_all();
             self.muted = muted;
         }
     }
 
-    fn step(&mut self, last_instruction_cycles: u8) {
+    pub fn step(&mut self, last_instruction_cycles: u8) {
         self.noise_description.write().step(last_instruction_cycles);
     }
 
-    fn step_64(&mut self) {
+    pub fn step_64(&mut self) {
         self.pulse_description_1.write().step_64();
         self.pulse_description_2.write().step_64();
         self.noise_description.write().step_64();
     }
 
-    fn step_128(&mut self, memory: Arc<RwLock<Memory>>) {
+    pub fn step_128(&mut self, memory: Arc<RwLock<Memory>>) {
         self.pulse_description_1.write().step_128(memory);
     }
 
-    fn step_256(&mut self) {
+    pub fn step_256(&mut self) {
         self.pulse_description_1.write().step_256();
         self.pulse_description_2.write().step_256();
         self.wave_description.write().step_256();
         self.noise_description.write().step_256();
     }
 
-    fn update(&mut self, memory: Arc<RwLock<Memory>>) {
+    pub fn update(&mut self, memory: Arc<RwLock<Memory>>) {
         if self.pulse_description_1.read().stop {
             memory.write().set_audio_channel_inactive(1);
         }
@@ -406,7 +389,7 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         }
     }
 
-    fn reload_length(&mut self, channel_n: u8, pulse_length: Byte) {
+    pub fn reload_length(&mut self, channel_n: u8, pulse_length: Byte) {
         match channel_n {
             1 => self.pulse_description_1.write().reload_length(pulse_length),
             2 => self.pulse_description_2.write().reload_length(pulse_length),
@@ -416,7 +399,7 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         }
     }
 
-    fn reload_sweep(&mut self, sweep: Option<Sweep>) {
+    pub fn reload_sweep(&mut self, sweep: Option<Sweep>) {
         self.pulse_description_1.write().reload_sweep(sweep);
     }
 }

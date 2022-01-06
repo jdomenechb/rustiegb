@@ -3,8 +3,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 
 use crate::audio::description::{NoiseDescription, VolumeEnvelopeDescription};
-use crate::Byte;
-use audio_unit_output::AudioUnitOutput;
+use crate::{Byte, CpalAudioUnitOutput};
 use description::{PulseDescription, WaveDescription};
 
 use crate::memory::memory_sector::MemorySector;
@@ -58,7 +57,7 @@ impl From<WaveOutputLevel> for f32 {
 }
 
 pub struct AudioUnit {
-    auo: Box<dyn AudioUnitOutput>,
+    auo: CpalAudioUnitOutput,
     memory: Arc<RwLock<Memory>>,
 
     cycle_count: u16,
@@ -66,7 +65,7 @@ pub struct AudioUnit {
 }
 
 impl AudioUnit {
-    pub fn new(au: Box<dyn AudioUnitOutput>, memory: Arc<RwLock<Memory>>) -> Self {
+    pub fn new(au: CpalAudioUnitOutput, memory: Arc<RwLock<Memory>>) -> Self {
         Self {
             auo: au,
             memory,

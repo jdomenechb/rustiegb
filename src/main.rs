@@ -64,7 +64,7 @@ fn main() {
         let mut cpu = Cpu::new(memory_thread.clone(), configuration.bootstrap);
         let mut gpu = Gpu::new(memory_thread.clone());
 
-        let audio_unit_output = Box::new(CpalAudioUnitOutput::new());
+        let audio_unit_output = CpalAudioUnitOutput::new();
 
         let mut audio_unit = AudioUnit::new(audio_unit_output, memory_thread.clone());
 
