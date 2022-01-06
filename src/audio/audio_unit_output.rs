@@ -88,7 +88,7 @@ impl CpalAudioUnitOutput {
                 }
 
                 sample_in_period = sample_rate / description.calculate_frequency();
-                high_part_max = sample_in_period * description.wave_duty_percent;
+                high_part_max = sample_in_period * description.wave_duty.to_percent();
                 volume_envelope = description.volume_envelope.current_volume;
                 sample_clock = description.next_sample_clock()
             }

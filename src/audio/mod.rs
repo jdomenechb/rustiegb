@@ -164,7 +164,7 @@ impl AudioUnit {
         let pulse_description = PulseDescription::new(
             audio_registers.is_set(),
             audio_registers.get_frequency(),
-            audio_registers.calculate_wave_duty_percent(),
+            audio_registers.calculate_wave_duty(),
             VolumeEnvelopeDescription::new(
                 audio_registers.get_volume_envelope(),
                 audio_registers.get_volume_envelope_direction(),

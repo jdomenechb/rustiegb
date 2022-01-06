@@ -1,5 +1,6 @@
 use crate::audio::sweep::Sweep;
 use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
+use crate::memory::audio_registers::PulseWavePatternDuty;
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, Memory, Word};
@@ -58,7 +59,7 @@ impl VolumeEnvelopeDescription {
 pub struct PulseDescription {
     pub set: bool,
     pub frequency: Word,
-    pub wave_duty_percent: f32,
+    pub wave_duty: PulseWavePatternDuty,
     pub volume_envelope: VolumeEnvelopeDescription,
     sweep: Option<Sweep>,
     pub stop: bool,
@@ -74,7 +75,7 @@ impl PulseDescription {
     pub fn new(
         set: bool,
         frequency: Word,
-        wave_duty_percent: f32,
+        wave_duty: PulseWavePatternDuty,
         volume_envelope: VolumeEnvelopeDescription,
         sweep: Option<Sweep>,
         use_length: bool,
@@ -83,7 +84,7 @@ impl PulseDescription {
         let mut value = Self {
             set,
             frequency,
-            wave_duty_percent,
+            wave_duty,
             volume_envelope,
             sweep,
             stop: false,
@@ -127,7 +128,7 @@ impl PulseDescription {
     pub fn exchange(&mut self, other: &Self) {
         self.set = other.set;
         self.frequency = other.frequency;
-        self.wave_duty_percent = other.wave_duty_percent;
+        self.wave_duty = other.wave_duty.clone();
         self.volume_envelope = VolumeEnvelopeDescription::new(
             other.volume_envelope.initial_volume,
             other.volume_envelope.direction,
@@ -405,7 +406,7 @@ mod tests {
         let mut pd = PulseDescription::new(
             true,
             1,
-            0.0,
+            PulseWavePatternDuty::default(),
             VolumeEnvelopeDescription::default(),
             None,
             true,
