@@ -1,6 +1,6 @@
+use crate::audio::pulse::PulseWavePatternDuty;
 use crate::audio::sweep::Sweep;
 use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
-use crate::memory::audio_registers::PulseWavePatternDuty;
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, Memory, Word};

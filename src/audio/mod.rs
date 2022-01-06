@@ -12,6 +12,7 @@ use crate::memory::{AudioRegWritten, Memory};
 
 pub mod audio_unit_output;
 mod description;
+pub mod pulse;
 pub mod sweep;
 
 const CYCLES_1_512_SEC: u16 = 8192;
