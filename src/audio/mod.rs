@@ -2,60 +2,23 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::audio::description::{NoiseDescription, VolumeEnvelopeDescription};
 use crate::{Byte, CpalAudioUnitOutput};
-use description::{PulseDescription, WaveDescription};
+use noise::NoiseDescription;
+use pulse::PulseDescription;
+use volume_envelope::VolumeEnvelopeDescription;
+use wave::WaveDescription;
 
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::memory::{AudioRegWritten, Memory};
 
 pub mod audio_unit_output;
-mod description;
+mod noise;
 pub mod pulse;
-pub mod sweep;
+pub mod volume_envelope;
+pub mod wave;
 
 const CYCLES_1_512_SEC: u16 = 8192;
-
-#[derive(Eq, PartialEq, Copy, Clone)]
-pub enum VolumeEnvelopeDirection {
-    Up,
-    Down,
-}
-
-impl Default for VolumeEnvelopeDirection {
-    fn default() -> Self {
-        VolumeEnvelopeDirection::Up
-    }
-}
-
-impl From<bool> for VolumeEnvelopeDirection {
-    fn from(value: bool) -> Self {
-        match value {
-            false => Self::Down,
-            true => Self::Up,
-        }
-    }
-}
-
-#[derive(Eq, PartialEq, Clone, Copy)]
-pub enum WaveOutputLevel {
-    Mute,
-    Vol100Percent,
-    Vol50Percent,
-    Vol25Percent,
-}
-
-impl From<WaveOutputLevel> for f32 {
-    fn from(wol: WaveOutputLevel) -> Self {
-        match wol {
-            WaveOutputLevel::Mute => 0.0,
-            WaveOutputLevel::Vol25Percent => 0.25,
-            WaveOutputLevel::Vol50Percent => 0.5,
-            WaveOutputLevel::Vol100Percent => 1.0,
-        }
-    }
-}
 
 pub struct AudioUnit {
     auo: CpalAudioUnitOutput,

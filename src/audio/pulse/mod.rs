@@ -1,3 +1,6 @@
-mod pulse_wave_pattern_duty;
+mod description;
+pub mod sweep;
+mod wave_pattern_duty;
 
-pub use self::pulse_wave_pattern_duty::PulseWavePatternDuty;
+pub use self::description::PulseDescription;
+pub use self::wave_pattern_duty::PulseWavePatternDuty;

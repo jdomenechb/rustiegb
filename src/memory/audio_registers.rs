@@ -1,6 +1,7 @@
+use crate::audio::pulse::sweep::Sweep;
 use crate::audio::pulse::PulseWavePatternDuty;
-use crate::audio::sweep::Sweep;
-use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
+use crate::audio::volume_envelope::VolumeEnvelopeDirection;
+use crate::audio::wave::WaveOutputLevel;
 use crate::{Byte, Word};
 
 #[readonly::make]

@@ -1,15 +1,12 @@
-use crate::audio::description::PulseDescription;
+use crate::audio::pulse::description::PulseDescription;
 use crate::{Byte, Memory, Word};
+use direction::SweepDirection;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-#[derive(Eq, PartialEq, Copy, Clone)]
-pub enum SweepDirection {
-    Add,
-    Sub,
-}
+mod direction;
 
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct Sweep {
     time: Byte,
     shifts: Byte,
@@ -79,7 +76,7 @@ impl Sweep {
 
         let new_frequency = match self.direction {
             SweepDirection::Add => self.shadow_frequency.wrapping_add(to_add_sub),
-            SweepDirection::Sub => self.shadow_frequency.wrapping_add(to_add_sub),
+            SweepDirection::Sub => self.shadow_frequency.wrapping_sub(to_add_sub),
         };
 
         if new_frequency > 2047 {
@@ -109,7 +106,5 @@ impl Sweep {
         self.direction = other.direction;
         self.shifts = other.shifts;
         self.calculated = false;
-        //self.timer = other.timer;
-        //self.shadow_frequency = other.shadow_frequency;
     }
 }
