@@ -404,8 +404,9 @@ impl Memory {
                     return;
                 }
 
+                self.audio_1_reg_written.control = true;
+
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_1_reg_written.control = true;
                     self.nr52.set_channel_active(1);
                 }
 
@@ -437,8 +438,9 @@ impl Memory {
                     return;
                 }
 
+                self.audio_2_reg_written.control = true;
+
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_2_reg_written.control = true;
                     self.nr52.set_channel_active(2);
                 }
 
@@ -470,8 +472,9 @@ impl Memory {
                     return;
                 }
 
+                self.audio_3_reg_written.control = true;
+
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_3_reg_written.control = true;
                     self.nr52.set_channel_active(3);
                 }
 
@@ -503,8 +506,9 @@ impl Memory {
                     return;
                 }
 
+                self.audio_4_reg_written.control = true;
+
                 if value & 0b10000000 == 0b10000000 {
-                    self.audio_4_reg_written.control = true;
                     self.nr52.set_channel_active(4);
                 }
 

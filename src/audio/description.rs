@@ -69,6 +69,8 @@ pub struct PulseDescription {
 }
 
 impl PulseDescription {
+    const MAXIMUM_LENGTH: Byte = 64;
+
     pub fn new(
         set: bool,
         frequency: Word,
@@ -135,7 +137,11 @@ impl PulseDescription {
         self.stop = other.stop;
         self.use_length = other.use_length;
         self.length = other.length;
-        self.remaining_steps = other.remaining_steps;
+
+        if other.set && self.remaining_steps == 0 {
+            self.remaining_steps = Self::MAXIMUM_LENGTH;
+        }
+
         self.sample_clock = 0.0;
     }
 
@@ -145,7 +151,7 @@ impl PulseDescription {
 
     pub fn reload_length(&mut self, length: Byte) {
         self.length = length;
-        self.remaining_steps = 64 - length;
+        self.remaining_steps = Self::MAXIMUM_LENGTH - length;
     }
 
     pub fn reload_sweep(&mut self, sweep: Option<Sweep>) {
@@ -182,6 +188,8 @@ pub struct WaveDescription {
 }
 
 impl WaveDescription {
+    const MAXIMUM_LENGTH: Word = 256;
+
     pub fn new(
         set: bool,
         frequency: u16,
@@ -217,7 +225,11 @@ impl WaveDescription {
         };
         self.use_length = other.use_length;
         self.length = other.length;
-        self.remaining_steps = other.remaining_steps;
+
+        if other.set && self.remaining_steps == 0 {
+            self.remaining_steps = Self::MAXIMUM_LENGTH;
+        }
+
         self.should_play = other.should_play;
         self.sample_clock = 0.0;
     }
@@ -238,7 +250,7 @@ impl WaveDescription {
 
     pub fn reload_length(&mut self, length: Byte) {
         self.length = length;
-        self.remaining_steps = 256 - length as Word;
+        self.remaining_steps = Self::MAXIMUM_LENGTH - length as Word;
     }
 
     pub fn next_sample_clock(&mut self) -> f32 {

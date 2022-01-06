@@ -218,7 +218,6 @@ impl CpalAudioUnitOutput {
         T: cpal::Sample,
     {
         let device = &self.device;
-        let sample_rate = config.sample_rate.0 as f32;
         let channels = config.channels as usize;
 
         let description = self.noise_description.clone();
@@ -226,7 +225,6 @@ impl CpalAudioUnitOutput {
         let next_value = move || {
             let lsfr;
             let volume_envelope;
-            let sample_clock;
 
             {
                 let mut description = description.write();
@@ -237,7 +235,6 @@ impl CpalAudioUnitOutput {
 
                 lsfr = description.lfsr;
                 volume_envelope = description.volume_envelope.current_volume;
-                sample_clock = description.next_sample_clock()
             }
 
             let wave = (lsfr & 0b1) as f32;
