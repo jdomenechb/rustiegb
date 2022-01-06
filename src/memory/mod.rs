@@ -742,6 +742,7 @@ impl Memory {
                 sweep = self.internally_read_byte(0xFF1A);
                 0xFF1E
             }
+            4 => 0xFF23,
             _ => panic!("Invalid channel provided"),
         };
 

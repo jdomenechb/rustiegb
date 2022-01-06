@@ -78,7 +78,7 @@ impl AudioRegisters {
         self.length
     }
 
-    pub fn get_pulse_length(&self) -> Byte {
+    pub fn get_pulse_or_noise_length(&self) -> Byte {
         self.length & 0b111111
     }
 
@@ -96,5 +96,17 @@ impl AudioRegisters {
         }
 
         None
+    }
+
+    pub fn get_poly_shift_clock_freq(&self) -> Byte {
+        (self.frequency >> 4) & 0xF
+    }
+
+    pub fn get_poly_step(&self) -> bool {
+        (self.frequency >> 3) & 0b1 == 1
+    }
+
+    pub fn get_poly_div_ratio(&self) -> Byte {
+        self.frequency & 0b111
     }
 }

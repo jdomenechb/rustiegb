@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::audio::description::VolumeEnvelopeDescription;
+use crate::audio::description::{NoiseDescription, VolumeEnvelopeDescription};
 use crate::Byte;
 use audio_unit_output::AudioUnitOutput;
 use description::{PulseDescription, WaveDescription};
@@ -111,12 +111,17 @@ impl AudioUnit {
             self.update_wave(&audio_triggers.2);
         }
 
-        // TODO: sound 4
+        // Sound 4
+        if audio_triggers.3.has_change() {
+            self.update_noise(&audio_triggers.3);
+        }
 
         self.auo.update(self.memory.clone());
     }
 
     fn clock_frame_sequencer(&mut self, last_instruction_cycles: u8) {
+        self.auo.step(last_instruction_cycles);
+
         self.cycle_count += last_instruction_cycles as u16;
 
         if self.cycle_count > CYCLES_1_512_SEC {
@@ -143,7 +148,7 @@ impl AudioUnit {
             memory.read_audio_registers(channel_n)
         };
 
-        let pulse_length = audio_registers.get_pulse_length();
+        let pulse_length = audio_registers.get_pulse_or_noise_length();
 
         if changes.length {
             self.auo.reload_length(channel_n, pulse_length);
@@ -207,5 +212,37 @@ impl AudioUnit {
         );
 
         self.auo.play_wave(&wave_description);
+    }
+
+    fn update_noise(&mut self, changes: &AudioRegWritten) {
+        let audio_registers;
+
+        {
+            let memory = self.memory.read();
+            audio_registers = memory.read_audio_registers(4);
+        }
+
+        let length = audio_registers.get_pulse_or_noise_length();
+
+        if changes.length {
+            self.auo.reload_length(4, length);
+            return;
+        }
+
+        let noise_description = NoiseDescription::new(
+            audio_registers.is_set(),
+            VolumeEnvelopeDescription::new(
+                audio_registers.get_volume_envelope(),
+                audio_registers.get_volume_envelope_direction(),
+                audio_registers.get_volume_envelope_duration_64(),
+            ),
+            audio_registers.get_poly_shift_clock_freq(),
+            audio_registers.get_poly_step(),
+            audio_registers.get_poly_div_ratio(),
+            audio_registers.is_length_used(),
+            audio_registers.get_pulse_or_noise_length(),
+        );
+
+        self.auo.play_noise(&noise_description);
     }
 }
