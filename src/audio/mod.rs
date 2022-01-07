@@ -71,12 +71,12 @@ impl AudioUnit {
 
         // Sound 3
         if audio_triggers.2.has_change() {
-            // self.update_wave(&audio_triggers.2);
+            self.update_wave(&audio_triggers.2);
         }
 
         // Sound 4
         if audio_triggers.3.has_change() {
-            // self.update_noise(&audio_triggers.3);
+            self.update_noise(&audio_triggers.3);
         }
 
         self.auo.update(self.memory.clone());
