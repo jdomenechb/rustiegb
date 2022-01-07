@@ -132,7 +132,6 @@ impl AudioUnit {
 
         if changes.control {
             self.auo.update_control(channel_n, audio_registers.control);
-            self.auo.play_pulse(channel_n);
             return;
         }
     }

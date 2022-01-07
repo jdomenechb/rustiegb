@@ -44,7 +44,7 @@ impl CpalAudioUnitOutput {
 
         let config = device.default_output_config().unwrap();
 
-        Self {
+        let mut value = Self {
             device,
             config,
             stream_1: None,
@@ -58,7 +58,12 @@ impl CpalAudioUnitOutput {
             noise_description: Arc::new(RwLock::new(NoiseDescription::default())),
 
             muted: false,
-        }
+        };
+
+        value.play_pulse(1);
+        value.play_pulse(2);
+
+        value
     }
 
     fn run_pulse<T>(
