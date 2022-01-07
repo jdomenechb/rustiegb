@@ -89,7 +89,7 @@ impl NoiseDescription {
     }
 
     pub fn calculate_frequency(&self) -> f32 {
-        let freq = 524288;
+        let freq = 524288_f32;
 
         let divisor = (if self.poly_div_ratio > 0 {
             self.poly_div_ratio << 4
@@ -97,7 +97,7 @@ impl NoiseDescription {
             8
         }) << self.poly_shift_clock_freq;
 
-        freq as f32 / divisor as f32
+        freq / divisor as f32
     }
 
     pub fn update_lfsr(&mut self) {
