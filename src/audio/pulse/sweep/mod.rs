@@ -18,22 +18,8 @@ pub struct Sweep {
 }
 
 impl Sweep {
-    pub fn new(sweep_register: Byte, frequency: Word) -> Self {
-        let shifts = sweep_register & 0b111;
-        let time = (sweep_register >> 4) & 0b111;
-
-        Self {
-            time,
-            shifts,
-            direction: match sweep_register & 0b1000 == 0b1000 {
-                true => SweepDirection::Sub,
-                false => SweepDirection::Add,
-            },
-            timer: if time > 0 { time } else { 8 },
-            enabled: time > 0 || shifts > 0,
-            shadow_frequency: frequency,
-            calculated: false,
-        }
+    pub fn set_shadow_frequency(&mut self, frequency: Word) {
+        self.shadow_frequency = frequency;
     }
 
     pub fn step_128(
@@ -106,5 +92,25 @@ impl Sweep {
         self.direction = other.direction;
         self.shifts = other.shifts;
         self.calculated = false;
+    }
+}
+
+impl From<Byte> for Sweep {
+    fn from(register: Byte) -> Self {
+        let shifts = register & 0b111;
+        let time = (register >> 4) & 0b111;
+
+        Self {
+            time,
+            shifts,
+            direction: match register & 0b1000 == 0b1000 {
+                true => SweepDirection::Sub,
+                false => SweepDirection::Add,
+            },
+            timer: if time > 0 { time } else { 8 },
+            enabled: time > 0 || shifts > 0,
+            shadow_frequency: 0,
+            calculated: false,
+        }
     }
 }

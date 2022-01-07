@@ -5,7 +5,6 @@ use cpal::{Device, Stream, SupportedStreamConfig};
 use parking_lot::RwLock;
 
 use crate::audio::noise::NoiseDescription;
-use crate::audio::pulse::sweep::Sweep;
 use crate::audio::pulse::PulseDescription;
 use crate::audio::registers::{
     ControlRegisterUpdatable, EnvelopeRegisterUpdatable, FrequencyRegisterUpdatable,
@@ -427,7 +426,7 @@ impl CpalAudioUnitOutput {
         }
     }
 
-    pub fn update_sweep(&mut self, sweep: Option<Sweep>) {
+    pub fn update_sweep(&mut self, sweep: Byte) {
         self.pulse_description_1.write().reload_sweep(sweep);
     }
 

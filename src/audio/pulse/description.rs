@@ -50,16 +50,16 @@ impl PulseDescription {
         131072_f32 / (2048.0 - self.frequency as f32)
     }
 
-    pub fn reload_sweep(&mut self, sweep: Option<Sweep>) {
-        if let Some(s) = sweep {
-            if let Some(mut s2) = self.sweep {
-                if s2.negate_is_disabled_after_calculation(&s) {
-                    self.stop_channel();
-                }
+    pub fn reload_sweep(&mut self, register: Byte) {
+        let s = Sweep::from(register);
 
-                s2.exchange(&s);
-                self.sweep = Some(s2);
+        if let Some(mut s2) = self.sweep {
+            if s2.negate_is_disabled_after_calculation(&s) {
+                self.stop_channel();
             }
+
+            s2.exchange(&s);
+            self.sweep = Some(s2);
         }
     }
 
@@ -110,6 +110,11 @@ impl ControlRegisterUpdatable for PulseDescription {
         self.sample_clock = 0.0;
 
         self.set_high_part_from_register(register);
+
+        if let Some(mut s) = self.sweep {
+            s.set_shadow_frequency(self.frequency);
+            self.sweep = Some(s);
+        }
 
         self.set = Self::calculate_initial_from_register(register);
         self.use_length = Self::calculate_use_length_from_register(register);

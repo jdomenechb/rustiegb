@@ -1,4 +1,3 @@
-use crate::audio::pulse::sweep::Sweep;
 use crate::audio::volume_envelope::VolumeEnvelopeDirection;
 use crate::audio::wave::WaveOutputLevel;
 use crate::{Byte, Word};
@@ -77,14 +76,6 @@ impl AudioRegisters {
         }
 
         true
-    }
-
-    pub fn get_sweep(&self) -> Option<Sweep> {
-        if let Some(sweep) = self.sweep {
-            return Some(Sweep::new(sweep, self.get_frequency()));
-        }
-
-        None
     }
 
     pub fn get_poly_shift_clock_freq(&self) -> Byte {

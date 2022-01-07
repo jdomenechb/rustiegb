@@ -1,4 +1,7 @@
-use crate::audio::registers::{ControlRegisterUpdatable, LengthRegisterUpdatable, LengthUpdatable};
+use crate::audio::registers::{
+    ControlRegisterUpdatable, ControlUpdatable, FrequencyRegisterUpdatable, FrequencyUpdatable,
+    LengthRegisterUpdatable, LengthUpdatable,
+};
 use crate::audio::wave::WaveOutputLevel;
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
@@ -14,6 +17,7 @@ pub struct WaveDescription {
     pub remaining_steps: Word,
     pub should_play: bool,
     sample_clock: f32,
+    pub stop: bool,
 }
 
 impl WaveDescription {
@@ -36,6 +40,7 @@ impl WaveDescription {
             remaining_steps: 0,
             should_play,
             sample_clock: 0.0,
+            stop: false,
         };
 
         value.reload_length(length);
@@ -130,7 +135,35 @@ impl LengthRegisterUpdatable for WaveDescription {
     }
 }
 
-// impl ControlRegisterUpdatable for WaveDescription {}
+impl ControlUpdatable for WaveDescription {}
+
+impl ControlRegisterUpdatable for WaveDescription {
+    fn trigger_control_register_update(&mut self, register: Byte) {
+        self.stop = false;
+        self.sample_clock = 0.0;
+
+        self.set_high_part_from_register(register);
+
+        self.set = Self::calculate_initial_from_register(register);
+        self.use_length = Self::calculate_use_length_from_register(register);
+
+        if self.set && self.remaining_steps == 0 {
+            self.set_remaining_steps(Self::get_maximum_length());
+        }
+    }
+}
+
+impl FrequencyUpdatable for WaveDescription {
+    fn set_frequency(&mut self, frequency: Word) {
+        self.frequency = frequency;
+    }
+
+    fn get_frequency(&self) -> Word {
+        self.frequency
+    }
+}
+
+impl FrequencyRegisterUpdatable for WaveDescription {}
 
 #[cfg(test)]
 mod tests {
