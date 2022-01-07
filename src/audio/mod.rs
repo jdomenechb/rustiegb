@@ -2,63 +2,26 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::audio::description::VolumeEnvelopeDescription;
-use crate::Byte;
-use audio_unit_output::AudioUnitOutput;
-use description::{PulseDescription, WaveDescription};
+use crate::{Byte, CpalAudioUnitOutput};
+use noise::NoiseDescription;
+use pulse::PulseDescription;
+use volume_envelope::VolumeEnvelopeDescription;
+use wave::WaveDescription;
 
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
-use crate::memory::Memory;
+use crate::memory::{AudioRegWritten, Memory};
 
 pub mod audio_unit_output;
-mod description;
-pub mod sweep;
+mod noise;
+pub mod pulse;
+pub mod volume_envelope;
+pub mod wave;
 
 const CYCLES_1_512_SEC: u16 = 8192;
 
-#[derive(Eq, PartialEq, Copy, Clone)]
-pub enum VolumeEnvelopeDirection {
-    Up,
-    Down,
-}
-
-impl Default for VolumeEnvelopeDirection {
-    fn default() -> Self {
-        VolumeEnvelopeDirection::Up
-    }
-}
-
-impl From<bool> for VolumeEnvelopeDirection {
-    fn from(value: bool) -> Self {
-        match value {
-            false => Self::Down,
-            true => Self::Up,
-        }
-    }
-}
-
-#[derive(Eq, PartialEq, Clone, Copy)]
-pub enum WaveOutputLevel {
-    Mute,
-    Vol100Percent,
-    Vol50Percent,
-    Vol25Percent,
-}
-
-impl From<WaveOutputLevel> for f32 {
-    fn from(wol: WaveOutputLevel) -> Self {
-        match wol {
-            WaveOutputLevel::Mute => 0.0,
-            WaveOutputLevel::Vol25Percent => 0.25,
-            WaveOutputLevel::Vol50Percent => 0.5,
-            WaveOutputLevel::Vol100Percent => 1.0,
-        }
-    }
-}
-
 pub struct AudioUnit {
-    auo: Box<dyn AudioUnitOutput>,
+    auo: CpalAudioUnitOutput,
     memory: Arc<RwLock<Memory>>,
 
     cycle_count: u16,
@@ -66,7 +29,7 @@ pub struct AudioUnit {
 }
 
 impl AudioUnit {
-    pub fn new(au: Box<dyn AudioUnitOutput>, memory: Arc<RwLock<Memory>>) -> Self {
+    pub fn new(au: CpalAudioUnitOutput, memory: Arc<RwLock<Memory>>) -> Self {
         Self {
             auo: au,
             memory,
@@ -92,26 +55,29 @@ impl AudioUnit {
 
         // NR52 controls the general output
         if nr52 & 0b10000000 != 0b10000000 {
-            self.stop_all();
+            self.auo.stop_all();
             return;
         }
 
         // Sound 1
-        if audio_triggers.0.control || audio_triggers.0.length {
-            self.update_pulse(1, audio_triggers.0.length);
+        if audio_triggers.0.has_change() {
+            self.update_pulse(1, &audio_triggers.0);
         }
 
         // Sound 2
-        if audio_triggers.1.control || audio_triggers.1.length {
-            self.update_pulse(2, audio_triggers.1.length);
+        if audio_triggers.1.has_change() {
+            self.update_pulse(2, &audio_triggers.1);
         }
 
         // Sound 3
-        if audio_triggers.2.control || audio_triggers.2.length {
-            self.update_wave(audio_triggers.2.length);
+        if audio_triggers.2.has_change() {
+            self.update_wave(&audio_triggers.2);
         }
 
-        // TODO: sound 4
+        // Sound 4
+        if audio_triggers.3.has_change() {
+            self.update_noise(&audio_triggers.3);
+        }
 
         self.auo.update(self.memory.clone());
     }
@@ -132,65 +98,49 @@ impl AudioUnit {
             }
 
             if self.frame_step == 2 || self.frame_step == 6 {
-                self.auo.step_128()
+                self.auo.step_128(self.memory.clone())
             }
         }
     }
 
-    fn stop_all(&mut self) {
-        self.auo.stop_all();
-    }
-
-    fn update_pulse(&mut self, channel_n: u8, only_length: bool) {
+    fn update_pulse(&mut self, channel_n: u8, changes: &AudioRegWritten) {
         let audio_registers = {
             let memory = self.memory.read();
             memory.read_audio_registers(channel_n)
         };
 
-        if !audio_registers.is_set() {
-            self.auo.stop(channel_n);
-            return;
-        }
+        let pulse_length = audio_registers.get_pulse_or_noise_length();
 
-        let pulse_length = audio_registers.get_pulse_length();
-
-        if only_length {
+        if changes.length {
             self.auo.reload_length(channel_n, pulse_length);
             return;
         }
 
-        let frequency = audio_registers.get_frequency();
-
-        let initial_volume_envelope = audio_registers.get_volume_envelope();
-        let volume_envelope_direction = audio_registers.get_volume_envelope_direction();
-
-        let volume_envelope_duration_in_1_64_s = audio_registers.get_volume_envelope_duration_64();
-        let wave_duty_percent = audio_registers.calculate_wave_duty_percent();
         let sweep = audio_registers.get_sweep();
 
-        let mut pulse_description = PulseDescription::new(
-            frequency,
-            wave_duty_percent,
+        if changes.sweep {
+            self.auo.reload_sweep(sweep);
+            return;
+        }
+
+        let pulse_description = PulseDescription::new(
+            audio_registers.is_set(),
+            audio_registers.get_frequency(),
+            audio_registers.calculate_wave_duty(),
             VolumeEnvelopeDescription::new(
-                initial_volume_envelope,
-                volume_envelope_direction,
-                volume_envelope_duration_in_1_64_s,
+                audio_registers.get_volume_envelope(),
+                audio_registers.get_volume_envelope_direction(),
+                audio_registers.get_volume_envelope_duration_64(),
             ),
             sweep,
             audio_registers.is_length_used(),
             pulse_length,
         );
 
-        if let Some(mut s) = sweep {
-            if s.has_shifts() {
-                s.calculate_new_frequency(&mut pulse_description);
-            }
-        }
-
         self.auo.play_pulse(channel_n, &pulse_description);
     }
 
-    fn update_wave(&mut self, only_length: bool) {
+    fn update_wave(&mut self, changes: &AudioRegWritten) {
         let audio_registers;
         let wave;
 
@@ -202,14 +152,9 @@ impl AudioUnit {
             }
         }
 
-        if !audio_registers.is_set() {
-            self.auo.stop(3);
-            return;
-        }
-
         let length = audio_registers.get_wave_length();
 
-        if only_length {
+        if changes.length {
             self.auo.reload_length(3, length);
             return;
         }
@@ -218,6 +163,7 @@ impl AudioUnit {
         let wave_output_level = audio_registers.get_wave_output_level();
 
         let wave_description = WaveDescription::new(
+            audio_registers.is_set(),
             frequency,
             wave_output_level,
             wave,
@@ -227,5 +173,37 @@ impl AudioUnit {
         );
 
         self.auo.play_wave(&wave_description);
+    }
+
+    fn update_noise(&mut self, changes: &AudioRegWritten) {
+        let audio_registers;
+
+        {
+            let memory = self.memory.read();
+            audio_registers = memory.read_audio_registers(4);
+        }
+
+        let length = audio_registers.get_pulse_or_noise_length();
+
+        if changes.length {
+            self.auo.reload_length(4, length);
+            return;
+        }
+
+        let noise_description = NoiseDescription::new(
+            audio_registers.is_set(),
+            VolumeEnvelopeDescription::new(
+                audio_registers.get_volume_envelope(),
+                audio_registers.get_volume_envelope_direction(),
+                audio_registers.get_volume_envelope_duration_64(),
+            ),
+            audio_registers.get_poly_shift_clock_freq(),
+            audio_registers.get_poly_step(),
+            audio_registers.get_poly_div_ratio(),
+            audio_registers.is_length_used(),
+            audio_registers.get_pulse_or_noise_length(),
+        );
+
+        self.auo.play_noise(&noise_description);
     }
 }

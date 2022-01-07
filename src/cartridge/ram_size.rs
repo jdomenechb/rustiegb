@@ -56,7 +56,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid RAM size")]
     fn test_from_ko() {
-        RamSize::from(0xFF);
+        let _ = RamSize::from(0xFF);
     }
 
     #[test]

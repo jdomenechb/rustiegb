@@ -1,13 +1,12 @@
-use crate::audio::description::PulseDescription;
-use crate::{Byte, Word};
+use crate::audio::pulse::description::PulseDescription;
+use crate::{Byte, Memory, Word};
+use direction::SweepDirection;
+use parking_lot::RwLock;
+use std::sync::Arc;
 
-#[derive(Eq, PartialEq, Copy, Clone)]
-pub enum SweepDirection {
-    Add,
-    Sub,
-}
+mod direction;
 
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct Sweep {
     time: Byte,
     shifts: Byte,
@@ -15,6 +14,7 @@ pub struct Sweep {
     timer: Byte,
     enabled: bool,
     shadow_frequency: Word,
+    calculated: bool,
 }
 
 impl Sweep {
@@ -32,10 +32,15 @@ impl Sweep {
             timer: if time > 0 { time } else { 8 },
             enabled: time > 0 || shifts > 0,
             shadow_frequency: frequency,
+            calculated: false,
         }
     }
 
-    pub fn step_128(&mut self, pulse_description: &mut PulseDescription) {
+    pub fn step_128(
+        &mut self,
+        memory: Arc<RwLock<Memory>>,
+        pulse_description: &mut PulseDescription,
+    ) {
         if self.timer == 0 {
             return;
         }
@@ -52,7 +57,11 @@ impl Sweep {
 
                 if new_frequency < 2048 && self.shifts > 0 {
                     self.shadow_frequency = new_frequency;
-                    pulse_description.current_frequency = new_frequency;
+                    pulse_description.frequency = new_frequency;
+
+                    {
+                        memory.write().update_audio_1_frequency(new_frequency);
+                    }
 
                     self.calculate_new_frequency(pulse_description);
                 }
@@ -61,11 +70,13 @@ impl Sweep {
     }
 
     pub fn calculate_new_frequency(&mut self, pulse_description: &mut PulseDescription) -> u16 {
+        self.calculated = true;
+
         let to_add_sub = self.shadow_frequency >> self.shifts;
 
         let new_frequency = match self.direction {
             SweepDirection::Add => self.shadow_frequency.wrapping_add(to_add_sub),
-            SweepDirection::Sub => self.shadow_frequency.wrapping_add(to_add_sub),
+            SweepDirection::Sub => self.shadow_frequency.wrapping_sub(to_add_sub),
         };
 
         if new_frequency > 2047 {
@@ -75,7 +86,25 @@ impl Sweep {
         new_frequency
     }
 
-    pub fn has_shifts(&self) -> bool {
-        self.shifts > 0
+    pub fn check_first_calculate_new_frequency(
+        &mut self,
+        pulse_description: &mut PulseDescription,
+    ) {
+        if self.shifts > 0 {
+            self.calculate_new_frequency(pulse_description);
+        }
+    }
+
+    pub fn negate_is_disabled_after_calculation(&self, other: &Self) -> bool {
+        self.calculated
+            && self.direction == SweepDirection::Sub
+            && other.direction == SweepDirection::Add
+    }
+
+    pub fn exchange(&mut self, other: &Self) {
+        self.time = other.time;
+        self.direction = other.direction;
+        self.shifts = other.shifts;
+        self.calculated = false;
     }
 }

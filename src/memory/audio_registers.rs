@@ -1,5 +1,7 @@
-use crate::audio::sweep::Sweep;
-use crate::audio::{VolumeEnvelopeDirection, WaveOutputLevel};
+use crate::audio::pulse::sweep::Sweep;
+use crate::audio::pulse::PulseWavePatternDuty;
+use crate::audio::volume_envelope::VolumeEnvelopeDirection;
+use crate::audio::wave::WaveOutputLevel;
 use crate::{Byte, Word};
 
 #[readonly::make]
@@ -32,16 +34,10 @@ impl AudioRegisters {
         ((self.control as u16 & 0b111) << 8) | self.frequency as u16
     }
 
-    pub fn calculate_wave_duty_percent(&self) -> f32 {
+    pub fn calculate_wave_duty(&self) -> PulseWavePatternDuty {
         let wave_duty = (self.length >> 6) & 0b11;
 
-        match wave_duty {
-            0b00 => 0.125,
-            0b01 => 0.25,
-            0b10 => 0.50,
-            0b11 => 0.75,
-            _ => panic!("Invalid Wave Duty"),
-        }
+        wave_duty.into()
     }
 
     pub fn get_volume_envelope(&self) -> Byte {
@@ -78,7 +74,7 @@ impl AudioRegisters {
         self.length
     }
 
-    pub fn get_pulse_length(&self) -> Byte {
+    pub fn get_pulse_or_noise_length(&self) -> Byte {
         self.length & 0b111111
     }
 
@@ -96,5 +92,17 @@ impl AudioRegisters {
         }
 
         None
+    }
+
+    pub fn get_poly_shift_clock_freq(&self) -> Byte {
+        (self.frequency >> 4) & 0xF
+    }
+
+    pub fn get_poly_step(&self) -> bool {
+        (self.frequency >> 3) & 0b1 == 1
+    }
+
+    pub fn get_poly_div_ratio(&self) -> Byte {
+        self.frequency & 0b111
     }
 }
