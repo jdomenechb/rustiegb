@@ -1,8 +1,8 @@
 use crate::audio::pulse::sweep::Sweep;
 use crate::audio::pulse::PulseWavePatternDuty;
 use crate::audio::registers::{
-    ControlRegisterUpdatable, ControlUpdatable, EnvelopeRegisterUpdatable, EnvelopeUpdatable,
-    LengthRegisterUpdatable, LengthUpdatable,
+    ChannelStopabble, ControlRegisterUpdatable, ControlUpdatable, EnvelopeRegisterUpdatable,
+    EnvelopeUpdatable, LengthRegisterUpdatable, LengthUpdatable,
 };
 use crate::audio::volume_envelope::VolumeEnvelopeDescription;
 use crate::{Byte, Memory, Word};
@@ -40,7 +40,7 @@ impl PulseDescription {
             self.remaining_steps -= 1;
 
             if self.remaining_steps == 0 {
-                self.stop = true;
+                self.stop_channel();
             }
         }
     }
@@ -53,7 +53,7 @@ impl PulseDescription {
         if let Some(s) = sweep {
             if let Some(mut s2) = self.sweep {
                 if s2.negate_is_disabled_after_calculation(&s) {
-                    self.stop = true;
+                    self.stop_channel();
                 }
 
                 s2.exchange(&s);
@@ -119,6 +119,16 @@ impl ControlRegisterUpdatable for PulseDescription {
         if self.set && self.remaining_steps == 0 {
             self.set_remaining_steps(Self::get_maximum_length());
         }
+
+        if self.volume_envelope.is_disabled() {
+            self.stop_channel();
+        }
+    }
+}
+
+impl ChannelStopabble for PulseDescription {
+    fn stop_channel(&mut self) {
+        self.stop = true;
     }
 }
 

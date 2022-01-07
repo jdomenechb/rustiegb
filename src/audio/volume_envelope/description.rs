@@ -47,6 +47,10 @@ impl VolumeEnvelopeDescription {
             }
         }
     }
+
+    pub fn is_disabled(&self) -> bool {
+        return self.initial_volume == 0 && self.direction == VolumeEnvelopeDirection::Down;
+    }
 }
 
 impl From<Byte> for VolumeEnvelopeDescription {
