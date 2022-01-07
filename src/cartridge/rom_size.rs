@@ -59,6 +59,6 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid ROM size")]
     fn test_from_ko() {
-        RomSize::from(0xFF);
+        let _ = RomSize::from(0xFF);
     }
 }

@@ -4,23 +4,14 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, Stream, SupportedStreamConfig};
 use parking_lot::RwLock;
 
-use crate::audio::description::{PulseDescription, WaveDescription};
-use crate::audio::WaveOutputLevel;
+use crate::audio::noise::NoiseDescription;
+use crate::audio::pulse::sweep::Sweep;
+use crate::audio::pulse::PulseDescription;
+use crate::audio::registers::{ControlRegisterUpdatable, LengthRegisterUpdatable};
+use crate::audio::wave::WaveDescription;
+use crate::audio::wave::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
 use crate::{Byte, Memory, Word};
-
-pub trait AudioUnitOutput {
-    fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription);
-    fn play_wave(&mut self, description: &WaveDescription);
-    fn stop(&mut self, channel_n: u8);
-    fn stop_all(&mut self);
-    fn set_mute(&mut self, muted: bool);
-    fn step_64(&mut self);
-    fn step_128(&mut self);
-    fn step_256(&mut self);
-    fn update(&mut self, memory: Arc<RwLock<Memory>>);
-    fn reload_length(&mut self, channel_n: u8, length: Byte);
-}
 
 pub struct CpalAudioUnitOutput {
     device: Device,
@@ -34,12 +25,13 @@ pub struct CpalAudioUnitOutput {
     pulse_description_1: Arc<RwLock<PulseDescription>>,
     pulse_description_2: Arc<RwLock<PulseDescription>>,
     wave_description: Arc<RwLock<WaveDescription>>,
+    noise_description: Arc<RwLock<NoiseDescription>>,
 
     muted: bool,
 }
 
 impl CpalAudioUnitOutput {
-    const MASTER_VOLUME: f32 = 0.5;
+    const MASTER_VOLUME: f32 = 0.25;
 
     pub fn new() -> Self {
         let host = cpal::default_host();
@@ -61,6 +53,7 @@ impl CpalAudioUnitOutput {
             pulse_description_1: Arc::new(RwLock::new(PulseDescription::default())),
             pulse_description_2: Arc::new(RwLock::new(PulseDescription::default())),
             wave_description: Arc::new(RwLock::new(WaveDescription::default())),
+            noise_description: Arc::new(RwLock::new(NoiseDescription::default())),
 
             muted: false,
         }
@@ -84,30 +77,32 @@ impl CpalAudioUnitOutput {
             _ => panic!("Invalid pulse number"),
         };
 
-        let mut sample_clock = 0f32;
-
-        let mut next_value = move || {
+        let next_value = move || {
             let sample_in_period;
             let high_part_max;
             let volume_envelope;
+            let sample_clock;
 
             {
-                let description = description.read();
+                let mut description = description.write();
+
+                if !description.set || description.stop {
+                    return 0.0;
+                }
 
                 sample_in_period = sample_rate / description.calculate_frequency();
-                high_part_max = sample_in_period * description.wave_duty_percent;
-                volume_envelope = description.volume_envelope.volume_envelope;
+                high_part_max = sample_in_period * description.wave_duty.to_percent();
+                volume_envelope = description.volume_envelope.current_volume;
+                sample_clock = description.next_sample_clock()
             }
-
-            sample_clock += 1.0;
 
             let wave = if sample_clock % sample_in_period <= high_part_max {
                 1.0
             } else {
-                -1.0
+                0.0
             };
 
-            wave * volume_envelope as f32 / 0xF as f32 * volume_envelope as f32 / 14.0
+            (wave * volume_envelope as f32) / 7.5 - 1.0
         };
 
         let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
@@ -139,18 +134,21 @@ impl CpalAudioUnitOutput {
 
         let description = self.wave_description.clone();
 
-        let mut sample_clock = 0f32;
-
-        let mut next_value = move || {
+        let next_value = move || {
             let sample_in_period;
             let output_level;
             let mut wave_sample;
             let duration_not_finished: f32;
-
-            sample_clock += 1.0;
+            let sample_clock;
 
             {
-                let description = description.read();
+                let mut description = description.write();
+
+                if !description.set || !description.should_play {
+                    return 0.0;
+                }
+
+                sample_clock = description.next_sample_clock();
 
                 // How many samples are in one frequency oscillation
                 sample_in_period = sample_rate / description.calculate_frequency();
@@ -202,10 +200,65 @@ impl CpalAudioUnitOutput {
 
         Ok(stream)
     }
-}
 
-impl AudioUnitOutput for CpalAudioUnitOutput {
-    fn play_pulse(&mut self, channel_n: u8, description: &PulseDescription) {
+    fn run_noise<T>(&mut self, config: &cpal::StreamConfig) -> Result<Stream, anyhow::Error>
+    where
+        T: cpal::Sample,
+    {
+        let device = &self.device;
+        let sample_rate = config.sample_rate.0 as f32;
+        let channels = config.channels as usize;
+
+        let description = self.noise_description.clone();
+
+        let next_value = move || {
+            let sample_in_period;
+            let volume_envelope;
+            let sample_clock;
+            let wave;
+
+            {
+                let mut description = description.write();
+
+                if !description.set || description.stop {
+                    return 0.0;
+                }
+
+                volume_envelope = description.volume_envelope.current_volume;
+
+                sample_in_period = sample_rate / (description.calculate_frequency() * 8.0);
+                sample_clock = description.next_sample_clock();
+
+                if sample_clock % sample_in_period == 0.0 {
+                    description.update_lfsr();
+                }
+
+                wave = (!(description.lfsr & 0b1) & 0b1) as f32;
+            }
+
+            (wave * volume_envelope as f32) / 7.5 - 1.0
+        };
+
+        let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
+
+        let stream = device.build_output_stream(
+            config,
+            move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
+                for frame in data.chunks_mut(channels) {
+                    let next_value = next_value() * Self::MASTER_VOLUME;
+                    let value: T = cpal::Sample::from::<f32>(&next_value);
+                    for sample in frame.iter_mut() {
+                        *sample = value;
+                    }
+                }
+            },
+            err_fn,
+        )?;
+
+        Ok(stream)
+    }
+
+    pub fn play_pulse(&mut self, channel_n: u8) {
         if self.muted {
             return;
         }
@@ -214,11 +267,9 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
 
         match channel_n {
             1 => {
-                self.pulse_description_1.write().exchange(description);
                 stream = &self.stream_1;
             }
             2 => {
-                self.pulse_description_2.write().exchange(description);
                 stream = &self.stream_2;
             }
             _ => panic!("Non pulse stream given"),
@@ -245,17 +296,15 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         }
     }
 
-    fn play_wave(&mut self, description: &WaveDescription) {
+    pub fn play_wave(&mut self, description: &WaveDescription) {
         if self.muted || !description.should_play {
             self.stream_3 = None;
             return;
         }
 
-        let stream = &self.stream_3;
-
         self.wave_description.write().exchange(description);
 
-        if stream.is_none() {
+        if self.stream_3.is_none() {
             let stream = match self.config.sample_format() {
                 cpal::SampleFormat::F32 => {
                     self.run_wave::<f32>(&self.config.clone().into()).unwrap()
@@ -272,73 +321,126 @@ impl AudioUnitOutput for CpalAudioUnitOutput {
         }
     }
 
-    fn stop(&mut self, channel_n: u8) {
-        match channel_n {
-            1 => self.stream_1 = None,
-            2 => self.stream_2 = None,
-            3 => self.stream_3 = None,
-            4 => self.stream_4 = None,
-            _ => panic!("Invalid channel number"),
+    pub fn play_noise(&mut self, description: &NoiseDescription) {
+        if self.muted || description.stop {
+            self.stream_4 = None;
+            return;
+        }
+
+        self.noise_description.write().exchange(description);
+
+        if self.stream_4.is_none() {
+            let stream = match self.config.sample_format() {
+                cpal::SampleFormat::F32 => {
+                    self.run_noise::<f32>(&self.config.clone().into()).unwrap()
+                }
+                cpal::SampleFormat::I16 => {
+                    self.run_noise::<i16>(&self.config.clone().into()).unwrap()
+                }
+                cpal::SampleFormat::U16 => {
+                    self.run_noise::<u16>(&self.config.clone().into()).unwrap()
+                }
+            };
+
+            self.stream_4 = Some(stream);
         }
     }
 
-    fn stop_all(&mut self) {
+    pub fn stop_all(&mut self) {
         self.stream_1 = None;
         self.stream_2 = None;
         self.stream_3 = None;
         self.stream_4 = None;
     }
 
-    fn set_mute(&mut self, muted: bool) {
+    pub fn set_mute(&mut self, muted: bool) {
         if self.muted != muted {
             self.stop_all();
             self.muted = muted;
         }
     }
 
-    fn step_64(&mut self) {
+    pub fn step_64(&mut self) {
         self.pulse_description_1.write().step_64();
         self.pulse_description_2.write().step_64();
+        self.noise_description.write().step_64();
     }
 
-    fn step_128(&mut self) {
-        self.pulse_description_1.write().step_128();
+    pub fn step_128(&mut self, memory: Arc<RwLock<Memory>>) {
+        self.pulse_description_1.write().step_128(memory);
     }
 
-    fn step_256(&mut self) {
+    pub fn step_256(&mut self) {
         self.pulse_description_1.write().step_256();
         self.pulse_description_2.write().step_256();
         self.wave_description.write().step_256();
+        self.noise_description.write().step_256();
     }
 
-    fn update(&mut self, memory: Arc<RwLock<Memory>>) {
+    pub fn update(&mut self, memory: Arc<RwLock<Memory>>) {
         if self.pulse_description_1.read().stop {
-            self.stop(1);
-
             memory.write().set_audio_channel_inactive(1);
         }
 
         if self.pulse_description_2.read().stop {
-            self.stop(2);
-
             memory.write().set_audio_channel_inactive(2);
         }
 
         if !self.wave_description.read().should_play {
-            self.stop(3);
-
             memory.write().set_audio_channel_inactive(3);
         }
 
-        // TODO: Noise channel
+        if self.noise_description.read().stop {
+            memory.write().set_audio_channel_inactive(4);
+        }
     }
 
-    fn reload_length(&mut self, channel_n: u8, pulse_length: Byte) {
+    pub fn update_length(&mut self, channel_n: Byte, register: Byte) {
         match channel_n {
-            1 => self.pulse_description_1.write().reload_length(pulse_length),
-            2 => self.pulse_description_2.write().reload_length(pulse_length),
+            1 => self
+                .pulse_description_1
+                .write()
+                .trigger_length_register_update(register),
+
+            2 => self
+                .pulse_description_2
+                .write()
+                .trigger_length_register_update(register),
+
+            3 => self
+                .wave_description
+                .write()
+                .trigger_length_register_update(register),
+
+            _ => panic!("Invalid channel number"),
+        }
+    }
+
+    pub fn update_length_old(&mut self, channel_n: u8, pulse_length: Byte) {
+        match channel_n {
             3 => self.wave_description.write().reload_length(pulse_length),
+            4 => self.noise_description.write().reload_length(pulse_length),
             _ => panic!("Invalid channel provided"),
+        }
+    }
+
+    pub fn update_sweep(&mut self, sweep: Option<Sweep>) {
+        self.pulse_description_1.write().reload_sweep(sweep);
+    }
+
+    pub fn update_control(&mut self, channel_n: Byte, register: Byte) {
+        match channel_n {
+            1 => self
+                .pulse_description_1
+                .write()
+                .trigger_control_register_update(register),
+
+            2 => self
+                .pulse_description_2
+                .write()
+                .trigger_control_register_update(register),
+
+            _ => panic!("Invalid channel number"),
         }
     }
 }
