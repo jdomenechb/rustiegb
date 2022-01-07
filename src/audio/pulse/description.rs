@@ -2,7 +2,8 @@ use crate::audio::pulse::sweep::Sweep;
 use crate::audio::pulse::PulseWavePatternDuty;
 use crate::audio::registers::{
     ChannelStopabble, ControlRegisterUpdatable, ControlUpdatable, EnvelopeRegisterUpdatable,
-    EnvelopeUpdatable, LengthRegisterUpdatable, LengthUpdatable,
+    EnvelopeUpdatable, FrequencyRegisterUpdatable, FrequencyUpdatable, LengthRegisterUpdatable,
+    LengthUpdatable,
 };
 use crate::audio::volume_envelope::VolumeEnvelopeDescription;
 use crate::{Byte, Memory, Word};
@@ -108,6 +109,8 @@ impl ControlRegisterUpdatable for PulseDescription {
         self.stop = false;
         self.sample_clock = 0.0;
 
+        self.set_high_part_from_register(register);
+
         self.set = Self::calculate_initial_from_register(register);
         self.use_length = Self::calculate_use_length_from_register(register);
 
@@ -139,6 +142,18 @@ impl EnvelopeUpdatable for PulseDescription {
 }
 
 impl EnvelopeRegisterUpdatable for PulseDescription {}
+
+impl FrequencyUpdatable for PulseDescription {
+    fn set_frequency(&mut self, frequency: Word) {
+        self.frequency = frequency;
+    }
+
+    fn get_frequency(&self) -> Word {
+        self.frequency
+    }
+}
+
+impl FrequencyRegisterUpdatable for PulseDescription {}
 
 #[cfg(test)]
 mod tests {

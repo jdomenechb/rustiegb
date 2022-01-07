@@ -1,4 +1,4 @@
-use crate::audio::registers::{LengthRegisterUpdatable, LengthUpdatable};
+use crate::audio::registers::{ControlRegisterUpdatable, LengthRegisterUpdatable, LengthUpdatable};
 use crate::audio::wave::WaveOutputLevel;
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
@@ -129,6 +129,8 @@ impl LengthRegisterUpdatable for WaveDescription {
         self.update_length_from_register(register);
     }
 }
+
+// impl ControlRegisterUpdatable for WaveDescription {}
 
 #[cfg(test)]
 mod tests {

@@ -49,11 +49,12 @@ pub struct AudioRegWritten {
     pub length: bool,
     pub sweep: bool,
     pub envelope: bool,
+    pub frequency: bool,
 }
 
 impl AudioRegWritten {
     pub fn has_change(&self) -> bool {
-        self.control || self.length || self.sweep || self.envelope
+        self.control || self.length || self.sweep || self.envelope || self.frequency
     }
 }
 
@@ -399,6 +400,7 @@ impl Memory {
             0xFF13 => {
                 if self.nr52.is_on() {
                     self.nr13 = value;
+                    self.audio_1_reg_written.frequency = true;
                 }
             }
             0xFF14 => {
@@ -434,6 +436,7 @@ impl Memory {
             0xFF18 => {
                 if self.nr52.is_on() {
                     self.nr23 = value;
+                    self.audio_2_reg_written.frequency = true;
                 }
             }
             0xFF19 => {
@@ -468,6 +471,7 @@ impl Memory {
             0xFF1D => {
                 if self.nr52.is_on() {
                     self.nr33 = value;
+                    self.audio_3_reg_written.frequency = true;
                 }
             }
             0xFF1E => {

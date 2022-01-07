@@ -125,6 +125,11 @@ impl AudioUnit {
             return;
         }
 
+        if changes.frequency {
+            self.auo
+                .update_frequency(channel_n, audio_registers.frequency);
+        }
+
         if changes.control {
             self.auo.update_control(channel_n, audio_registers.control);
             self.auo.play_pulse(channel_n);
