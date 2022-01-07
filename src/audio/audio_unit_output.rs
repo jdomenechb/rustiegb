@@ -7,7 +7,9 @@ use parking_lot::RwLock;
 use crate::audio::noise::NoiseDescription;
 use crate::audio::pulse::sweep::Sweep;
 use crate::audio::pulse::PulseDescription;
-use crate::audio::registers::{ControlRegisterUpdatable, LengthRegisterUpdatable};
+use crate::audio::registers::{
+    ControlRegisterUpdatable, EnvelopeRegisterUpdatable, LengthRegisterUpdatable,
+};
 use crate::audio::wave::WaveDescription;
 use crate::audio::wave::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
@@ -441,6 +443,20 @@ impl CpalAudioUnitOutput {
                 .trigger_control_register_update(register),
 
             _ => panic!("Invalid channel number"),
+        }
+    }
+
+    pub fn update_envelope(&mut self, channel_n: Byte, register: Byte) {
+        match channel_n {
+            1 => self
+                .pulse_description_1
+                .write()
+                .trigger_envelope_register_update(register),
+            2 => self
+                .pulse_description_2
+                .write()
+                .trigger_envelope_register_update(register),
+            _ => panic!("Invalid channel provided"),
         }
     }
 }

@@ -119,6 +119,12 @@ impl AudioUnit {
             return;
         }
 
+        if changes.envelope {
+            self.auo
+                .update_envelope(channel_n, audio_registers.envelope);
+            return;
+        }
+
         if changes.control {
             self.auo.update_control(channel_n, audio_registers.control);
             self.auo.play_pulse(channel_n);

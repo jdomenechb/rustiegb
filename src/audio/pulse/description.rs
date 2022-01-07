@@ -1,7 +1,8 @@
 use crate::audio::pulse::sweep::Sweep;
 use crate::audio::pulse::PulseWavePatternDuty;
 use crate::audio::registers::{
-    ControlRegisterUpdatable, ControlUpdatable, LengthRegisterUpdatable, LengthUpdatable,
+    ControlRegisterUpdatable, ControlUpdatable, EnvelopeRegisterUpdatable, EnvelopeUpdatable,
+    LengthRegisterUpdatable, LengthUpdatable,
 };
 use crate::audio::volume_envelope::VolumeEnvelopeDescription;
 use crate::{Byte, Memory, Word};
@@ -120,6 +121,14 @@ impl ControlRegisterUpdatable for PulseDescription {
         }
     }
 }
+
+impl EnvelopeUpdatable for PulseDescription {
+    fn set_envelope(&mut self, envelope: VolumeEnvelopeDescription) {
+        self.volume_envelope = envelope;
+    }
+}
+
+impl EnvelopeRegisterUpdatable for PulseDescription {}
 
 #[cfg(test)]
 mod tests {

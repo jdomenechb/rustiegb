@@ -48,3 +48,18 @@ impl VolumeEnvelopeDescription {
         }
     }
 }
+
+impl From<Byte> for VolumeEnvelopeDescription {
+    fn from(register: Byte) -> Self {
+        let initial_volume = register >> 4;
+        let period = register & 0b111;
+
+        VolumeEnvelopeDescription {
+            initial_volume,
+            current_volume: initial_volume,
+            direction: VolumeEnvelopeDirection::from(register & 0b1000 == 0b1000),
+            period,
+            period_timer: period,
+        }
+    }
+}

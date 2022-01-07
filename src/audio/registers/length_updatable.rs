@@ -1,9 +1,5 @@
 use crate::{Byte, Word};
 
-pub trait LengthRegisterUpdatable: LengthUpdatable {
-    fn trigger_length_register_update(&mut self, register: Byte);
-}
-
 pub trait LengthUpdatable {
     fn get_maximum_length() -> Word;
 
@@ -27,4 +23,8 @@ pub trait LengthUpdatable {
         self.set_length(length);
         self.refresh_remaining_steps();
     }
+}
+
+pub trait LengthRegisterUpdatable: LengthUpdatable {
+    fn trigger_length_register_update(&mut self, register: Byte);
 }

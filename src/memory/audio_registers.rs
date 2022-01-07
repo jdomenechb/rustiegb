@@ -7,7 +7,7 @@ use crate::{Byte, Word};
 pub struct AudioRegisters {
     pub control: Byte,
     pub frequency: Byte,
-    pub volume: Byte,
+    pub envelope: Byte,
     pub length: Byte,
     pub sweep: Option<Byte>,
 }
@@ -16,14 +16,14 @@ impl AudioRegisters {
     pub fn new(
         control: Byte,
         frequency: Byte,
-        volume: Byte,
+        envelope: Byte,
         length: Byte,
         sweep: Option<Byte>,
     ) -> Self {
         Self {
             control,
             frequency,
-            volume,
+            envelope,
             length,
             sweep,
         }
@@ -34,19 +34,19 @@ impl AudioRegisters {
     }
 
     pub fn get_volume_envelope(&self) -> Byte {
-        (self.volume >> 4) & 0xF
+        (self.envelope >> 4) & 0xF
     }
 
     pub fn get_volume_envelope_direction(&self) -> VolumeEnvelopeDirection {
-        VolumeEnvelopeDirection::from(self.volume & 0b1000 == 0b1000)
+        VolumeEnvelopeDirection::from(self.envelope & 0b1000 == 0b1000)
     }
 
     pub fn get_volume_envelope_duration_64(&self) -> Byte {
-        self.volume & 0b111
+        self.envelope & 0b111
     }
 
     pub fn get_wave_output_level(&self) -> WaveOutputLevel {
-        match self.volume & 0b1100000 {
+        match self.envelope & 0b1100000 {
             0b0000000 => WaveOutputLevel::Mute,
             0b0100000 => WaveOutputLevel::Vol100Percent,
             0b1000000 => WaveOutputLevel::Vol50Percent,
