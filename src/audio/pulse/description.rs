@@ -25,6 +25,10 @@ pub struct PulseDescription {
 }
 
 impl PulseDescription {
+    pub fn init_sweep(&mut self) {
+        self.sweep = Some(Sweep::default());
+    }
+
     pub fn step_128(&mut self, memory: Arc<RwLock<Memory>>) {
         if let Some(mut sweep) = self.sweep {
             sweep.step_128(memory, self);
@@ -51,14 +55,8 @@ impl PulseDescription {
     }
 
     pub fn reload_sweep(&mut self, register: Byte) {
-        let s = Sweep::from(register);
-
         if let Some(mut s2) = self.sweep {
-            if s2.negate_is_disabled_after_calculation(&s) {
-                self.stop_channel();
-            }
-
-            s2.exchange(&s);
+            s2.update_from_register(register, self);
             self.sweep = Some(s2);
         }
     }
@@ -115,8 +113,7 @@ impl ControlRegisterUpdatable for PulseDescription {
         self.set_freq_high_part_from_register(register);
 
         if let Some(mut s) = self.sweep {
-            s.set_shadow_frequency(self.frequency);
-            s.check_first_calculate_new_frequency(self);
+            s.trigger_control_register_update(self);
             self.sweep = Some(s);
         }
 

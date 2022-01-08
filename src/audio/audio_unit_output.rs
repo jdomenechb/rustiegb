@@ -45,6 +45,9 @@ impl CpalAudioUnitOutput {
 
         let config = device.default_output_config().unwrap();
 
+        let mut description1 = PulseDescription::default();
+        description1.init_sweep();
+
         let mut value = Self {
             device,
             config,
@@ -53,7 +56,7 @@ impl CpalAudioUnitOutput {
             stream_3: None,
             stream_4: None,
 
-            pulse_description_1: Arc::new(RwLock::new(PulseDescription::default())),
+            pulse_description_1: Arc::new(RwLock::new(description1)),
             pulse_description_2: Arc::new(RwLock::new(PulseDescription::default())),
             wave_description: Arc::new(RwLock::new(WaveDescription::default())),
             noise_description: Arc::new(RwLock::new(NoiseDescription::default())),

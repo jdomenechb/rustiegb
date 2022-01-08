@@ -1,4 +1,5 @@
 use crate::audio::pulse::description::PulseDescription;
+use crate::audio::registers::{ChannelStopabble, FrequencyUpdatable};
 use crate::{Byte, Memory, Word};
 use direction::SweepDirection;
 use parking_lot::RwLock;
@@ -27,29 +28,25 @@ impl Sweep {
         memory: Arc<RwLock<Memory>>,
         pulse_description: &mut PulseDescription,
     ) {
-        if self.timer == 0 {
-            return;
-        }
-
         if self.timer > 0 {
             self.timer -= 1;
-        }
 
-        if self.timer == 0 {
-            self.timer = if self.time > 0 { self.time } else { 8 };
+            if self.timer == 0 {
+                self.reload_timer();
 
-            if self.enabled && self.time > 0 {
-                let new_frequency = self.calculate_new_frequency(pulse_description);
+                if self.enabled && self.time > 0 {
+                    let new_frequency = self.calculate_new_frequency(pulse_description);
 
-                if new_frequency < 2048 && self.shifts > 0 {
-                    self.shadow_frequency = new_frequency;
-                    pulse_description.frequency = new_frequency;
+                    if new_frequency < 2048 && self.shifts > 0 {
+                        self.shadow_frequency = new_frequency;
+                        pulse_description.frequency = new_frequency;
 
-                    {
-                        memory.write().update_audio_1_frequency(new_frequency);
+                        {
+                            memory.write().update_audio_1_frequency(new_frequency);
+                        }
+
+                        self.calculate_new_frequency(pulse_description);
                     }
-
-                    self.calculate_new_frequency(pulse_description);
                 }
             }
         }
@@ -66,7 +63,7 @@ impl Sweep {
         };
 
         if new_frequency > 2047 {
-            pulse_description.stop = true;
+            pulse_description.stop_channel();
         }
 
         new_frequency
@@ -81,16 +78,41 @@ impl Sweep {
         }
     }
 
-    pub fn negate_is_disabled_after_calculation(&self, other: &Self) -> bool {
-        self.calculated
-            && self.direction == SweepDirection::Sub
-            && other.direction == SweepDirection::Add
+    pub fn reload_timer(&mut self) {
+        self.timer = if self.time > 0 { self.time } else { 8 };
     }
 
-    pub fn exchange(&mut self, other: &Self) {
-        self.time = other.time;
-        self.direction = other.direction;
-        self.shifts = other.shifts;
+    pub fn trigger_control_register_update(&mut self, pulse_description: &mut PulseDescription) {
+        self.set_shadow_frequency(pulse_description.get_frequency());
+        self.reload_timer();
+        self.enabled = self.time > 0 || self.shifts > 0;
+        self.check_first_calculate_new_frequency(pulse_description);
+    }
+
+    pub fn update_from_register(
+        &mut self,
+        register: Byte,
+        pulse_description: &mut PulseDescription,
+    ) {
+        let shifts = register & 0b111;
+        let time = (register >> 4) & 0b111;
+
+        let direction = match register & 0b1000 == 0b1000 {
+            true => SweepDirection::Sub,
+            false => SweepDirection::Add,
+        };
+
+        if self.calculated
+            && self.direction == SweepDirection::Sub
+            && direction == SweepDirection::Add
+        {
+            pulse_description.stop_channel();
+        }
+
+        self.time = time;
+        self.shifts = shifts;
+        self.direction = direction;
+
         self.calculated = false;
     }
 }
@@ -107,10 +129,16 @@ impl From<Byte> for Sweep {
                 true => SweepDirection::Sub,
                 false => SweepDirection::Add,
             },
-            timer: if time > 0 { time } else { 8 },
-            enabled: time > 0 || shifts > 0,
+            timer: 0,
+            enabled: true,
             shadow_frequency: 0,
             calculated: false,
         }
+    }
+}
+
+impl Default for Sweep {
+    fn default() -> Self {
+        Sweep::from(0x80)
     }
 }

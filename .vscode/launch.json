@@ -201,7 +201,7 @@
                 }
             },
             "args": [
-                "roms/gb-test-roms-master/dmg_sound/rom_singles//05-sweep details.gb"
+                "roms/gb-test-roms-master/dmg_sound/rom_singles/04-sweep.gb"
             ],
             "cwd": "${workspaceFolder}"
         },
