@@ -13,6 +13,7 @@ use crate::audio::registers::{
 use crate::audio::wave::WaveDescription;
 use crate::audio::wave::WaveOutputLevel;
 use crate::memory::memory_sector::ReadMemory;
+use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, Memory, Word};
 
 pub struct CpalAudioUnitOutput {
@@ -62,6 +63,7 @@ impl CpalAudioUnitOutput {
 
         value.play_pulse(1);
         value.play_pulse(2);
+        value.play_wave();
 
         value
     }
@@ -151,7 +153,7 @@ impl CpalAudioUnitOutput {
             {
                 let mut description = description.write();
 
-                if !description.set || !description.should_play {
+                if !description.set || !description.should_play || description.stop {
                     return 0.0;
                 }
 
@@ -303,13 +305,11 @@ impl CpalAudioUnitOutput {
         }
     }
 
-    pub fn play_wave(&mut self, description: &WaveDescription) {
-        if self.muted || !description.should_play {
+    pub fn play_wave(&mut self) {
+        if self.muted {
             self.stream_3 = None;
             return;
         }
-
-        self.wave_description.write().exchange(description);
 
         if self.stream_3.is_none() {
             let stream = match self.config.sample_format() {
@@ -393,7 +393,7 @@ impl CpalAudioUnitOutput {
             memory.write().set_audio_channel_inactive(2);
         }
 
-        if !self.wave_description.read().should_play {
+        if self.wave_description.read().stop {
             memory.write().set_audio_channel_inactive(3);
         }
 
@@ -447,6 +447,12 @@ impl CpalAudioUnitOutput {
                 .write()
                 .trigger_control_register_update(register),
 
+            3 => {
+                self.wave_description
+                    .write()
+                    .trigger_control_register_update(register);
+            }
+
             _ => panic!("Invalid channel number"),
         }
     }
@@ -479,11 +485,30 @@ impl CpalAudioUnitOutput {
                 .write()
                 .trigger_frequency_register_update(register),
 
-            // 3 => self
-            //     .wave_description
-            //     .write()
-            //     .trigger_frequency_register_update(register),
+            3 => self
+                .wave_description
+                .write()
+                .trigger_frequency_register_update(register),
+
             _ => panic!("Invalid channel provided"),
         }
+    }
+
+    pub fn update_wave_onoff(&mut self, register: Byte) {
+        self.wave_description
+            .write()
+            .trigger_wave_onoff_register_update(register);
+    }
+
+    pub fn update_wave_output_level(&mut self, register: Byte) {
+        self.wave_description
+            .write()
+            .trigger_wave_output_level_register_update(register);
+    }
+
+    pub fn update_wave_pattern(&mut self, pattern: WavePatternRam) {
+        self.wave_description
+            .write()
+            .trigger_wave_pattern_update(pattern);
     }
 }

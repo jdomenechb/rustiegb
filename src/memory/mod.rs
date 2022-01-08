@@ -47,14 +47,19 @@ pub mod wave_pattern_ram;
 pub struct AudioRegWritten {
     pub control: bool,
     pub length: bool,
-    pub sweep: bool,
-    pub envelope: bool,
+    pub sweep_or_wave_onoff: bool,
+    pub envelope_or_wave_out_lvl: bool,
     pub frequency: bool,
+    pub wave_pattern: bool,
 }
 
 impl AudioRegWritten {
     pub fn has_change(&self) -> bool {
-        self.control || self.length || self.sweep || self.envelope || self.frequency
+        self.control
+            || self.length
+            || self.sweep_or_wave_onoff
+            || self.envelope_or_wave_out_lvl
+            || self.frequency
     }
 }
 
@@ -382,7 +387,7 @@ impl Memory {
             Self::ADDR_NR10 => {
                 if self.nr52.is_on() {
                     self.nr10 = value;
-                    self.audio_1_reg_written.sweep = true;
+                    self.audio_1_reg_written.sweep_or_wave_onoff = true;
                 }
             }
             0xFF11 => {
@@ -394,7 +399,7 @@ impl Memory {
             0xFF12 => {
                 if self.nr52.is_on() {
                     self.nr12 = value;
-                    self.audio_1_reg_written.envelope = true;
+                    self.audio_1_reg_written.envelope_or_wave_out_lvl = true;
                 }
             }
             0xFF13 => {
@@ -430,7 +435,7 @@ impl Memory {
             0xFF17 => {
                 if self.nr52.is_on() {
                     self.nr22 = value;
-                    self.audio_2_reg_written.envelope = true;
+                    self.audio_2_reg_written.envelope_or_wave_out_lvl = true;
                 }
             }
             0xFF18 => {
@@ -455,6 +460,7 @@ impl Memory {
             0xFF1A => {
                 if self.nr52.is_on() {
                     self.nr30 = value;
+                    self.audio_3_reg_written.sweep_or_wave_onoff = true;
                 }
             }
             0xFF1B => {
@@ -501,7 +507,7 @@ impl Memory {
             0xFF21 => {
                 if self.nr52.is_on() {
                     self.nr42 = value;
-                    self.audio_4_reg_written.envelope = true;
+                    self.audio_4_reg_written.envelope_or_wave_out_lvl = true;
                 }
             }
             0xFF22 => {
@@ -563,7 +569,10 @@ impl Memory {
             0xFF27..=0xFF2F => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
-            0xFF30..=0xFF3F => self.wave_pattern_ram.write_byte(position - 0xFF30, value),
+            0xFF30..=0xFF3F => {
+                self.wave_pattern_ram.write_byte(position - 0xFF30, value);
+                self.audio_3_reg_written.wave_pattern = true;
+            }
             0xFF40 => self.lcdc = value.into(),
             Self::ADDR_STAT => self.stat = value.into(),
             0xFF42 => self.scy = value,

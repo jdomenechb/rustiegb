@@ -1,12 +1,11 @@
 use crate::audio::volume_envelope::VolumeEnvelopeDirection;
-use crate::audio::wave::WaveOutputLevel;
-use crate::{Byte, Word};
+use crate::Byte;
 
 #[readonly::make]
 pub struct AudioRegisters {
     pub control: Byte,
     pub frequency: Byte,
-    pub envelope: Byte,
+    pub envelope_or_wave_out_lvl: Byte,
     pub length: Byte,
     pub sweep: Option<Byte>,
 }
@@ -22,36 +21,22 @@ impl AudioRegisters {
         Self {
             control,
             frequency,
-            envelope,
+            envelope_or_wave_out_lvl: envelope,
             length,
             sweep,
         }
     }
 
-    pub fn get_frequency(&self) -> Word {
-        ((self.control as u16 & 0b111) << 8) | self.frequency as u16
-    }
-
     pub fn get_volume_envelope(&self) -> Byte {
-        (self.envelope >> 4) & 0xF
+        (self.envelope_or_wave_out_lvl >> 4) & 0xF
     }
 
     pub fn get_volume_envelope_direction(&self) -> VolumeEnvelopeDirection {
-        VolumeEnvelopeDirection::from(self.envelope & 0b1000 == 0b1000)
+        VolumeEnvelopeDirection::from(self.envelope_or_wave_out_lvl & 0b1000 == 0b1000)
     }
 
     pub fn get_volume_envelope_duration_64(&self) -> Byte {
-        self.envelope & 0b111
-    }
-
-    pub fn get_wave_output_level(&self) -> WaveOutputLevel {
-        match self.envelope & 0b1100000 {
-            0b0000000 => WaveOutputLevel::Mute,
-            0b0100000 => WaveOutputLevel::Vol100Percent,
-            0b1000000 => WaveOutputLevel::Vol50Percent,
-            0b1100000 => WaveOutputLevel::Vol25Percent,
-            _ => panic!("Invalid Wave Output Level"),
-        }
+        self.envelope_or_wave_out_lvl & 0b111
     }
 
     pub fn is_set(&self) -> bool {
@@ -62,20 +47,8 @@ impl AudioRegisters {
         self.control & 0b1000000 == 0b1000000
     }
 
-    pub fn get_wave_length(&self) -> Byte {
-        self.length
-    }
-
     pub fn get_pulse_or_noise_length(&self) -> Byte {
         self.length & 0b111111
-    }
-
-    pub fn get_wave_should_play(&self) -> bool {
-        if let Some(sweep) = self.sweep {
-            return sweep & 0b10000000 == 0b10000000;
-        }
-
-        true
     }
 
     pub fn get_poly_shift_clock_freq(&self) -> Byte {
