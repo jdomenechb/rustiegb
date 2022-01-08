@@ -135,7 +135,7 @@ mod tests {
     fn test_stops_when_no_remaining_steps() {
         let mut wd = WaveDescription::default();
         wd.use_length = true;
-        wd.reload_length(255);
+        wd.trigger_length_register_update(255);
 
         assert_eq!(wd.remaining_steps, 1);
         assert_eq!(wd.stop, false);
