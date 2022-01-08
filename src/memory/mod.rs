@@ -513,6 +513,7 @@ impl Memory {
             0xFF22 => {
                 if self.nr52.is_on() {
                     self.nr43 = value;
+                    self.audio_4_reg_written.frequency_or_poly_counter = true;
                 }
             }
             0xFF23 => {
