@@ -64,6 +64,7 @@ impl CpalAudioUnitOutput {
         value.play_pulse(1);
         value.play_pulse(2);
         value.play_wave();
+        value.play_noise();
 
         value
     }
@@ -328,13 +329,10 @@ impl CpalAudioUnitOutput {
         }
     }
 
-    pub fn play_noise(&mut self, description: &NoiseDescription) {
-        if self.muted || description.stop {
-            self.stream_4 = None;
+    pub fn play_noise(&mut self) {
+        if self.muted {
             return;
         }
-
-        self.noise_description.write().exchange(description);
 
         if self.stream_4.is_none() {
             let stream = match self.config.sample_format() {
@@ -419,15 +417,12 @@ impl CpalAudioUnitOutput {
                 .write()
                 .trigger_length_register_update(register),
 
-            _ => panic!("Invalid channel number"),
-        }
-    }
+            4 => self
+                .noise_description
+                .write()
+                .trigger_length_register_update(register),
 
-    pub fn update_length_old(&mut self, channel_n: u8, pulse_length: Byte) {
-        match channel_n {
-            3 => self.wave_description.write().reload_length(pulse_length),
-            4 => self.noise_description.write().reload_length(pulse_length),
-            _ => panic!("Invalid channel provided"),
+            _ => panic!("Invalid channel number"),
         }
     }
 
@@ -453,6 +448,12 @@ impl CpalAudioUnitOutput {
                     .trigger_control_register_update(register);
             }
 
+            4 => {
+                self.noise_description
+                    .write()
+                    .trigger_control_register_update(register);
+            }
+
             _ => panic!("Invalid channel number"),
         }
     }
@@ -466,6 +467,11 @@ impl CpalAudioUnitOutput {
 
             2 => self
                 .pulse_description_2
+                .write()
+                .trigger_envelope_register_update(register),
+
+            4 => self
+                .noise_description
                 .write()
                 .trigger_envelope_register_update(register),
 
@@ -510,5 +516,11 @@ impl CpalAudioUnitOutput {
         self.wave_description
             .write()
             .trigger_wave_pattern_update(pattern);
+    }
+
+    pub fn update_noise_poly_counter(&mut self, register: Byte) {
+        self.noise_description
+            .write()
+            .trigger_poly_counter_register_update(register);
     }
 }

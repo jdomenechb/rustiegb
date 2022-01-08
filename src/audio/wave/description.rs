@@ -35,11 +35,6 @@ impl WaveDescription {
         65536_f32 / (2048 - self.frequency) as f32
     }
 
-    pub fn reload_length(&mut self, length: Byte) {
-        self.length = length;
-        self.remaining_steps = Self::get_maximum_length() - length as Word;
-    }
-
     pub fn next_sample_clock(&mut self) -> f32 {
         let value = self.sample_clock;
         self.sample_clock += 1.0;
@@ -99,7 +94,7 @@ impl ControlRegisterUpdatable for WaveDescription {
         self.stop = false;
         self.sample_clock = 0.0;
 
-        self.set_high_part_from_register(register);
+        self.set_freq_high_part_from_register(register);
 
         self.set = Self::calculate_initial_from_register(register);
         self.use_length = Self::calculate_use_length_from_register(register);

@@ -3,8 +3,6 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 
 use crate::{Byte, CpalAudioUnitOutput};
-use noise::NoiseDescription;
-use volume_envelope::VolumeEnvelopeDescription;
 
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
@@ -124,9 +122,9 @@ impl AudioUnit {
             return;
         }
 
-        if changes.frequency {
+        if changes.frequency_or_poly_counter {
             self.auo
-                .update_frequency(channel_n, audio_registers.frequency);
+                .update_frequency(channel_n, audio_registers.frequency_or_poly_counter);
             return;
         }
 
@@ -159,8 +157,9 @@ impl AudioUnit {
             return;
         }
 
-        if changes.frequency {
-            self.auo.update_frequency(3, audio_registers.frequency);
+        if changes.frequency_or_poly_counter {
+            self.auo
+                .update_frequency(3, audio_registers.frequency_or_poly_counter);
             return;
         }
 
@@ -179,34 +178,30 @@ impl AudioUnit {
     }
 
     fn update_noise(&mut self, changes: &AudioRegWritten) {
-        let audio_registers;
-
-        {
+        let audio_registers = {
             let memory = self.memory.read();
-            audio_registers = memory.read_audio_registers(4);
-        }
-
-        let length = audio_registers.get_pulse_or_noise_length();
+            memory.read_audio_registers(4)
+        };
 
         if changes.length {
-            self.auo.update_length_old(4, length);
+            self.auo.update_length(4, audio_registers.length);
             return;
         }
 
-        let noise_description = NoiseDescription::new(
-            audio_registers.is_set(),
-            VolumeEnvelopeDescription::new(
-                audio_registers.get_volume_envelope(),
-                audio_registers.get_volume_envelope_direction(),
-                audio_registers.get_volume_envelope_duration_64(),
-            ),
-            audio_registers.get_poly_shift_clock_freq(),
-            audio_registers.get_poly_step(),
-            audio_registers.get_poly_div_ratio(),
-            audio_registers.is_length_used(),
-            audio_registers.get_pulse_or_noise_length(),
-        );
+        if changes.envelope_or_wave_out_lvl {
+            self.auo
+                .update_envelope(4, audio_registers.envelope_or_wave_out_lvl);
+            return;
+        }
 
-        self.auo.play_noise(&noise_description);
+        if changes.frequency_or_poly_counter {
+            self.auo
+                .update_noise_poly_counter(audio_registers.frequency_or_poly_counter);
+            return;
+        }
+
+        if changes.control {
+            self.auo.update_control(4, audio_registers.control);
+        }
     }
 }

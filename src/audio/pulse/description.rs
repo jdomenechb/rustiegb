@@ -112,7 +112,7 @@ impl ControlRegisterUpdatable for PulseDescription {
         self.set = Self::calculate_initial_from_register(register);
         self.use_length = Self::calculate_use_length_from_register(register);
 
-        self.set_high_part_from_register(register);
+        self.set_freq_high_part_from_register(register);
 
         if let Some(mut s) = self.sweep {
             s.set_shadow_frequency(self.frequency);
