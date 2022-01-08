@@ -19,10 +19,6 @@ pub struct Sweep {
 }
 
 impl Sweep {
-    pub fn set_shadow_frequency(&mut self, frequency: Word) {
-        self.shadow_frequency = frequency;
-    }
-
     pub fn step_128(
         &mut self,
         memory: Arc<RwLock<Memory>>,
@@ -69,24 +65,19 @@ impl Sweep {
         new_frequency
     }
 
-    pub fn check_first_calculate_new_frequency(
-        &mut self,
-        pulse_description: &mut PulseDescription,
-    ) {
-        if self.shifts > 0 {
-            self.calculate_new_frequency(pulse_description);
-        }
-    }
-
     pub fn reload_timer(&mut self) {
         self.timer = if self.time > 0 { self.time } else { 8 };
     }
 
     pub fn trigger_control_register_update(&mut self, pulse_description: &mut PulseDescription) {
-        self.set_shadow_frequency(pulse_description.get_frequency());
+        self.shadow_frequency = pulse_description.get_frequency();
         self.reload_timer();
+
         self.enabled = self.time > 0 || self.shifts > 0;
-        self.check_first_calculate_new_frequency(pulse_description);
+
+        if self.shifts > 0 {
+            self.calculate_new_frequency(pulse_description);
+        };
     }
 
     pub fn update_from_register(
