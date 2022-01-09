@@ -105,7 +105,6 @@ impl ControlUpdatable for PulseDescription {}
 impl ControlRegisterUpdatable for PulseDescription {
     fn trigger_control_register_update(&mut self, register: Byte) {
         self.stop = false;
-        self.sample_clock = 0.0;
 
         self.set = Self::calculate_initial_from_register(register);
         self.use_length = Self::calculate_use_length_from_register(register);
@@ -117,8 +116,12 @@ impl ControlRegisterUpdatable for PulseDescription {
             self.sweep = Some(s);
         }
 
-        if self.set && self.remaining_steps == 0 {
-            self.set_remaining_steps(Self::get_maximum_length());
+        if self.set {
+            self.sample_clock = 0.0;
+
+            if self.remaining_steps == 0 {
+                self.set_remaining_steps(Self::get_maximum_length());
+            }
         }
 
         if self.volume_envelope.is_disabled() {
