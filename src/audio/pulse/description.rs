@@ -51,7 +51,7 @@ impl PulseDescription {
     }
 
     pub fn calculate_frequency(&self) -> f32 {
-        131072_f32 / (2048.0 - self.frequency as f32)
+        131072.0 / (2048.0 - self.frequency as f32)
     }
 
     pub fn reload_sweep(&mut self, register: Byte) {

@@ -91,10 +91,10 @@ impl CpalAudioUnitOutput {
         };
 
         let next_value = move || {
-            let sample_in_period;
-            let high_part_max;
             let volume_envelope;
             let sample_clock;
+            let wave_duty;
+            let frequency;
 
             {
                 let mut description = description.write();
@@ -103,19 +103,33 @@ impl CpalAudioUnitOutput {
                     return 0.0;
                 }
 
-                sample_in_period = sample_rate / description.calculate_frequency();
-                high_part_max = sample_in_period * description.wave_duty.to_percent();
+                sample_clock = description.next_sample_clock();
                 volume_envelope = description.volume_envelope.current_volume;
-                sample_clock = description.next_sample_clock()
+                wave_duty = description.wave_duty.to_percent();
+                frequency = description.calculate_frequency();
             }
 
-            let wave = if sample_clock % sample_in_period <= high_part_max {
-                1.0
+            let sample_in_period = sample_rate / frequency;
+            let mut high_part_max = sample_in_period * wave_duty;
+            let low_part_return;
+            let high_part_return;
+
+            if wave_duty < 0.75 {
+                high_part_max = sample_in_period - high_part_max;
+                low_part_return = 0.0;
+                high_part_return = 1.0;
             } else {
-                0.0
+                low_part_return = 1.0;
+                high_part_return = 0.0;
             };
 
-            (wave * volume_envelope as f32) / 7.5 - 1.0
+            let wave = if sample_clock % sample_in_period <= high_part_max {
+                low_part_return
+            } else {
+                high_part_return
+            };
+
+            wave * (volume_envelope as f32 / 7.5) - 1.0
         };
 
         let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
