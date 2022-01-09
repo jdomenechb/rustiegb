@@ -34,7 +34,7 @@ pub struct CpalAudioUnitOutput {
 }
 
 impl CpalAudioUnitOutput {
-    const MASTER_VOLUME: f32 = 0.25;
+    const MASTER_VOLUME: f32 = 1.0;
 
     pub fn new() -> Self {
         let host = cpal::default_host();
@@ -99,7 +99,7 @@ impl CpalAudioUnitOutput {
             {
                 let mut description = description.write();
 
-                if !description.set || description.stop {
+                if description.stop {
                     return 0.0;
                 }
 
@@ -171,7 +171,7 @@ impl CpalAudioUnitOutput {
             {
                 let mut description = description.write();
 
-                if !description.set || !description.should_play || description.stop {
+                if !description.should_play || description.stop {
                     return 0.0;
                 }
 
@@ -247,7 +247,7 @@ impl CpalAudioUnitOutput {
             {
                 let mut description = description.write();
 
-                if !description.set || description.stop {
+                if description.stop {
                     return 0.0;
                 }
 
