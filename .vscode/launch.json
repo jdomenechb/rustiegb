@@ -100,7 +100,7 @@
                 }
             },
             "args": [
-                "./roms/Kirby's Dream Land (USA, Europe).gb"
+                "./roms/kirby.gb"
             ],
             "cwd": "${workspaceFolder}"
         },

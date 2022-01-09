@@ -167,6 +167,7 @@ impl CpalAudioUnitOutput {
             let mut wave_sample;
             let sample_clock;
             let frequency;
+            let current_wave_pos;
 
             {
                 let mut description = description.write();
@@ -182,16 +183,16 @@ impl CpalAudioUnitOutput {
                 // How many samples are in one frequency oscillation
                 sample_in_period = sample_rate / frequency;
 
-                let current_wave_pos =
+                current_wave_pos =
                     ((sample_clock % sample_in_period) / sample_in_period * 32.0).floor() as u8;
 
                 wave_sample = description.wave.read_byte((current_wave_pos / 2) as Word);
+            }
 
-                if current_wave_pos % 2 == 0 {
-                    wave_sample >>= 4;
-                } else {
-                    wave_sample &= 0b1111;
-                }
+            if current_wave_pos % 2 == 0 {
+                wave_sample >>= 4;
+            } else {
+                wave_sample &= 0b1111;
             }
 
             match output_level {
@@ -320,7 +321,6 @@ impl CpalAudioUnitOutput {
 
     pub fn play_wave(&mut self) {
         if self.muted {
-            self.stream_3 = None;
             return;
         }
 
@@ -395,44 +395,56 @@ impl CpalAudioUnitOutput {
     }
 
     pub fn update(&mut self, memory: Arc<RwLock<Memory>>) {
-        if self.pulse_description_1.read().stop {
-            memory.write().set_audio_channel_inactive(1);
+        {
+            if self.pulse_description_1.read().stop {
+                memory.write().set_audio_channel_inactive(1);
+            }
         }
 
-        if self.pulse_description_2.read().stop {
-            memory.write().set_audio_channel_inactive(2);
+        {
+            if self.pulse_description_2.read().stop {
+                memory.write().set_audio_channel_inactive(2);
+            }
         }
 
-        if self.wave_description.read().stop {
-            memory.write().set_audio_channel_inactive(3);
+        {
+            if self.wave_description.read().stop {
+                memory.write().set_audio_channel_inactive(3);
+            }
         }
 
-        if self.noise_description.read().stop {
-            memory.write().set_audio_channel_inactive(4);
+        {
+            if self.noise_description.read().stop {
+                memory.write().set_audio_channel_inactive(4);
+            }
         }
     }
 
     pub fn update_length(&mut self, channel_n: Byte, register: Byte) {
         match channel_n {
-            1 => self
-                .pulse_description_1
-                .write()
-                .trigger_length_register_update(register),
+            1 => {
+                self.pulse_description_1
+                    .write()
+                    .trigger_length_register_update(register);
+            }
 
-            2 => self
-                .pulse_description_2
-                .write()
-                .trigger_length_register_update(register),
+            2 => {
+                self.pulse_description_2
+                    .write()
+                    .trigger_length_register_update(register);
+            }
 
-            3 => self
-                .wave_description
-                .write()
-                .trigger_length_register_update(register),
+            3 => {
+                self.wave_description
+                    .write()
+                    .trigger_length_register_update(register);
+            }
 
-            4 => self
-                .noise_description
-                .write()
-                .trigger_length_register_update(register),
+            4 => {
+                self.noise_description
+                    .write()
+                    .trigger_length_register_update(register);
+            }
 
             _ => panic!("Invalid channel number"),
         }
@@ -444,15 +456,17 @@ impl CpalAudioUnitOutput {
 
     pub fn update_control(&mut self, channel_n: Byte, register: Byte) {
         match channel_n {
-            1 => self
-                .pulse_description_1
-                .write()
-                .trigger_control_register_update(register),
+            1 => {
+                self.pulse_description_1
+                    .write()
+                    .trigger_control_register_update(register);
+            }
 
-            2 => self
-                .pulse_description_2
-                .write()
-                .trigger_control_register_update(register),
+            2 => {
+                self.pulse_description_2
+                    .write()
+                    .trigger_control_register_update(register);
+            }
 
             3 => {
                 self.wave_description
@@ -472,20 +486,23 @@ impl CpalAudioUnitOutput {
 
     pub fn update_envelope(&mut self, channel_n: Byte, register: Byte) {
         match channel_n {
-            1 => self
-                .pulse_description_1
-                .write()
-                .trigger_envelope_register_update(register),
+            1 => {
+                self.pulse_description_1
+                    .write()
+                    .trigger_envelope_register_update(register);
+            }
 
-            2 => self
-                .pulse_description_2
-                .write()
-                .trigger_envelope_register_update(register),
+            2 => {
+                self.pulse_description_2
+                    .write()
+                    .trigger_envelope_register_update(register);
+            }
 
-            4 => self
-                .noise_description
-                .write()
-                .trigger_envelope_register_update(register),
+            4 => {
+                self.noise_description
+                    .write()
+                    .trigger_envelope_register_update(register);
+            }
 
             _ => panic!("Invalid channel provided"),
         }
@@ -493,20 +510,23 @@ impl CpalAudioUnitOutput {
 
     pub fn update_frequency(&mut self, channel_n: Byte, register: Byte) {
         match channel_n {
-            1 => self
-                .pulse_description_1
-                .write()
-                .trigger_frequency_register_update(register),
+            1 => {
+                self.pulse_description_1
+                    .write()
+                    .trigger_frequency_register_update(register);
+            }
 
-            2 => self
-                .pulse_description_2
-                .write()
-                .trigger_frequency_register_update(register),
+            2 => {
+                self.pulse_description_2
+                    .write()
+                    .trigger_frequency_register_update(register);
+            }
 
-            3 => self
-                .wave_description
-                .write()
-                .trigger_frequency_register_update(register),
+            3 => {
+                self.wave_description
+                    .write()
+                    .trigger_frequency_register_update(register);
+            }
 
             _ => panic!("Invalid channel provided"),
         }
