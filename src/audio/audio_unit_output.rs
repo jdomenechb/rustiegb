@@ -202,7 +202,7 @@ impl CpalAudioUnitOutput {
                 _ => {}
             }
 
-            (wave_sample / 0b1111) as f32
+            ((wave_sample / 0b1111) as f32 - 0.5) * 2.0
         };
 
         let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
