@@ -14,23 +14,23 @@ impl Configuration {
     pub fn from_command(app_name: &str) -> Self {
         let matches = App::new(app_name)
             .arg(
-                Arg::with_name("ROMFILE")
+                Arg::new("ROMFILE")
                     .required(true)
                     .index(1)
                     .help("Path of the ROM file to use"),
             )
             .arg(
-                Arg::with_name("debug-cpu")
+                Arg::new("debug-cpu")
                     .long("debug-cpu")
                     .help("Prints CPU instructions on command line"),
             )
             .arg(
-                Arg::with_name("debug-header")
+                Arg::new("debug-header")
                     .long("debug-header")
                     .help("Prints the parsed cartridge header"),
             )
             .arg(
-                Arg::with_name("bootstrap")
+                Arg::new("bootstrap")
                     .long("bootstrap")
                     .help("Uses bootstrap ROM"),
             )
