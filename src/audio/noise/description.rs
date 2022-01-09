@@ -123,8 +123,11 @@ impl ControlRegisterUpdatable for NoiseDescription {
         self.set = Self::calculate_initial_from_register(register);
         self.use_length = Self::calculate_use_length_from_register(register);
 
-        if self.set && self.remaining_steps == 0 {
-            self.set_remaining_steps(Self::get_maximum_length());
+        if self.set {
+            self.sample_clock = 0.0;
+            if self.remaining_steps == 0 {
+                self.set_remaining_steps(Self::get_maximum_length());
+            }
         }
 
         if self.volume_envelope.is_disabled() {

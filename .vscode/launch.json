@@ -147,7 +147,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug Tetris with bootstrap",
+            "name": "Debug Tetris",
             "cargo": {
                 "args": [
                     "build",
@@ -160,8 +160,7 @@
                 }
             },
             "args": [
-                "--bootstrap",
-                "roms/t.gb"
+                "roms/tetris.gb"
             ],
             "cwd": "${workspaceFolder}"
         },

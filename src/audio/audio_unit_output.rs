@@ -165,8 +165,8 @@ impl CpalAudioUnitOutput {
             let sample_in_period;
             let output_level;
             let mut wave_sample;
-            let duration_not_finished: f32;
             let sample_clock;
+            let frequency;
 
             {
                 let mut description = description.write();
@@ -176,16 +176,11 @@ impl CpalAudioUnitOutput {
                 }
 
                 sample_clock = description.next_sample_clock();
+                frequency = description.calculate_frequency();
+                output_level = description.output_level;
 
                 // How many samples are in one frequency oscillation
-                sample_in_period = sample_rate / description.calculate_frequency();
-                output_level = description.output_level;
-                duration_not_finished =
-                    if !description.use_length || description.remaining_steps > 0 {
-                        1.0
-                    } else {
-                        0.0
-                    };
+                sample_in_period = sample_rate / frequency;
 
                 let current_wave_pos =
                     ((sample_clock % sample_in_period) / sample_in_period * 32.0).floor() as u8;
@@ -206,7 +201,7 @@ impl CpalAudioUnitOutput {
                 _ => {}
             }
 
-            (wave_sample / 0b1111) as f32 * duration_not_finished
+            (wave_sample / 0b1111) as f32
         };
 
         let err_fn = |err| eprintln!("An error occurred on stream: {}", err);

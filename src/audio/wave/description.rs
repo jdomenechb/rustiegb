@@ -32,7 +32,7 @@ impl WaveDescription {
     }
 
     pub fn calculate_frequency(&self) -> f32 {
-        65536_f32 / (2048 - self.frequency) as f32
+        65536.0 / (2048 - self.frequency) as f32
     }
 
     pub fn next_sample_clock(&mut self) -> f32 {
@@ -92,15 +92,18 @@ impl ControlUpdatable for WaveDescription {}
 impl ControlRegisterUpdatable for WaveDescription {
     fn trigger_control_register_update(&mut self, register: Byte) {
         self.stop = false;
-        self.sample_clock = 0.0;
 
         self.set_freq_high_part_from_register(register);
 
         self.set = Self::calculate_initial_from_register(register);
         self.use_length = Self::calculate_use_length_from_register(register);
 
-        if self.set && self.remaining_steps == 0 {
-            self.set_remaining_steps(Self::get_maximum_length());
+        if self.set {
+            self.sample_clock = 0.0;
+
+            if self.remaining_steps == 0 {
+                self.set_remaining_steps(Self::get_maximum_length());
+            }
         }
 
         if !self.should_play {

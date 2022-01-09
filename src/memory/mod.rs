@@ -60,6 +60,7 @@ impl AudioRegWritten {
             || self.sweep_or_wave_onoff
             || self.envelope_or_wave_out_lvl
             || self.frequency_or_poly_counter
+            || self.wave_pattern
     }
 }
 
