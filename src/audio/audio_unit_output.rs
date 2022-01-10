@@ -34,7 +34,7 @@ pub struct CpalAudioUnitOutput {
 }
 
 impl CpalAudioUnitOutput {
-    const MASTER_VOLUME: f32 = 1.0;
+    const MASTER_VOLUME: f32 = 0.25;
 
     pub fn new() -> Self {
         let host = cpal::default_host();
