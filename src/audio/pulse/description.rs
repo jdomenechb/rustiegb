@@ -95,7 +95,8 @@ impl LengthRegisterUpdatable for PulseDescription {
     fn trigger_length_register_update(&mut self, register: Byte) {
         self.update_length_from_register(register);
 
-        let wave_duty = (self.length >> 6) & 0b11;
+        let wave_duty = (register >> 6) & 0b11;
+
         self.wave_duty = wave_duty.into()
     }
 }
@@ -159,6 +160,7 @@ impl FrequencyRegisterUpdatable for PulseDescription {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
     #[test]
     fn test_stops_when_no_remaining_steps() {
@@ -175,5 +177,17 @@ mod tests {
 
         assert_eq!(pd.remaining_steps, 0);
         assert_eq!(pd.stop, true);
+    }
+
+    #[test_case(0b01000000, 0b01)]
+    #[test_case(0b10000000, 0b10)]
+    fn test_correct_importation_of_wave_duty(register: Byte, expected: Byte) {
+        let mut pd = PulseDescription::default();
+
+        assert_eq!(pd.wave_duty, PulseWavePatternDuty::default());
+
+        pd.trigger_length_register_update(register);
+
+        assert_eq!(pd.wave_duty, PulseWavePatternDuty::from(expected));
     }
 }

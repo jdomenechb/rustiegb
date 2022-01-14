@@ -1,6 +1,7 @@
 use crate::Byte;
 
 #[derive(Clone)]
+#[cfg_attr(test, derive(PartialEq, Debug))]
 pub enum PulseWavePatternDuty {
     Percent125,
     Percent25,
