@@ -23,6 +23,8 @@ pub trait LengthUpdatable {
         self.set_length(length);
         self.refresh_remaining_steps();
     }
+
+    fn clock_length(&mut self);
 }
 
 pub trait LengthRegisterUpdatable: LengthUpdatable {

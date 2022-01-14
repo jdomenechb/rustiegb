@@ -454,30 +454,35 @@ impl CpalAudioUnitOutput {
         self.pulse_description_1.write().reload_sweep(sweep);
     }
 
-    pub fn update_control(&mut self, channel_n: Byte, register: Byte) {
+    pub fn update_control(
+        &mut self,
+        channel_n: Byte,
+        register: Byte,
+        next_frame_step_is_length: bool,
+    ) {
         match channel_n {
             1 => {
                 self.pulse_description_1
                     .write()
-                    .trigger_control_register_update(register);
+                    .trigger_control_register_update(register, next_frame_step_is_length);
             }
 
             2 => {
                 self.pulse_description_2
                     .write()
-                    .trigger_control_register_update(register);
+                    .trigger_control_register_update(register, next_frame_step_is_length);
             }
 
             3 => {
                 self.wave_description
                     .write()
-                    .trigger_control_register_update(register);
+                    .trigger_control_register_update(register, next_frame_step_is_length);
             }
 
             4 => {
                 self.noise_description
                     .write()
-                    .trigger_control_register_update(register);
+                    .trigger_control_register_update(register, next_frame_step_is_length);
             }
 
             _ => panic!("Invalid channel number"),

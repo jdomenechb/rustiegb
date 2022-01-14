@@ -42,11 +42,7 @@ impl PulseDescription {
 
     pub fn step_256(&mut self) {
         if self.use_length && self.remaining_steps > 0 {
-            self.remaining_steps -= 1;
-
-            if self.remaining_steps == 0 {
-                self.stop_channel();
-            }
+            self.clock_length()
         }
     }
 
@@ -89,6 +85,14 @@ impl LengthUpdatable for PulseDescription {
     fn set_remaining_steps(&mut self, remaining_steps: Word) {
         self.remaining_steps = remaining_steps;
     }
+
+    fn clock_length(&mut self) {
+        self.remaining_steps -= 1;
+
+        if self.remaining_steps == 0 {
+            self.stop_channel();
+        }
+    }
 }
 
 impl LengthRegisterUpdatable for PulseDescription {
@@ -104,11 +108,21 @@ impl LengthRegisterUpdatable for PulseDescription {
 impl ControlUpdatable for PulseDescription {}
 
 impl ControlRegisterUpdatable for PulseDescription {
-    fn trigger_control_register_update(&mut self, register: Byte) {
+    fn trigger_control_register_update(&mut self, register: Byte, next_frame_step_is_length: bool) {
         self.stop = false;
 
+        let new_use_length = Self::calculate_use_length_from_register(register);
+
+        if !next_frame_step_is_length
+            && !self.use_length
+            && new_use_length
+            && self.remaining_steps > 0
+        {
+            self.clock_length();
+        }
+
         self.set = Self::calculate_initial_from_register(register);
-        self.use_length = Self::calculate_use_length_from_register(register);
+        self.use_length = new_use_length;
 
         self.set_freq_high_part_from_register(register);
 

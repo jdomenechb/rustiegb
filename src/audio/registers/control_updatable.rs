@@ -1,7 +1,7 @@
 use crate::Byte;
 
 pub trait ControlRegisterUpdatable: ControlUpdatable {
-    fn trigger_control_register_update(&mut self, register: Byte);
+    fn trigger_control_register_update(&mut self, register: Byte, next_frame_step_is_length: bool);
 }
 
 pub trait ControlUpdatable {

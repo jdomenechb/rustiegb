@@ -23,6 +23,7 @@ pub struct AudioUnit {
 
     cycle_count: u16,
     frame_step: Byte,
+    was_stopped: bool,
 }
 
 impl AudioUnit {
@@ -31,7 +32,8 @@ impl AudioUnit {
             auo: au,
             memory,
             cycle_count: 0,
-            frame_step: 0,
+            frame_step: 7,
+            was_stopped: true,
         }
     }
 
@@ -48,13 +50,19 @@ impl AudioUnit {
             audio_triggers = memory.audio_reg_have_been_written();
         }
 
-        self.clock_frame_sequencer(last_instruction_cycles);
-
         // NR52 controls the general output
         if nr52 & 0b10000000 != 0b10000000 {
             self.auo.stop_all();
+            self.was_stopped = true;
             return;
         }
+
+        if self.was_stopped {
+            self.was_stopped = false;
+            self.frame_step = 7;
+        }
+
+        self.clock_frame_sequencer(last_instruction_cycles);
 
         // Sound 1
         if audio_triggers.0.has_change() {
@@ -129,7 +137,11 @@ impl AudioUnit {
         }
 
         if changes.control {
-            self.auo.update_control(channel_n, audio_registers.control);
+            self.auo.update_control(
+                channel_n,
+                audio_registers.control,
+                self.next_frame_step_is_length(),
+            );
         }
     }
 
@@ -164,7 +176,8 @@ impl AudioUnit {
         }
 
         if changes.control {
-            self.auo.update_control(3, audio_registers.control);
+            self.auo
+                .update_control(3, audio_registers.control, self.next_frame_step_is_length());
             return;
         }
 
@@ -201,7 +214,12 @@ impl AudioUnit {
         }
 
         if changes.control {
-            self.auo.update_control(4, audio_registers.control);
+            self.auo
+                .update_control(4, audio_registers.control, self.next_frame_step_is_length());
         }
+    }
+
+    fn next_frame_step_is_length(&self) -> bool {
+        self.frame_step % 2 == 1
     }
 }
