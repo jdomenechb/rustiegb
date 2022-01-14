@@ -112,14 +112,7 @@ impl ControlRegisterUpdatable for PulseDescription {
         self.stop = false;
 
         let new_use_length = Self::calculate_use_length_from_register(register);
-
-        if !next_frame_step_is_length
-            && !self.use_length
-            && new_use_length
-            && self.remaining_steps > 0
-        {
-            self.clock_length();
-        }
+        let old_use_length = self.use_length;
 
         self.set = Self::calculate_initial_from_register(register);
         self.use_length = new_use_length;
@@ -131,12 +124,23 @@ impl ControlRegisterUpdatable for PulseDescription {
             self.sweep = Some(s);
         }
 
+        let mut steps_resetted = false;
+
         if self.set {
             self.sample_clock = 0.0;
 
             if self.remaining_steps == 0 {
                 self.set_remaining_steps(Self::get_maximum_length());
+                steps_resetted = true;
             }
+        }
+
+        if !next_frame_step_is_length
+            && (!old_use_length || steps_resetted)
+            && new_use_length
+            && self.remaining_steps > 0
+        {
+            self.clock_length();
         }
 
         if self.volume_envelope.is_disabled() {
