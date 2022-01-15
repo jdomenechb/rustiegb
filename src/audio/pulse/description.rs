@@ -1,5 +1,10 @@
 use crate::audio::pulse::sweep::Sweep;
 use crate::audio::pulse::PulseWavePatternDuty;
+use crate::audio::registers::{
+    ChannelStopabble, ControlRegisterUpdatable, ControlUpdatable, EnvelopeRegisterUpdatable,
+    EnvelopeUpdatable, FrequencyRegisterUpdatable, FrequencyUpdatable, LengthRegisterUpdatable,
+    LengthUpdatable,
+};
 use crate::audio::volume_envelope::VolumeEnvelopeDescription;
 use crate::{Byte, Memory, Word};
 use parking_lot::RwLock;
@@ -15,43 +20,13 @@ pub struct PulseDescription {
     pub stop: bool,
     use_length: bool,
     length: Byte,
-    remaining_steps: Byte,
+    remaining_steps: Word,
     sample_clock: f32,
 }
 
 impl PulseDescription {
-    const MAXIMUM_LENGTH: Byte = 64;
-
-    pub fn new(
-        set: bool,
-        frequency: Word,
-        wave_duty: PulseWavePatternDuty,
-        volume_envelope: VolumeEnvelopeDescription,
-        sweep: Option<Sweep>,
-        use_length: bool,
-        length: Byte,
-    ) -> Self {
-        let mut value = Self {
-            set,
-            frequency,
-            wave_duty,
-            volume_envelope,
-            sweep,
-            stop: false,
-            use_length,
-            length,
-            remaining_steps: 0,
-            sample_clock: 0.0,
-        };
-
-        value.reload_length(length);
-
-        if let Some(mut s) = sweep {
-            s.check_first_calculate_new_frequency(&mut value);
-            value.sweep = Some(s);
-        }
-
-        value
+    pub fn init_sweep(&mut self) {
+        self.sweep = Some(Sweep::default());
     }
 
     pub fn step_128(&mut self, memory: Arc<RwLock<Memory>>) {
@@ -67,54 +42,18 @@ impl PulseDescription {
 
     pub fn step_256(&mut self) {
         if self.use_length && self.remaining_steps > 0 {
-            self.remaining_steps -= 1;
-
-            if self.remaining_steps == 0 {
-                self.stop = true;
-            }
+            self.clock_length()
         }
-    }
-
-    pub fn exchange(&mut self, other: &Self) {
-        self.set = other.set;
-        self.frequency = other.frequency;
-        self.wave_duty = other.wave_duty.clone();
-        self.volume_envelope = VolumeEnvelopeDescription::new(
-            other.volume_envelope.initial_volume,
-            other.volume_envelope.direction,
-            other.volume_envelope.period,
-        );
-        self.sweep = other.sweep;
-        self.stop = other.stop;
-        self.use_length = other.use_length;
-        self.length = other.length;
-
-        if other.set && self.remaining_steps == 0 {
-            self.remaining_steps = Self::MAXIMUM_LENGTH;
-        }
-
-        self.sample_clock = 0.0;
     }
 
     pub fn calculate_frequency(&self) -> f32 {
-        131072_f32 / (2048.0 - self.frequency as f32)
+        131072.0 / (2048.0 - self.frequency as f32)
     }
 
-    pub fn reload_length(&mut self, length: Byte) {
-        self.length = length;
-        self.remaining_steps = Self::MAXIMUM_LENGTH - length;
-    }
-
-    pub fn reload_sweep(&mut self, sweep: Option<Sweep>) {
-        if let Some(s) = sweep {
-            if let Some(mut s2) = self.sweep {
-                if s2.negate_is_disabled_after_calculation(&s) {
-                    self.stop = true;
-                }
-
-                s2.exchange(&s);
-                self.sweep = Some(s2);
-            }
+    pub fn reload_sweep(&mut self, register: Byte) {
+        if let Some(mut s2) = self.sweep {
+            s2.update_from_register(register, self);
+            self.sweep = Some(s2);
         }
     }
 
@@ -126,21 +65,131 @@ impl PulseDescription {
     }
 }
 
+impl LengthUpdatable for PulseDescription {
+    fn get_maximum_length() -> Word {
+        64
+    }
+
+    fn calculate_length_from_register(register: Byte) -> Byte {
+        register & 0b111111
+    }
+
+    fn set_length(&mut self, length: Byte) {
+        self.length = length;
+    }
+
+    fn get_length(&mut self) -> Byte {
+        self.length
+    }
+
+    fn set_remaining_steps(&mut self, remaining_steps: Word) {
+        self.remaining_steps = remaining_steps;
+    }
+
+    fn clock_length(&mut self) {
+        self.remaining_steps -= 1;
+
+        if self.remaining_steps == 0 {
+            self.stop_channel();
+        }
+    }
+}
+
+impl LengthRegisterUpdatable for PulseDescription {
+    fn trigger_length_register_update(&mut self, register: Byte) {
+        self.update_length_from_register(register);
+
+        let wave_duty = (register >> 6) & 0b11;
+
+        self.wave_duty = wave_duty.into()
+    }
+}
+
+impl ControlUpdatable for PulseDescription {}
+
+impl ControlRegisterUpdatable for PulseDescription {
+    fn trigger_control_register_update(&mut self, register: Byte, next_frame_step_is_length: bool) {
+        self.stop = false;
+
+        let new_use_length = Self::calculate_use_length_from_register(register);
+        let old_use_length = self.use_length;
+
+        self.set = Self::calculate_initial_from_register(register);
+        self.use_length = new_use_length;
+
+        self.set_freq_high_part_from_register(register);
+
+        if let Some(mut s) = self.sweep {
+            s.trigger_control_register_update(self);
+            self.sweep = Some(s);
+        }
+
+        if !next_frame_step_is_length
+            && !old_use_length
+            && new_use_length
+            && self.remaining_steps > 0
+        {
+            self.clock_length();
+        }
+
+        if self.set {
+            self.sample_clock = 0.0;
+
+            if self.remaining_steps == 0 {
+                let mut length = Self::get_maximum_length();
+
+                if !next_frame_step_is_length && new_use_length {
+                    length -= 1;
+                }
+
+                self.set_remaining_steps(length);
+            }
+        }
+
+        if self.volume_envelope.is_disabled() {
+            self.stop_channel();
+        }
+    }
+}
+
+impl ChannelStopabble for PulseDescription {
+    fn stop_channel(&mut self) {
+        self.stop = true;
+    }
+}
+
+impl EnvelopeUpdatable for PulseDescription {
+    fn set_envelope(&mut self, envelope: VolumeEnvelopeDescription) {
+        self.volume_envelope = envelope;
+    }
+}
+
+impl EnvelopeRegisterUpdatable for PulseDescription {}
+
+impl FrequencyUpdatable for PulseDescription {
+    fn set_frequency(&mut self, frequency: Word) {
+        self.frequency = frequency;
+    }
+
+    fn get_frequency(&self) -> Word {
+        self.frequency
+    }
+}
+
+impl FrequencyRegisterUpdatable for PulseDescription {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
     #[test]
     fn test_stops_when_no_remaining_steps() {
-        let mut pd = PulseDescription::new(
-            true,
-            1,
-            PulseWavePatternDuty::default(),
-            VolumeEnvelopeDescription::default(),
-            None,
-            true,
-            63,
-        );
+        let mut pd = PulseDescription::default();
+
+        pd.set_length(63);
+        pd.refresh_remaining_steps();
+        pd.use_length = true;
 
         assert_eq!(pd.remaining_steps, 1);
         assert_eq!(pd.stop, false);
@@ -149,5 +198,17 @@ mod tests {
 
         assert_eq!(pd.remaining_steps, 0);
         assert_eq!(pd.stop, true);
+    }
+
+    #[test_case(0b01000000, 0b01)]
+    #[test_case(0b10000000, 0b10)]
+    fn test_correct_importation_of_wave_duty(register: Byte, expected: Byte) {
+        let mut pd = PulseDescription::default();
+
+        assert_eq!(pd.wave_duty, PulseWavePatternDuty::default());
+
+        pd.trigger_length_register_update(register);
+
+        assert_eq!(pd.wave_duty, PulseWavePatternDuty::from(expected));
     }
 }

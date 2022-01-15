@@ -100,7 +100,7 @@
                 }
             },
             "args": [
-                "./roms/Kirby's Dream Land (USA, Europe).gb"
+                "./roms/kirby.gb"
             ],
             "cwd": "${workspaceFolder}"
         },
@@ -147,7 +147,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug Tetris with bootstrap",
+            "name": "Debug Tetris",
             "cargo": {
                 "args": [
                     "build",
@@ -160,8 +160,7 @@
                 }
             },
             "args": [
-                "--bootstrap",
-                "roms/t.gb"
+                "roms/tetris.gb"
             ],
             "cwd": "${workspaceFolder}"
         },
@@ -201,7 +200,7 @@
                 }
             },
             "args": [
-                "roms/gb-test-roms-master/dmg_sound/rom_singles//05-sweep details.gb"
+                "roms/gb-test-roms-master/dmg_sound/rom_singles/04-sweep.gb"
             ],
             "cwd": "${workspaceFolder}"
         },

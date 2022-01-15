@@ -1,4 +1,5 @@
 use crate::audio::pulse::description::PulseDescription;
+use crate::audio::registers::{ChannelStopabble, FrequencyUpdatable};
 use crate::{Byte, Memory, Word};
 use direction::SweepDirection;
 use parking_lot::RwLock;
@@ -18,22 +19,42 @@ pub struct Sweep {
 }
 
 impl Sweep {
-    pub fn new(sweep_register: Byte, frequency: Word) -> Self {
-        let shifts = sweep_register & 0b111;
-        let time = (sweep_register >> 4) & 0b111;
+    pub fn update_from_register(
+        &mut self,
+        register: Byte,
+        pulse_description: &mut PulseDescription,
+    ) {
+        let shifts = register & 0b111;
+        let time = (register >> 4) & 0b111;
 
-        Self {
-            time,
-            shifts,
-            direction: match sweep_register & 0b1000 == 0b1000 {
-                true => SweepDirection::Sub,
-                false => SweepDirection::Add,
-            },
-            timer: if time > 0 { time } else { 8 },
-            enabled: time > 0 || shifts > 0,
-            shadow_frequency: frequency,
-            calculated: false,
+        let direction = match register & 0b1000 == 0b1000 {
+            true => SweepDirection::Sub,
+            false => SweepDirection::Add,
+        };
+
+        if self.calculated
+            && self.direction == SweepDirection::Sub
+            && direction == SweepDirection::Add
+        {
+            pulse_description.stop_channel();
         }
+
+        self.time = time;
+        self.shifts = shifts;
+        self.direction = direction;
+
+        self.calculated = false;
+    }
+
+    pub fn trigger_control_register_update(&mut self, pulse_description: &mut PulseDescription) {
+        self.shadow_frequency = pulse_description.get_frequency();
+        self.reload_timer();
+
+        self.enabled = self.time > 0 || self.shifts > 0;
+
+        if self.shifts > 0 {
+            self.calculate_new_frequency(pulse_description);
+        };
     }
 
     pub fn step_128(
@@ -41,29 +62,25 @@ impl Sweep {
         memory: Arc<RwLock<Memory>>,
         pulse_description: &mut PulseDescription,
     ) {
-        if self.timer == 0 {
-            return;
-        }
-
         if self.timer > 0 {
             self.timer -= 1;
-        }
 
-        if self.timer == 0 {
-            self.timer = if self.time > 0 { self.time } else { 8 };
+            if self.timer == 0 {
+                self.reload_timer();
 
-            if self.enabled && self.time > 0 {
-                let new_frequency = self.calculate_new_frequency(pulse_description);
+                if self.enabled && self.time > 0 {
+                    let new_frequency = self.calculate_new_frequency(pulse_description);
 
-                if new_frequency < 2048 && self.shifts > 0 {
-                    self.shadow_frequency = new_frequency;
-                    pulse_description.frequency = new_frequency;
+                    if new_frequency < 2048 && self.shifts > 0 {
+                        self.shadow_frequency = new_frequency;
+                        pulse_description.frequency = new_frequency;
 
-                    {
-                        memory.write().update_audio_1_frequency(new_frequency);
+                        {
+                            memory.write().update_audio_1_frequency(new_frequency);
+                        }
+
+                        self.calculate_new_frequency(pulse_description);
                     }
-
-                    self.calculate_new_frequency(pulse_description);
                 }
             }
         }
@@ -80,31 +97,108 @@ impl Sweep {
         };
 
         if new_frequency > 2047 {
-            pulse_description.stop = true;
+            pulse_description.stop_channel();
         }
 
         new_frequency
     }
 
-    pub fn check_first_calculate_new_frequency(
-        &mut self,
-        pulse_description: &mut PulseDescription,
-    ) {
-        if self.shifts > 0 {
-            self.calculate_new_frequency(pulse_description);
+    pub fn reload_timer(&mut self) {
+        self.timer = if self.time > 0 { self.time } else { 8 };
+    }
+}
+
+impl From<Byte> for Sweep {
+    fn from(register: Byte) -> Self {
+        let shifts = register & 0b111;
+        let time = (register >> 4) & 0b111;
+
+        Self {
+            time,
+            shifts,
+            direction: match register & 0b1000 == 0b1000 {
+                true => SweepDirection::Sub,
+                false => SweepDirection::Add,
+            },
+            timer: 0,
+            enabled: false,
+            shadow_frequency: 0,
+            calculated: false,
         }
     }
+}
 
-    pub fn negate_is_disabled_after_calculation(&self, other: &Self) -> bool {
-        self.calculated
-            && self.direction == SweepDirection::Sub
-            && other.direction == SweepDirection::Add
+impl Default for Sweep {
+    fn default() -> Self {
+        Sweep::from(0x80)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_ok() {
+        let sweep = Sweep::from(0b1011010);
+
+        assert_eq!(sweep.time, 0b101);
+        assert_eq!(sweep.shifts, 0b010);
+        assert_eq!(sweep.direction, SweepDirection::Sub);
+        assert_eq!(sweep.timer, 0);
+        assert_eq!(sweep.enabled, false);
+        assert_eq!(sweep.shadow_frequency, 0);
+        assert_eq!(sweep.calculated, false);
     }
 
-    pub fn exchange(&mut self, other: &Self) {
-        self.time = other.time;
-        self.direction = other.direction;
-        self.shifts = other.shifts;
-        self.calculated = false;
+    #[test]
+    fn test_default_ok() {
+        let sweep = Sweep::default();
+
+        assert_eq!(sweep.time, 0);
+        assert_eq!(sweep.shifts, 0);
+        assert_eq!(sweep.direction, SweepDirection::Add);
+        assert_eq!(sweep.timer, 0);
+        assert_eq!(sweep.enabled, false);
+        assert_eq!(sweep.shadow_frequency, 0);
+        assert_eq!(sweep.calculated, false);
+    }
+
+    #[test]
+    fn test_update_from_register_basic() {
+        let mut sweep = Sweep::default();
+        sweep.calculated = true;
+
+        sweep.update_from_register(0b1011010, &mut PulseDescription::default());
+
+        assert_eq!(sweep.time, 0b101);
+        assert_eq!(sweep.shifts, 0b010);
+        assert_eq!(sweep.direction, SweepDirection::Sub);
+        assert_eq!(sweep.timer, 0);
+        assert_eq!(sweep.enabled, false);
+        assert_eq!(sweep.shadow_frequency, 0);
+        assert_eq!(sweep.calculated, false);
+    }
+
+    #[test]
+    fn test_update_from_register_stops_channel() {
+        let mut sweep = Sweep::default();
+        sweep.calculated = true;
+        sweep.direction = SweepDirection::Sub;
+
+        let mut description = PulseDescription::default();
+        assert!(!description.stop);
+
+        sweep.update_from_register(0b1010010, &mut description);
+
+        assert_eq!(sweep.time, 0b101);
+        assert_eq!(sweep.shifts, 0b010);
+        assert_eq!(sweep.direction, SweepDirection::Add);
+        assert_eq!(sweep.timer, 0);
+        assert_eq!(sweep.enabled, false);
+        assert_eq!(sweep.shadow_frequency, 0);
+        assert_eq!(sweep.calculated, false);
+
+        assert!(description.stop);
     }
 }

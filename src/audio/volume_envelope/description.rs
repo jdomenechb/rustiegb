@@ -11,16 +11,6 @@ pub struct VolumeEnvelopeDescription {
 }
 
 impl VolumeEnvelopeDescription {
-    pub fn new(initial_volume: Byte, direction: VolumeEnvelopeDirection, period: u8) -> Self {
-        Self {
-            initial_volume,
-            current_volume: initial_volume,
-            direction,
-            period,
-            period_timer: period,
-        }
-    }
-
     pub fn step_64(&mut self) {
         if self.period == 0 {
             return;
@@ -45,6 +35,25 @@ impl VolumeEnvelopeDescription {
                     }
                 }
             }
+        }
+    }
+
+    pub fn is_disabled(&self) -> bool {
+        self.initial_volume == 0 && self.direction == VolumeEnvelopeDirection::Down
+    }
+}
+
+impl From<Byte> for VolumeEnvelopeDescription {
+    fn from(register: Byte) -> Self {
+        let initial_volume = register >> 4;
+        let period = register & 0b111;
+
+        VolumeEnvelopeDescription {
+            initial_volume,
+            current_volume: initial_volume,
+            direction: VolumeEnvelopeDirection::from(register & 0b1000 == 0b1000),
+            period,
+            period_timer: period,
         }
     }
 }
