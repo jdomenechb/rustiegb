@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::{Device, Stream, SupportedStreamConfig};
+use cpal::{Device, Stream, StreamConfig, SupportedStreamConfig};
 use parking_lot::RwLock;
 
 use crate::audio::noise::NoiseDescription;
@@ -20,10 +20,7 @@ pub struct CpalAudioUnitOutput {
     device: Device,
     config: SupportedStreamConfig,
 
-    stream_1: Option<Stream>,
-    stream_2: Option<Stream>,
-    stream_3: Option<Stream>,
-    stream_4: Option<Stream>,
+    stream_mix: Option<Stream>,
 
     pulse_description_1: Arc<RwLock<PulseDescription>>,
     pulse_description_2: Arc<RwLock<PulseDescription>>,
@@ -51,10 +48,8 @@ impl CpalAudioUnitOutput {
         let mut value = Self {
             device,
             config,
-            stream_1: None,
-            stream_2: None,
-            stream_3: None,
-            stream_4: None,
+
+            stream_mix: None,
 
             pulse_description_1: Arc::new(RwLock::new(description1)),
             pulse_description_2: Arc::new(RwLock::new(PulseDescription::default())),
@@ -64,82 +59,65 @@ impl CpalAudioUnitOutput {
             muted: false,
         };
 
-        value.play_pulse(1);
-        value.play_pulse(2);
-        value.play_wave();
-        value.play_noise();
+        value.play();
 
         value
     }
 
-    fn run_pulse<T>(
-        &mut self,
-        config: &cpal::StreamConfig,
-        pulse_n: u8,
-    ) -> Result<Stream, anyhow::Error>
+    fn play(&mut self) {
+        if self.muted {
+            return;
+        }
+
+        if self.stream_mix.is_none() {
+            let stream = match self.config.sample_format() {
+                cpal::SampleFormat::F32 => self.run::<f32>().unwrap(),
+                cpal::SampleFormat::I16 => self.run::<i16>().unwrap(),
+                cpal::SampleFormat::U16 => self.run::<u16>().unwrap(),
+            };
+
+            self.stream_mix = Some(stream)
+        }
+    }
+
+    fn run<T>(&mut self) -> Result<Stream, anyhow::Error>
     where
         T: cpal::Sample,
     {
+        let config = &StreamConfig::from(self.config.clone());
+
         let device = &self.device;
         let sample_rate = config.sample_rate.0 as f32;
         let channels = config.channels as usize;
 
-        let description = match pulse_n {
-            1 => self.pulse_description_1.clone(),
-            2 => self.pulse_description_2.clone(),
-            _ => panic!("Invalid pulse number"),
-        };
-
-        let next_value = move || {
-            let volume_envelope;
-            let sample_clock;
-            let wave_duty;
-            let frequency;
-
-            {
-                let mut description = description.write();
-
-                if description.stop {
-                    return 0.0;
-                }
-
-                sample_clock = description.next_sample_clock();
-                volume_envelope = description.volume_envelope.current_volume;
-                wave_duty = description.wave_duty.to_percent();
-                frequency = description.calculate_frequency();
-            }
-
-            let sample_in_period = sample_rate / frequency;
-            let mut high_part_max = sample_in_period * wave_duty;
-            let low_part_return;
-            let high_part_return;
-
-            if wave_duty < 0.75 {
-                high_part_max = sample_in_period - high_part_max;
-                low_part_return = 0.0;
-                high_part_return = 1.0;
-            } else {
-                low_part_return = 1.0;
-                high_part_return = 0.0;
-            };
-
-            let wave = if sample_clock % sample_in_period <= high_part_max {
-                low_part_return
-            } else {
-                high_part_return
-            };
-
-            wave * (volume_envelope as f32 / 7.5) - 1.0
-        };
-
         let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
+
+        let description1 = self.pulse_description_1.clone();
+        let description2 = self.pulse_description_2.clone();
+        let description3 = self.wave_description.clone();
+        let description4 = self.noise_description.clone();
+
+        let pulse_func = CpalAudioUnitOutput::next_value_pulse;
+        let wave_func = CpalAudioUnitOutput::next_value_wave;
+        let noise_func = CpalAudioUnitOutput::next_value_noise;
 
         let stream = device.build_output_stream(
             config,
             move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 for frame in data.chunks_mut(channels) {
-                    let next_value = next_value() * Self::MASTER_VOLUME;
+                    let next_value1 =
+                        pulse_func(description1.clone(), sample_rate) * Self::MASTER_VOLUME;
+                    let next_value2 =
+                        pulse_func(description2.clone(), sample_rate) * Self::MASTER_VOLUME;
+                    let next_value3 =
+                        wave_func(description3.clone(), sample_rate) * Self::MASTER_VOLUME;
+                    let next_value4 =
+                        noise_func(description4.clone(), sample_rate) * Self::MASTER_VOLUME;
+
+                    let next_value = (next_value1 + next_value2 + next_value3 + next_value4) / 4.0;
+
                     let value: T = cpal::Sample::from::<f32>(&next_value);
+
                     for sample in frame.iter_mut() {
                         *sample = value;
                     }
@@ -151,223 +129,122 @@ impl CpalAudioUnitOutput {
         Ok(stream)
     }
 
-    fn run_wave<T>(&mut self, config: &cpal::StreamConfig) -> Result<Stream, anyhow::Error>
-    where
-        T: cpal::Sample,
-    {
-        let device = &self.device;
-        let sample_rate = config.sample_rate.0 as f32;
-        let channels = config.channels as usize;
+    fn next_value_pulse(description: Arc<RwLock<PulseDescription>>, sample_rate: f32) -> f32 {
+        let volume_envelope;
+        let sample_clock;
+        let wave_duty;
+        let frequency;
 
-        let description = self.wave_description.clone();
+        {
+            let mut description = description.write();
 
-        let next_value = move || {
-            let sample_in_period;
-            let output_level;
-            let mut wave_sample;
-            let sample_clock;
-            let frequency;
-            let current_wave_pos;
-
-            {
-                let mut description = description.write();
-
-                if !description.should_play || description.stop {
-                    return 0.0;
-                }
-
-                sample_clock = description.next_sample_clock();
-                frequency = description.calculate_frequency();
-                output_level = description.output_level;
-
-                // How many samples are in one frequency oscillation
-                sample_in_period = sample_rate / frequency;
-
-                current_wave_pos =
-                    ((sample_clock % sample_in_period) / sample_in_period * 32.0).floor() as u8;
-
-                wave_sample = description.wave.read_byte((current_wave_pos / 2) as Word);
+            if description.stop {
+                return 0.0;
             }
 
-            if current_wave_pos % 2 == 0 {
-                wave_sample >>= 4;
-            } else {
-                wave_sample &= 0b1111;
-            }
+            sample_clock = description.next_sample_clock();
+            volume_envelope = description.volume_envelope.current_volume;
+            wave_duty = description.wave_duty.to_percent();
+            frequency = description.calculate_frequency();
+        }
 
-            match output_level {
-                WaveOutputLevel::Mute => wave_sample = 0,
-                WaveOutputLevel::Vol50Percent => wave_sample >>= 1,
-                WaveOutputLevel::Vol25Percent => wave_sample >>= 2,
-                _ => {}
-            }
+        let sample_in_period = sample_rate / frequency;
+        let mut high_part_max = sample_in_period * wave_duty;
+        let low_part_return;
+        let high_part_return;
 
-            ((wave_sample / 0b1111) as f32 - 0.5) * 2.0
+        if wave_duty < 0.75 {
+            high_part_max = sample_in_period - high_part_max;
+            low_part_return = 0.0;
+            high_part_return = 1.0;
+        } else {
+            low_part_return = 1.0;
+            high_part_return = 0.0;
         };
 
-        let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
-
-        let stream = device.build_output_stream(
-            config,
-            move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
-                for frame in data.chunks_mut(channels) {
-                    let next_value = next_value() * Self::MASTER_VOLUME;
-                    let value: T = cpal::Sample::from::<f32>(&next_value);
-                    for sample in frame.iter_mut() {
-                        *sample = value;
-                    }
-                }
-            },
-            err_fn,
-        )?;
-
-        Ok(stream)
-    }
-
-    fn run_noise<T>(&mut self, config: &cpal::StreamConfig) -> Result<Stream, anyhow::Error>
-    where
-        T: cpal::Sample,
-    {
-        let device = &self.device;
-        let sample_rate = config.sample_rate.0 as f32;
-        let channels = config.channels as usize;
-
-        let description = self.noise_description.clone();
-
-        let next_value = move || {
-            let sample_in_period;
-            let volume_envelope;
-            let sample_clock;
-            let wave;
-
-            {
-                let mut description = description.write();
-
-                if description.stop {
-                    return 0.0;
-                }
-
-                volume_envelope = description.volume_envelope.current_volume;
-
-                sample_in_period = sample_rate / (description.calculate_frequency() * 8.0);
-                sample_clock = description.next_sample_clock();
-
-                if sample_clock % sample_in_period == 0.0 {
-                    description.update_lfsr();
-                }
-
-                wave = (!(description.lfsr & 0b1) & 0b1) as f32;
-            }
-
-            (wave * volume_envelope as f32) / 7.5 - 1.0
+        let wave = if sample_clock % sample_in_period <= high_part_max {
+            low_part_return
+        } else {
+            high_part_return
         };
 
-        let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
-
-        let stream = device.build_output_stream(
-            config,
-            move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
-                for frame in data.chunks_mut(channels) {
-                    let next_value = next_value() * Self::MASTER_VOLUME;
-                    let value: T = cpal::Sample::from::<f32>(&next_value);
-                    for sample in frame.iter_mut() {
-                        *sample = value;
-                    }
-                }
-            },
-            err_fn,
-        )?;
-
-        Ok(stream)
+        wave * (volume_envelope as f32 / 7.5) - 1.0
     }
 
-    pub fn play_pulse(&mut self, channel_n: u8) {
-        if self.muted {
-            return;
+    fn next_value_wave(description: Arc<RwLock<WaveDescription>>, sample_rate: f32) -> f32 {
+        let sample_in_period;
+        let output_level;
+        let mut wave_sample;
+        let sample_clock;
+        let frequency;
+        let current_wave_pos;
+
+        {
+            let mut description = description.write();
+
+            if !description.should_play || description.stop {
+                return 0.0;
+            }
+
+            sample_clock = description.next_sample_clock();
+            frequency = description.calculate_frequency();
+            output_level = description.output_level;
+
+            // How many samples are in one frequency oscillation
+            sample_in_period = sample_rate / frequency;
+
+            current_wave_pos =
+                ((sample_clock % sample_in_period) / sample_in_period * 32.0).floor() as u8;
+
+            wave_sample = description.wave.read_byte((current_wave_pos / 2) as Word);
         }
 
-        let stream;
-
-        match channel_n {
-            1 => {
-                stream = &self.stream_1;
-            }
-            2 => {
-                stream = &self.stream_2;
-            }
-            _ => panic!("Non pulse stream given"),
+        if current_wave_pos % 2 == 0 {
+            wave_sample >>= 4;
+        } else {
+            wave_sample &= 0b1111;
         }
 
-        if stream.is_none() {
-            let stream = match self.config.sample_format() {
-                cpal::SampleFormat::F32 => self
-                    .run_pulse::<f32>(&self.config.clone().into(), channel_n)
-                    .unwrap(),
-                cpal::SampleFormat::I16 => self
-                    .run_pulse::<i16>(&self.config.clone().into(), channel_n)
-                    .unwrap(),
-                cpal::SampleFormat::U16 => self
-                    .run_pulse::<u16>(&self.config.clone().into(), channel_n)
-                    .unwrap(),
-            };
-
-            match channel_n {
-                1 => self.stream_1 = Some(stream),
-                2 => self.stream_2 = Some(stream),
-                _ => panic!("Non pulse stream given"),
-            }
+        match output_level {
+            WaveOutputLevel::Mute => wave_sample = 0,
+            WaveOutputLevel::Vol50Percent => wave_sample >>= 1,
+            WaveOutputLevel::Vol25Percent => wave_sample >>= 2,
+            _ => {}
         }
+
+        ((wave_sample / 0b1111) as f32 - 0.5) * 2.0
     }
 
-    pub fn play_wave(&mut self) {
-        if self.muted {
-            return;
+    fn next_value_noise(description: Arc<RwLock<NoiseDescription>>, sample_rate: f32) -> f32 {
+        let sample_in_period;
+        let volume_envelope;
+        let sample_clock;
+        let wave;
+
+        {
+            let mut description = description.write();
+
+            if description.stop {
+                return 0.0;
+            }
+
+            volume_envelope = description.volume_envelope.current_volume;
+
+            sample_in_period = sample_rate / (description.calculate_frequency() * 8.0);
+            sample_clock = description.next_sample_clock();
+
+            if sample_clock % sample_in_period == 0.0 {
+                description.update_lfsr();
+            }
+
+            wave = (!(description.lfsr & 0b1) & 0b1) as f32;
         }
 
-        if self.stream_3.is_none() {
-            let stream = match self.config.sample_format() {
-                cpal::SampleFormat::F32 => {
-                    self.run_wave::<f32>(&self.config.clone().into()).unwrap()
-                }
-                cpal::SampleFormat::I16 => {
-                    self.run_wave::<i16>(&self.config.clone().into()).unwrap()
-                }
-                cpal::SampleFormat::U16 => {
-                    self.run_wave::<u16>(&self.config.clone().into()).unwrap()
-                }
-            };
-
-            self.stream_3 = Some(stream);
-        }
-    }
-
-    pub fn play_noise(&mut self) {
-        if self.muted {
-            return;
-        }
-
-        if self.stream_4.is_none() {
-            let stream = match self.config.sample_format() {
-                cpal::SampleFormat::F32 => {
-                    self.run_noise::<f32>(&self.config.clone().into()).unwrap()
-                }
-                cpal::SampleFormat::I16 => {
-                    self.run_noise::<i16>(&self.config.clone().into()).unwrap()
-                }
-                cpal::SampleFormat::U16 => {
-                    self.run_noise::<u16>(&self.config.clone().into()).unwrap()
-                }
-            };
-
-            self.stream_4 = Some(stream);
-        }
+        (wave * volume_envelope as f32) / 7.5 - 1.0
     }
 
     pub fn stop_all(&mut self) {
-        self.stream_1 = None;
-        self.stream_2 = None;
-        self.stream_3 = None;
-        self.stream_4 = None;
+        self.stream_mix = None;
     }
 
     pub fn set_mute(&mut self, muted: bool) {
