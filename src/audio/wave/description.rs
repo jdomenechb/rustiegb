@@ -105,23 +105,26 @@ impl ControlRegisterUpdatable for WaveDescription {
         self.set = Self::calculate_initial_from_register(register);
         self.use_length = new_use_length;
 
-        let mut steps_resetted = false;
+        if !next_frame_step_is_length
+            && !old_use_length
+            && new_use_length
+            && self.remaining_steps > 0
+        {
+            self.clock_length();
+        }
 
         if self.set {
             self.sample_clock = 0.0;
 
             if self.remaining_steps == 0 {
-                self.set_remaining_steps(Self::get_maximum_length());
-                steps_resetted = true;
-            }
-        }
+                let mut length = Self::get_maximum_length();
 
-        if !next_frame_step_is_length
-            && (!old_use_length || steps_resetted)
-            && new_use_length
-            && self.remaining_steps > 0
-        {
-            self.clock_length();
+                if !next_frame_step_is_length && new_use_length {
+                    length -= 1;
+                }
+
+                self.set_remaining_steps(length);
+            }
         }
 
         if !self.should_play {
