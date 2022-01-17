@@ -20,11 +20,6 @@ impl Configuration {
                     .help("Path of the ROM file to use"),
             )
             .arg(
-                Arg::new("debug-cpu")
-                    .long("debug-cpu")
-                    .help("Prints CPU instructions on command line"),
-            )
-            .arg(
                 Arg::new("debug-header")
                     .long("debug-header")
                     .help("Prints the parsed cartridge header"),
