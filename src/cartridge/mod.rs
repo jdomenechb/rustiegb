@@ -101,6 +101,23 @@ impl ReadMemory for Cartridge {
                     self.header.cartridge_type
                 );
             }
+            CartridgeType::Mbc3(_, _, _) => {
+                if (0xA000..0xC000).contains(&position) {
+                    if !self.ram_enabled {
+                        return 0xFF;
+                    }
+
+                    return self.ram.read_byte(
+                        position as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
+                    );
+                }
+
+                panic!(
+                    "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
+                    position,
+                    self.header.cartridge_type
+                );
+            }
             CartridgeType::Mbc5(_, _, _) => {
                 if (0xA000..0xC000).contains(&position) {
                     if !self.ram_enabled {
@@ -218,6 +235,16 @@ impl WriteMemory for Cartridge {
 
                     panic!("Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented", value, position, self.header.cartridge_type);
                 }
+
+                if (0xA000..0xC000).contains(&position) {
+                    if self.ram_enabled {
+                        self.ram.write_byte(
+                            position as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
+                            value,
+                        );
+                    }
+                    return;
+                }
             }
 
             CartridgeType::Mbc5(_, ram, _) => {
@@ -242,6 +269,11 @@ impl WriteMemory for Cartridge {
                 // Select RAM Bank Number
                 if (0x4000..0x6000).contains(&position) {
                     self.selected_ram_bank = value & 0xF;
+                    return;
+                }
+
+                if (0x6000..0xA000).contains(&position) {
+                    // Ignore
                     return;
                 }
 
