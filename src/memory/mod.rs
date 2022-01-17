@@ -296,7 +296,7 @@ impl Memory {
         match position {
             0..=0x7FFF => Some(self.cartridge.read_byte(position)),
             0x8000..=0x9FFF => Some(self.video_ram.read_byte(position - 0x8000)),
-            0xA000..=0xBFFF => Some(self.switchable_ram_bank.read_byte(position - 0xA000)),
+            0xA000..=0xBFFF => Some(self.cartridge.read_byte(position)),
             0xC000..=0xDFFF => Some(self.internal_ram_8k.read_byte(position - 0xC000)),
             0xE000..=0xFDFF => Some(self.internal_ram_8k.read_byte(position - 0xE000)),
             0xFE00..=0xFE9F => Some(self.oam_ram.read_byte(position - 0xFE00)),
@@ -364,9 +364,7 @@ impl Memory {
         match position {
             0..=0x7FFF => self.cartridge.write_byte(position, value),
             0x8000..=0x9FFF => self.video_ram.write_byte(position - 0x8000, value),
-            0xA000..=0xBFFF => self
-                .switchable_ram_bank
-                .write_byte(position - 0xA000, value),
+            0xA000..=0xBFFF => self.cartridge.write_byte(position, value),
             0xC000..=0xDFFF => self.internal_ram_8k.write_byte(position - 0xC000, value),
             0xE000..=0xFDFF => self.internal_ram_8k.write_byte(position - 0xE000, value),
             0xFE00..=0xFE9F => self.oam_ram.write_byte(position - 0xFE00, value),
