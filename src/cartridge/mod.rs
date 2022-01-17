@@ -44,7 +44,7 @@ impl Cartridge {
             header,
             selected_rom_bank: 1,
             ram_enabled: false,
-            selected_ram_bank: 1,
+            selected_ram_bank: 0,
             ram: CartridgeMemorySector::of_size(ram_size_in_bytes),
             ram_banking_mode: false,
         }
@@ -91,7 +91,7 @@ impl ReadMemory for Cartridge {
                     }
 
                     return self.ram.read_byte(
-                        position as usize - 0xA000 + 0xA000 * self.selected_ram_bank as usize,
+                        position as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
                     );
                 }
 
@@ -108,7 +108,7 @@ impl ReadMemory for Cartridge {
                     }
 
                     return self.ram.read_byte(
-                        position as usize - 0xA000 + 0xA000 * self.selected_ram_bank as usize,
+                        position as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
                     );
                 }
 
