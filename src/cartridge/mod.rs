@@ -165,10 +165,12 @@ impl WriteMemory for Cartridge {
 
                 // Select ROM Bank Number
                 if (0x2000..0x4000).contains(&position) {
-                    self.selected_rom_bank = if value != 0 {
-                        value as u16 & 0b11111
+                    let new_value = value as u16 & 0b11111;
+
+                    self.selected_rom_bank = if new_value % 0x20 == 0 {
+                        new_value + 1
                     } else {
-                        1
+                        new_value
                     };
 
                     return;
@@ -179,7 +181,7 @@ impl WriteMemory for Cartridge {
 
                     if !self.ram_banking_mode {
                         self.selected_rom_bank =
-                            (new_value as u16) << 5 | (self.selected_rom_bank & 0b11111);
+                            (new_value as Word) << 5 | (self.selected_rom_bank & 0b11111);
                     } else {
                         self.selected_ram_bank = new_value;
                     }
@@ -188,7 +190,7 @@ impl WriteMemory for Cartridge {
                 }
 
                 if (0x6000..0x8000).contains(&position) {
-                    self.ram_banking_mode = value != 0;
+                    self.ram_banking_mode = value & 0b1 == 0b1;
                     return;
                 }
 
