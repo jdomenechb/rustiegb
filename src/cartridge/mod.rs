@@ -308,3 +308,44 @@ impl Cartridge {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    #[test]
+    fn test_determine_ram_enable_doesnt_act_when_position_gte_2000() {
+        let mut cartridge = Cartridge::default();
+        let result = cartridge.determine_ram_enable(0x2000, 0, false);
+
+        assert_eq!(result, false);
+    }
+
+    #[test]
+    fn test_determine_ram_enable_acts_when_position_lt_2000() {
+        let mut cartridge = Cartridge::default();
+        let result = cartridge.determine_ram_enable(0x1FFF, 0, false);
+
+        assert_eq!(result, true);
+    }
+
+    #[test]
+    fn test_determine_ram_enable_enables() {
+        let mut cartridge = Cartridge::default();
+        cartridge.determine_ram_enable(0, 0x0A, true);
+
+        assert_eq!(cartridge.ram_enabled, true);
+    }
+
+    #[test_case(0x0A, false)]
+    #[test_case(0x0, true)]
+    fn test_determine_ram_enable_disables(value: Byte, ram: bool) {
+        let mut cartridge = Cartridge::default();
+        cartridge.ram_enabled = true;
+
+        cartridge.determine_ram_enable(0, value, ram);
+
+        assert_eq!(cartridge.ram_enabled, false);
+    }
+}
