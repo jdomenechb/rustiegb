@@ -28,6 +28,20 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
+    pub fn new(data: CartridgeMemorySector, header: CartridgeHeader) -> Self {
+        let ram_size_in_bytes = header.ram_size.in_bytes();
+
+        Self {
+            data,
+            header,
+            selected_rom_bank: 1,
+            ram_enabled: false,
+            selected_ram_bank: 0,
+            ram: CartridgeMemorySector::of_size(ram_size_in_bytes),
+            ram_banking_mode: false,
+        }
+    }
+
     pub fn new_from_path(rom_path: &str) -> Self {
         let mut data: Vec<Byte> = Vec::new();
         let mut rom_file = File::open(rom_path).expect("File not found");
@@ -37,17 +51,7 @@ impl Cartridge {
 
         let header = CartridgeHeader::new_from_data(&data);
 
-        let ram_size_in_bytes = header.ram_size.in_bytes();
-
-        Self {
-            data: CartridgeMemorySector::from_data(data),
-            header,
-            selected_rom_bank: 1,
-            ram_enabled: false,
-            selected_ram_bank: 0,
-            ram: CartridgeMemorySector::of_size(ram_size_in_bytes),
-            ram_banking_mode: false,
-        }
+        Self::new(CartridgeMemorySector::new_from_data(data), header)
     }
 
     pub fn print_header(&self) {
@@ -77,9 +81,10 @@ impl ReadMemory for Cartridge {
         }
 
         if (0x4000..0x8000).contains(&position) {
-            return self
-                .data
-                .read_byte(position as usize - 0x4000 + 0x4000 * self.selected_rom_bank as usize);
+            return self.data.read_byte(
+                position as usize - 0x4000
+                    + 0x4000 * (self.selected_rom_bank & self.header.rom_size.mask()) as usize,
+            );
         }
 
         match self.header.cartridge_type {
@@ -361,5 +366,14 @@ mod tests {
         cartridge.determine_ram_enable(0, 0x0A, true);
 
         assert_eq!(cartridge.ram_enabled, false);
+    }
+
+    #[test]
+    fn test_read_rom_bank_byte_when_rom_bank_higher_than_available() {
+        let header = CartridgeHeader::new("TEST".to_string(), 0x01, 0x01, 0);
+        let mut cartridge = Cartridge::new(CartridgeMemorySector::of_size(64 * 1024), header);
+
+        cartridge.selected_rom_bank = 0b11111111;
+        cartridge.read_byte(0x4000);
     }
 }

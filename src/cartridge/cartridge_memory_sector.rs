@@ -22,7 +22,7 @@ impl CartridgeMemorySector {
         }
     }
 
-    pub fn from_data(data: Vec<Byte>) -> Self {
+    pub fn new_from_data(data: Vec<Byte>) -> Self {
         Self { data }
     }
 

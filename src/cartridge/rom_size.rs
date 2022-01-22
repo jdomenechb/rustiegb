@@ -16,6 +16,25 @@ pub enum RomSize {
     Mb1d5,
 }
 
+impl RomSize {
+    pub fn mask(&self) -> u16 {
+        match self {
+            Self::Kb32 => 0b1,
+            Self::Kb64 => 0b11,
+            Self::Kb128 => 0b111,
+            Self::Kb256 => 0b1111,
+            Self::Kb512 => 0b11111,
+            Self::Mb1 => 0b111111,
+            Self::Mb2 => 0b1111111,
+            Self::Mb4 => 0b11111111,
+            Self::Mb8 => 0b111111111,
+            Self::Mb1d1 => 0b11,
+            Self::Mb1d2 => 0b11,
+            Self::Mb1d5 => 0b11,
+        }
+    }
+}
+
 impl From<Byte> for RomSize {
     fn from(value: u8) -> Self {
         match value {
@@ -39,6 +58,22 @@ impl From<Byte> for RomSize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_mask_ok() {
+        assert_eq!(RomSize::from(0x00).mask(), 0b1);
+        assert_eq!(RomSize::from(0x01).mask(), 0b11);
+        assert_eq!(RomSize::from(0x02).mask(), 0b111);
+        assert_eq!(RomSize::from(0x03).mask(), 0b1111);
+        assert_eq!(RomSize::from(0x04).mask(), 0b11111);
+        assert_eq!(RomSize::from(0x05).mask(), 0b111111);
+        assert_eq!(RomSize::from(0x06).mask(), 0b1111111);
+        assert_eq!(RomSize::from(0x07).mask(), 0b11111111);
+        assert_eq!(RomSize::from(0x08).mask(), 0b111111111);
+        assert_eq!(RomSize::from(0x52).mask(), 0b11);
+        assert_eq!(RomSize::from(0x53).mask(), 0b11);
+        assert_eq!(RomSize::from(0x54).mask(), 0b11);
+    }
 
     #[test]
     fn test_from_ok() {
