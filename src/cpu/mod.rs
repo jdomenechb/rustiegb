@@ -675,9 +675,10 @@ impl Cpu {
     fn dec_mhl(&mut self) {
         let mut memory = self.memory.write();
 
-        let value = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let pos = self.registers.read_word(&WordRegister::HL);
+        let value = memory.read_byte(pos);
         let value = self.alu.dec_n(&mut self.registers, value);
-        memory.write_byte(self.registers.read_word(&WordRegister::HL), value);
+        memory.write_byte(pos, value);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;
@@ -1279,12 +1280,10 @@ impl Cpu {
     fn ldd_mhl_a(&mut self) {
         let mut memory = self.memory.write();
 
-        memory.write_byte(
-            self.registers.read_word(&WordRegister::HL),
-            self.registers.a,
-        );
+        let pos = self.registers.read_word(&WordRegister::HL);
+        memory.write_byte(pos, self.registers.a);
 
-        let value = self.registers.read_word(&WordRegister::HL);
+        let value = pos;
         self.registers
             .write_word(&WordRegister::HL, self.alu.dec_nn(value));
 
@@ -1297,13 +1296,11 @@ impl Cpu {
      */
     fn ldi_mhl_a(&mut self) {
         let mut memory = self.memory.write();
+        let pos = self.registers.read_word(&WordRegister::HL);
 
-        memory.write_byte(
-            self.registers.read_word(&WordRegister::HL),
-            self.registers.a,
-        );
+        memory.write_byte(pos, self.registers.a);
 
-        let value = self.registers.read_word(&WordRegister::HL);
+        let value = pos;
         self.registers
             .write_word(&WordRegister::HL, self.alu.inc_nn(value));
 
@@ -2137,9 +2134,11 @@ impl Cpu {
     fn res_v_mhl(&mut self, bit: u8) {
         let mut memory = self.memory.write();
 
-        let mut value = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let pos = self.registers.read_word(&WordRegister::HL);
+
+        let mut value = memory.read_byte(pos);
         value &= !(0x1 << bit);
-        memory.write_byte(self.registers.read_word(&WordRegister::HL), value);
+        memory.write_byte(pos, value);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 16;
