@@ -25,6 +25,10 @@ impl CartridgeMemorySector {
     pub fn from_data(data: Vec<Byte>) -> Self {
         Self { data }
     }
+
+    pub fn size(&self) -> usize {
+        self.data.len()
+    }
 }
 
 impl ReadCartridgeMemory for CartridgeMemorySector {
@@ -51,5 +55,19 @@ impl WriteCartridgeMemory for CartridgeMemorySector {
 
         self.data[position] = bytes.1;
         self.data[position + 1] = bytes.0;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn test_write_out_of_bonds_panics() {
+        let mut cartridge_sector = CartridgeMemorySector::of_size(4);
+        cartridge_sector.write_byte(4, 0xFF);
+
+        assert_eq!(cartridge_sector.data.len(), 0);
     }
 }

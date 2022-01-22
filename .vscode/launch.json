@@ -107,6 +107,26 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug LSDJ",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustiegb",
+                    "--package=rustiegb"
+                ],
+                "filter": {
+                    "name": "rustiegb",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "./roms/lsdj.gb"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug Wario Land 2",
             "cargo": {
                 "args": [

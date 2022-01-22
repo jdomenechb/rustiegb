@@ -301,7 +301,7 @@ impl WriteMemory for Cartridge {
 impl Cartridge {
     fn determine_ram_enable(&mut self, position: u16, value: u8, ram: bool) -> bool {
         if position < 0x2000 {
-            self.ram_enabled = ram && (value & 0x0A == 0x0A);
+            self.ram_enabled = ram && (value & 0x0A == 0x0A) && self.ram.size() > 0;
             return true;
         }
 
@@ -333,6 +333,8 @@ mod tests {
     #[test]
     fn test_determine_ram_enable_enables() {
         let mut cartridge = Cartridge::default();
+        cartridge.ram = CartridgeMemorySector::of_size(10);
+
         cartridge.determine_ram_enable(0, 0x0A, true);
 
         assert_eq!(cartridge.ram_enabled, true);
@@ -342,9 +344,21 @@ mod tests {
     #[test_case(0x0, true)]
     fn test_determine_ram_enable_disables(value: Byte, ram: bool) {
         let mut cartridge = Cartridge::default();
+
+        cartridge.ram = CartridgeMemorySector::of_size(10);
         cartridge.ram_enabled = true;
 
         cartridge.determine_ram_enable(0, value, ram);
+
+        assert_eq!(cartridge.ram_enabled, false);
+    }
+
+    #[test]
+    fn test_determine_ram_enable_disables_when_ram_length_0() {
+        let mut cartridge = Cartridge::default();
+        cartridge.ram_enabled = true;
+
+        cartridge.determine_ram_enable(0, 0x0A, true);
 
         assert_eq!(cartridge.ram_enabled, false);
     }
