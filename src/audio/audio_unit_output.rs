@@ -212,7 +212,7 @@ impl CpalAudioUnitOutput {
             _ => {}
         }
 
-        ((wave_sample / 0b1111) as f32 - 0.5) * 2.0
+        ((wave_sample as f32 / 16.0) - 0.5) * 2.0
     }
 
     fn next_value_noise(description: Arc<RwLock<NoiseDescription>>, sample_rate: f32) -> f32 {
