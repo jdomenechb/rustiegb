@@ -371,7 +371,7 @@ impl Memory {
             0xFEA0..=0xFEFF => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
-            0xFF00 => self.p1.from_byte(value),
+            0xFF00 => self.p1.parse_byte(value),
             0xFF01 => self.serial_transfer_data = value,
             Self::ADDR_SIO_CONTROL => self.sio_control = value.into(),
             0xFF03 => println!("Attempt to write at an unused RAM position {:X}", position),

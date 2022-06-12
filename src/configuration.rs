@@ -1,5 +1,5 @@
 use crate::cpu::Cpu;
-use clap::{App, Arg};
+use clap::{Arg, Command};
 
 #[readonly::make]
 pub struct Configuration {
@@ -12,7 +12,7 @@ pub struct Configuration {
 
 impl Configuration {
     pub fn from_command(app_name: &str) -> Self {
-        let matches = App::new(app_name)
+        let matches = Command::new(app_name)
             .arg(
                 Arg::new("ROMFILE")
                     .required(true)

@@ -65,7 +65,7 @@ impl Joypad {
         value
     }
 
-    pub fn from_byte(&mut self, new_value: Byte) {
+    pub fn parse_byte(&mut self, new_value: Byte) {
         self.p14 = new_value & 0b10000 != 0b10000;
         self.p15 = new_value & 0b100000 != 0b100000;
     }
