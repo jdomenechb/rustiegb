@@ -1,5 +1,8 @@
 # RustieGB
-GB emulator written in Rust
+
+GB emulator written in Rust. 
+
+This project's original intention was to learn Rust by coding something cool and, at the same time, complex. Therefore, this emulator only features the basics to emulate GB and focus in learnign to work with Rust rather ¡ than new functionalities, speed or improvements.
 
 ## Blargg test status
 
