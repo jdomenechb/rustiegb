@@ -13,6 +13,7 @@ readonly = "0"
 cpal = "0"
 anyhow = "1"
 parking_lot = {version = "0"}
+nix = "0.24.2"
 
 [dev-dependencies]
 test-case = "1"

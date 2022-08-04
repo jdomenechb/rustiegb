@@ -1375,6 +1375,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nix"
+version = "0.24.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "195cdbc1741b8134346d515b3a56a1c94b0912758009cfd53f99ea0f57b065fc"
+dependencies = [
+ "bitflags",
+ "cfg-if 1.0.0",
+ "libc",
+ "memoffset",
+]
+
+[[package]]
 name = "nom"
 version = "7.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1933,6 +1945,7 @@ dependencies = [
  "cpal",
  "gfx_device_gl",
  "image",
+ "nix 0.24.2",
  "parking_lot 0.12.1",
  "piston_window",
  "readonly",
