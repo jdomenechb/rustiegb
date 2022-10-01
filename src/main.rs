@@ -26,7 +26,7 @@ use parking_lot::RwLock;
 use piston_window::*;
 use std::sync::{mpsc, Arc};
 
-const APP_NAME: &str = "RustieGB";
+const APP_NAME: &'static str = "RustieGB";
 const WINDOW_SIZE_MULTIPLIER: u32 = 4;
 
 type Byte = u8;

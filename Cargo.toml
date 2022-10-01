@@ -1,22 +1,22 @@
 [package]
 name = "rustiegb"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jordi Domènech <jdomenechbborges@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 piston_window = "0"
-clap = "3"
+clap = "4"
 gfx_device_gl = "0"
 image = "0"
 readonly = "0"
 cpal = "0"
 anyhow = "1"
 parking_lot = {version = "0"}
-nix = "0.24.2"
+nix = "0.25"
 
 [dev-dependencies]
-test-case = "1"
+test-case = "2"
 
 #[profile.release]
 #debug = true
