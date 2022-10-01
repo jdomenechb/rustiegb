@@ -9,7 +9,7 @@ pub struct ReadOnlyMemorySector {
 impl ReadOnlyMemorySector {
     pub fn new(data: &[Byte]) -> Self {
         Self {
-            data: MemorySector::with_data((&data[0x0..min(0x8000, data.len())]).to_vec()),
+            data: MemorySector::with_data(data[0x0..min(0x8000, data.len())].to_vec()),
         }
     }
 }

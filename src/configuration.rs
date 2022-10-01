@@ -11,7 +11,7 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn from_command(app_name: &str) -> Self {
+    pub fn from_command(app_name: &'static str) -> Self {
         let matches = Command::new(app_name)
             .arg(
                 Arg::new("ROMFILE")
@@ -32,9 +32,9 @@ impl Configuration {
             .get_matches();
 
         Self {
-            debug_header: matches.is_present("debug-header"),
-            bootstrap: matches.is_present("bootstrap"),
-            rom_file: matches.value_of("ROMFILE").unwrap().to_string(),
+            debug_header: matches.contains_id("debug-header"),
+            bootstrap: matches.contains_id("bootstrap"),
+            rom_file: matches.get_one::<String>("ROMFILE").unwrap().to_string(),
 
             user_speed_multiplier: 1,
         }
