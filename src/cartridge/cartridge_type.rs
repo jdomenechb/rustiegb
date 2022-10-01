@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum CartridgeType {
     // ROM + RAM + Battery
     Rom(bool, bool),

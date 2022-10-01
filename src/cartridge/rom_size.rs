@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RomSize {
     Kb32,
     Kb64,

@@ -192,7 +192,7 @@ fn main() {
             let memory = memory.read();
 
             let pixel_size: (f64, f64) = (
-                render_args.window_size.get(0).unwrap() / (Gpu::PIXEL_WIDTH as f64),
+                render_args.window_size.first().unwrap() / (Gpu::PIXEL_WIDTH as f64),
                 render_args.window_size.get(1).unwrap() / (Gpu::PIXEL_HEIGHT as f64),
             );
 
@@ -201,7 +201,7 @@ fn main() {
 
                 clear(Color::white().to_f_rgba(), graphics);
 
-                if !(&memory.lcdc).lcd_control_operation() {
+                if !memory.lcdc.lcd_control_operation() {
                     return;
                 }
 

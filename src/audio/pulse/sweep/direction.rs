@@ -1,4 +1,4 @@
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum SweepDirection {
     Add,
     Sub,
