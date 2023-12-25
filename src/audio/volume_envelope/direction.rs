@@ -1,13 +1,8 @@
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone, Default)]
 pub enum VolumeEnvelopeDirection {
+    #[default]
     Up,
     Down,
-}
-
-impl Default for VolumeEnvelopeDirection {
-    fn default() -> Self {
-        VolumeEnvelopeDirection::Up
-    }
 }
 
 impl From<bool> for VolumeEnvelopeDirection {

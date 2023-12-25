@@ -33,24 +33,20 @@ impl CartridgeMemorySector {
 
 impl ReadCartridgeMemory for CartridgeMemorySector {
     fn read_byte(&self, position: usize) -> Byte {
-        self.data[position as usize]
+        self.data[position]
     }
 
     fn read_word(&self, position: usize) -> Word {
-        let position = position as usize;
-
         two_bytes_to_word(self.data[position + 1], self.data[position])
     }
 }
 
 impl WriteCartridgeMemory for CartridgeMemorySector {
     fn write_byte(&mut self, position: usize, value: Byte) {
-        self.data[position as usize] = value;
+        self.data[position] = value;
     }
 
     fn write_word(&mut self, position: usize, value: Word) {
-        let position = position as usize;
-
         let bytes = word_to_two_bytes(value);
 
         self.data[position] = bytes.1;

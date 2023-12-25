@@ -258,9 +258,9 @@ impl Gpu {
 
                 // Window
                 if lcdc.window_display() && wy <= screen_y as Byte && wx <= (screen_x + 7) as Byte {
-                    let last_window_rendered_position_x: u16 = screen_x as u16 + 7 - wx as u16;
+                    let last_window_rendered_position_x: u16 = screen_x + 7 - wx as u16;
 
-                    let last_window_rendered_position_y = screen_y as u16 - wy as u16;
+                    let last_window_rendered_position_y = screen_y - wy as u16;
 
                     bg_tile_map_location = window_tile_map_start_location
                         + (((last_window_rendered_position_y / Gpu::PIXELS_PER_TILE)
@@ -279,7 +279,7 @@ impl Gpu {
                         + (screen_x_with_offset / Gpu::PIXELS_PER_TILE);
 
                     tile_x = screen_x_with_offset % 8;
-                    tile_row = screen_y_with_offset as u16 % 8;
+                    tile_row = screen_y_with_offset % 8;
                 }
 
                 if previous_bg_tile_map_location != bg_tile_map_location {
@@ -382,7 +382,7 @@ impl Gpu {
 
             for current_screen_x in screen_x..limit {
                 let current_pixel_x: i16 =
-                    current_screen_x as i16 + Gpu::PIXELS_PER_TILE as i16 - sprite.x() as i16;
+                    current_screen_x + Gpu::PIXELS_PER_TILE as i16 - sprite.x() as i16;
 
                 if !(0..8).contains(&current_pixel_x) {
                     continue;
