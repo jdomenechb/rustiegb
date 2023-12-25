@@ -5,8 +5,6 @@ on:
     # Automatically run on every Sunday
     - cron:  '0 0 * * 0'
 
-  push:
-
 jobs:
   build:
     runs-on: ubuntu-latest
