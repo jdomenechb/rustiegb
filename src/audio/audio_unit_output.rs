@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::{Device, Stream, StreamConfig, SupportedStreamConfig};
+use cpal::{Device, FromSample, Stream, StreamConfig, SupportedStreamConfig};
 use parking_lot::RwLock;
 
 use crate::audio::noise::NoiseDescription;
@@ -71,9 +71,17 @@ impl CpalAudioUnitOutput {
 
         if self.stream_mix.is_none() {
             let stream = match self.config.sample_format() {
-                cpal::SampleFormat::F32 => self.run::<f32>().unwrap(),
+                cpal::SampleFormat::I8 => self.run::<i8>().unwrap(),
                 cpal::SampleFormat::I16 => self.run::<i16>().unwrap(),
+                cpal::SampleFormat::I32 => self.run::<i32>().unwrap(),
+                cpal::SampleFormat::I64 => self.run::<i64>().unwrap(),
+                cpal::SampleFormat::U8 => self.run::<u8>().unwrap(),
                 cpal::SampleFormat::U16 => self.run::<u16>().unwrap(),
+                cpal::SampleFormat::U32 => self.run::<u32>().unwrap(),
+                cpal::SampleFormat::U64 => self.run::<u64>().unwrap(),
+                cpal::SampleFormat::F32 => self.run::<f32>().unwrap(),
+                cpal::SampleFormat::F64 => self.run::<f64>().unwrap(),
+                _ => panic!("Invalid sample format"),
             };
 
             self.stream_mix = Some(stream)
@@ -82,7 +90,7 @@ impl CpalAudioUnitOutput {
 
     fn run<T>(&mut self) -> Result<Stream, anyhow::Error>
     where
-        T: cpal::Sample,
+        T: cpal::Sample + cpal::SizedSample + FromSample<f32>,
     {
         let config = &StreamConfig::from(self.config.clone());
 
@@ -116,7 +124,7 @@ impl CpalAudioUnitOutput {
 
                     let next_value = (next_value1 + next_value2 + next_value3 + next_value4) / 4.0;
 
-                    let value: T = cpal::Sample::from::<f32>(&next_value);
+                    let value: T = T::from_sample::<f32>(next_value);
 
                     for sample in frame.iter_mut() {
                         *sample = value;
@@ -124,6 +132,7 @@ impl CpalAudioUnitOutput {
                 }
             },
             err_fn,
+            None,
         )?;
 
         Ok(stream)
