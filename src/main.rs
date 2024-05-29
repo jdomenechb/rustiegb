@@ -78,7 +78,7 @@ fn main() {
             }
 
             while runtime_config_thread.read().cpu_has_available_ccycles() {
-                let last_instruction_cycles = cpu.step();
+                let last_instruction_cycles = cpu.step(runtime_config_thread.read().is_debug());
 
                 {
                     runtime_config_thread.write().available_cycles -=

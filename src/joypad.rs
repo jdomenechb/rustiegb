@@ -68,6 +68,9 @@ impl JoypadHandler {
             Key::R => {
                 self.runtime_config.write().set_reset(true);
             }
+            Key::D => {
+                self.runtime_config.write().toggle_debug();
+            }
             _ => {}
         };
     }
