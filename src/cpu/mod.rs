@@ -356,11 +356,11 @@ impl Cpu {
             self.pc_to_increment = 0;
         }
 
-        self.registers.pc += self.pc_to_increment as Word;
-
         if debug {
             println!("{:X}: {}", self.registers.pc, self.last_instruction);
         }
+
+        self.registers.pc += self.pc_to_increment as Word;
 
         self.last_instruction_ccycles
     }
