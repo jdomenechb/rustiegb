@@ -716,6 +716,10 @@ impl Memory {
         self.determine_ly_interrupt();
     }
 
+    pub fn ly_reset_wo_interrupt(&mut self) {
+        self.ly.reset();
+    }
+
     fn determine_ly_interrupt(&mut self) {
         let ly = Byte::from(self.ly.clone());
 
