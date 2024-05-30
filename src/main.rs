@@ -18,6 +18,7 @@ use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
 use crate::joypad::JoypadHandler;
+use crate::memory::bootstrap_rom::BootstrapRom;
 use cpu::Cpu;
 use gpu::Gpu;
 use image::ImageBuffer;
@@ -38,6 +39,11 @@ fn main() {
     let runtime_config = Arc::new(RwLock::new(RuntimeConfig::default()));
 
     // --- Read ROM
+    let bootstrap_rom = configuration
+        .bootstrap_path
+        .clone()
+        .map(|x| BootstrapRom::new_from_path(x.as_str()));
+
     let cartridge = Cartridge::new_from_path(configuration.rom_file.as_str());
 
     if configuration.debug_header {
@@ -47,7 +53,7 @@ fn main() {
     let window_title = format!("{} - {}", cartridge.header.title, APP_NAME);
 
     // --- Setting up GB components
-    let memory = Arc::new(RwLock::new(Memory::new(cartridge, configuration.bootstrap)));
+    let memory = Arc::new(RwLock::new(Memory::new(cartridge, bootstrap_rom)));
     let joypad_handler = JoypadHandler::new(memory.clone(), runtime_config.clone());
 
     let canvas = Arc::new(RwLock::new(ImageBuffer::new(
@@ -61,7 +67,10 @@ fn main() {
     let (sx, rx) = mpsc::channel();
 
     std::thread::spawn(move || {
-        let mut cpu = Cpu::new(memory_thread.clone(), configuration.bootstrap);
+        let mut cpu = Cpu::new(
+            memory_thread.clone(),
+            configuration.bootstrap_path.is_some(),
+        );
         let mut gpu = Gpu::new(memory_thread.clone());
 
         let audio_unit_output = CpalAudioUnitOutput::new();
