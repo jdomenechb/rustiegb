@@ -1,42 +1,27 @@
 use crate::Byte;
 
 #[derive(Default)]
+#[readonly::make]
 pub struct InterruptEnable {
     rest: u8,
-    p10_13_transition: bool,
+    pub p10_13_transition: bool,
     serial_io_transfer_complete: bool,
-    timer_overflow: bool,
-    lcd_stat: bool,
-    vblank: bool,
+    pub timer_overflow: bool,
+    pub lcd_stat: bool,
+    pub vblank: bool,
 }
 
 impl InterruptEnable {
-    pub fn is_vblank(&self) -> bool {
-        self.vblank
-    }
-
     pub fn set_vblank(&mut self, value: bool) {
         self.vblank = value;
-    }
-
-    pub fn is_lcd_stat(&self) -> bool {
-        self.lcd_stat
     }
 
     pub fn set_lcd_stat(&mut self, value: bool) {
         self.lcd_stat = value;
     }
 
-    pub fn is_p10_p13_transition(&self) -> bool {
-        self.p10_13_transition
-    }
-
     pub fn set_p10_p13_transition(&mut self, value: bool) {
         self.p10_13_transition = value;
-    }
-
-    pub fn is_timer_overflow(&self) -> bool {
-        self.timer_overflow
     }
 
     pub fn set_timer_overflow(&mut self, value: bool) {

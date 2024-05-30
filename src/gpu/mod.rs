@@ -52,7 +52,7 @@ impl Gpu {
             lcdc = memory.lcdc;
         }
 
-        if !lcdc.lcd_control_operation() {
+        if !lcdc.lcd_control_operation {
             let mut memory = self.memory.write();
             memory.ly_reset_wo_interrupt();
             self.cycles_accumulated = 0;
@@ -127,18 +127,15 @@ impl Gpu {
 
         let lcdc = &memory.lcdc;
 
-        if !lcdc.obj_sprite_display() {
+        if !lcdc.obj_sprite_display {
             return;
         }
 
         let ly: u8 = memory.ly.clone().into();
-        let sprite_size = if lcdc.obj_sprite_size() { 16 } else { 8 };
+        let sprite_size = if lcdc.obj_sprite_size { 16 } else { 8 };
 
         for oam_entry in memory.oam_ram() {
-            if oam_entry.x() != 0
-                && ly + 16 >= oam_entry.y()
-                && ly + 16 < oam_entry.y() + sprite_size
-            {
+            if oam_entry.x != 0 && ly + 16 >= oam_entry.y && ly + 16 < oam_entry.y + sprite_size {
                 if oam_entry.priority() {
                     self.sprites_to_be_drawn_with_priority.push(oam_entry);
                 } else {
@@ -147,11 +144,10 @@ impl Gpu {
             }
         }
 
-        self.sprites_to_be_drawn_with_priority
-            .sort_by_key(|a| a.x());
+        self.sprites_to_be_drawn_with_priority.sort_by_key(|a| a.x);
 
         self.sprites_to_be_drawn_without_priority
-            .sort_by_key(|a| a.x());
+            .sort_by_key(|a| a.x);
     }
 
     fn lcd_transfer(&mut self, canvas: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
@@ -189,24 +185,24 @@ impl Gpu {
             sprite_palette0 = memory.read_byte(0xFF48);
             sprite_palette1 = memory.read_byte(0xFF49);
 
-            sprite_size = if memory.lcdc.obj_sprite_size() {
+            sprite_size = if memory.lcdc.obj_sprite_size {
                 16i16
             } else {
                 8i16
             };
         }
 
-        if !lcdc.lcd_control_operation() {
+        if !lcdc.lcd_control_operation {
             return;
         }
 
-        let bg_tile_map_start_location = if lcdc.bg_tile_map_display_select() {
+        let bg_tile_map_start_location = if lcdc.bg_tile_map_display_select {
             0x9C00
         } else {
             0x9800
         };
 
-        let window_tile_map_start_location = if lcdc.window_tile_map_display_select() {
+        let window_tile_map_start_location = if lcdc.window_tile_map_display_select {
             0x9C00
         } else {
             0x9800
@@ -222,7 +218,7 @@ impl Gpu {
         let mut screen_row_with_priority: [Option<DisplayPixel>; Gpu::PIXEL_WIDTH as usize] =
             [None; Gpu::PIXEL_WIDTH as usize];
 
-        if lcdc.obj_sprite_display() {
+        if lcdc.obj_sprite_display {
             self.draw_sprites_in_row(
                 false,
                 screen_y,
@@ -253,7 +249,7 @@ impl Gpu {
 
             pixel_to_write = *screen_row_with_priority.get(screen_x as usize).unwrap();
 
-            if lcdc.bg_display() {
+            if lcdc.bg_display {
                 let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
                 let tile_x;
                 let bg_tile_map_location;
@@ -269,7 +265,7 @@ impl Gpu {
                 }
 
                 // Window
-                if lcdc.window_display() && wy <= screen_y as Byte && wx <= (screen_x + 7) as Byte {
+                if lcdc.window_display && wy <= screen_y as Byte && wx <= (screen_x + 7) as Byte {
                     let last_window_rendered_position_x: u16 = screen_x + 7 - wx as u16;
 
                     let last_window_rendered_position_y = screen_y - wy as u16;
@@ -297,7 +293,7 @@ impl Gpu {
                 if previous_bg_tile_map_location != bg_tile_map_location {
                     let bg_tile_map = { self.memory.read().read_byte(bg_tile_map_location) };
 
-                    let bg_data_location = match lcdc.bg_and_window_tile_data_select() {
+                    let bg_data_location = match lcdc.bg_and_window_tile_data_select {
                         true => 0x8000 + bg_tile_map as Word * Gpu::TILE_SIZE_BYTES as Word,
                         false => {
                             (if bg_tile_map >= 0b10000000 {
@@ -364,16 +360,13 @@ impl Gpu {
         let mut screen_x = -1;
 
         for sprite in sprites_to_be_drawn {
-            screen_x = max(
-                screen_x + 1,
-                sprite.x() as i16 - Gpu::PIXELS_PER_TILE as i16,
-            );
+            screen_x = max(screen_x + 1, sprite.x as i16 - Gpu::PIXELS_PER_TILE as i16);
 
             let current_pixel_y: i16 =
-                screen_y as i16 + (Gpu::PIXELS_PER_TILE * 2) as i16 - sprite.y() as i16;
+                screen_y as i16 + (Gpu::PIXELS_PER_TILE * 2) as i16 - sprite.y as i16;
 
             let sprite_addr =
-                SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * Gpu::TILE_SIZE_BYTES as u16;
+                SPRITE_TILES_ADDR_START + sprite.tile_number as u16 * Gpu::TILE_SIZE_BYTES as u16;
 
             let row = if sprite.flip_y() {
                 sprite_size - 1 - current_pixel_y
@@ -383,7 +376,7 @@ impl Gpu {
 
             let tile_row = self.read_tile_row(sprite_addr, row);
 
-            let limit = min(sprite.x() as i16, Gpu::PIXEL_WIDTH as i16);
+            let limit = min(sprite.x as i16, Gpu::PIXEL_WIDTH as i16);
             let mut sprite_end = screen_x;
 
             let palette = if !sprite.palette() {
@@ -394,7 +387,7 @@ impl Gpu {
 
             for current_screen_x in screen_x..limit {
                 let current_pixel_x: i16 =
-                    current_screen_x + Gpu::PIXELS_PER_TILE as i16 - sprite.x() as i16;
+                    current_screen_x + Gpu::PIXELS_PER_TILE as i16 - sprite.x as i16;
 
                 if !(0..8).contains(&current_pixel_x) {
                     continue;
