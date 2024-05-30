@@ -201,7 +201,7 @@ fn main() {
 
                 clear(Color::white().to_f_rgba(), graphics);
 
-                if !memory.lcdc.lcd_control_operation() {
+                if !memory.lcdc.lcd_control_operation {
                     return;
                 }
 

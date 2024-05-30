@@ -1,72 +1,39 @@
 use crate::Byte;
 
 #[derive(Clone, Copy)]
+#[readonly::make]
 pub struct Lcdc {
     // 0 - Stop completely (no picture on screen)
     // 1 - operation
-    lcd_control_operation: bool,
+    pub lcd_control_operation: bool,
 
     // 0 - $9800-$9BFF
     // 1 - $9C00-$9DFF
-    window_tile_map_display_select: bool,
+    pub window_tile_map_display_select: bool,
 
     // 0 - off
     // 1 - on
-    window_display: bool,
+    pub window_display: bool,
 
     // 0 - $8800-$97FF
     // 1 - $8000-$8FFF
-    bg_and_window_tile_data_select: bool,
+    pub bg_and_window_tile_data_select: bool,
 
     // 0 - $9800-$9BFF
     // 1 - $9C00-$9DFF
-    bg_tile_map_display_select: bool,
+    pub bg_tile_map_display_select: bool,
 
     // 0 - 8*8
     // 1 - 8*16
-    obj_sprite_size: bool,
+    pub obj_sprite_size: bool,
 
     // 0 - off
     // 1 - on
-    obj_sprite_display: bool,
+    pub obj_sprite_display: bool,
 
     // 0 - off
     // 1 - on
-    bg_display: bool,
-}
-
-impl Lcdc {
-    pub fn lcd_control_operation(&self) -> bool {
-        self.lcd_control_operation
-    }
-
-    pub fn window_tile_map_display_select(&self) -> bool {
-        self.window_tile_map_display_select
-    }
-
-    pub fn window_display(&self) -> bool {
-        self.window_display
-    }
-
-    pub fn bg_and_window_tile_data_select(&self) -> bool {
-        self.bg_and_window_tile_data_select
-    }
-
-    pub fn bg_tile_map_display_select(&self) -> bool {
-        self.bg_tile_map_display_select
-    }
-
-    pub fn obj_sprite_size(&self) -> bool {
-        self.obj_sprite_size
-    }
-
-    pub fn obj_sprite_display(&self) -> bool {
-        self.obj_sprite_display
-    }
-
-    pub fn bg_display(&self) -> bool {
-        self.bg_display
-    }
+    pub bg_display: bool,
 }
 
 impl From<Byte> for Lcdc {
