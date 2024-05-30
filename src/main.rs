@@ -39,10 +39,8 @@ fn main() {
     let runtime_config = Arc::new(RwLock::new(RuntimeConfig::default()));
 
     // --- Read ROM
-    let bootstrap_rom = configuration
-        .bootstrap_path
-        .clone()
-        .map(|x| BootstrapRom::new_from_path(x.as_str()));
+    let bootstrap_rom =
+        BootstrapRom::new_from_optional_path(configuration.bootstrap_path.as_deref());
 
     let cartridge = Cartridge::new_from_path(configuration.rom_file.as_str());
 

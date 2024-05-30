@@ -20,6 +20,10 @@ impl BootstrapRom {
             data: MemorySector::with_data(bootstrap_data),
         }
     }
+
+    pub fn new_from_optional_path(path: Option<&str>) -> Option<Self> {
+        path.map(Self::new_from_path)
+    }
 }
 
 impl ReadMemory for BootstrapRom {
@@ -35,7 +39,7 @@ mod tests {
     use assert_fs::NamedTempFile;
 
     #[test]
-    fn it_reads_from_path() {
+    fn it_creates_new_from_path() {
         let tmp_file = NamedTempFile::new("foo.rs").unwrap();
         tmp_file.write_binary(&[0x09_u8, 0x08_u8, 0x07_u8]).unwrap();
 
@@ -46,6 +50,27 @@ mod tests {
         assert_eq!(bootstrap_rom.read_byte(0x2), 0x07);
 
         tmp_file.close().unwrap();
+    }
+
+    #[test]
+    fn it_creates_new_from_optional_path() {
+        let tmp_file = NamedTempFile::new("foo.rs").unwrap();
+        tmp_file.write_binary(&[0x09_u8, 0x08_u8, 0x07_u8]).unwrap();
+
+        let bootstrap_rom =
+            BootstrapRom::new_from_optional_path(Some(tmp_file.to_str().unwrap())).unwrap();
+
+        assert_eq!(bootstrap_rom.read_byte(0x0), 0x09);
+        assert_eq!(bootstrap_rom.read_byte(0x1), 0x08);
+        assert_eq!(bootstrap_rom.read_byte(0x2), 0x07);
+
+        tmp_file.close().unwrap();
+    }
+
+    #[test]
+    fn it_does_not_create_new_from_optional_path() {
+        let bootstrap_rom = BootstrapRom::new_from_optional_path(None);
+        assert!(bootstrap_rom.is_none());
     }
 
     #[test]
