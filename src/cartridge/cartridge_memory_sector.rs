@@ -1,14 +1,11 @@
-use crate::math::{two_bytes_to_word, word_to_two_bytes};
-use crate::{Byte, Word};
+use crate::Byte;
 
 pub trait ReadCartridgeMemory {
     fn read_byte(&self, position: usize) -> Byte;
-    fn read_word(&self, position: usize) -> Word;
 }
 
 pub trait WriteCartridgeMemory {
     fn write_byte(&mut self, position: usize, value: Byte);
-    fn write_word(&mut self, position: usize, value: Word);
 }
 
 pub struct CartridgeMemorySector {
@@ -35,22 +32,11 @@ impl ReadCartridgeMemory for CartridgeMemorySector {
     fn read_byte(&self, position: usize) -> Byte {
         self.data[position]
     }
-
-    fn read_word(&self, position: usize) -> Word {
-        two_bytes_to_word(self.data[position + 1], self.data[position])
-    }
 }
 
 impl WriteCartridgeMemory for CartridgeMemorySector {
     fn write_byte(&mut self, position: usize, value: Byte) {
         self.data[position] = value;
-    }
-
-    fn write_word(&mut self, position: usize, value: Word) {
-        let bytes = word_to_two_bytes(value);
-
-        self.data[position] = bytes.1;
-        self.data[position + 1] = bytes.0;
     }
 }
 

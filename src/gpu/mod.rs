@@ -43,10 +43,22 @@ impl Gpu {
     }
 
     pub fn step(&mut self, last_instruction_cycles: u8, canvas: &mut RgbaImage) {
-        let mode = {
+        let mode;
+        let lcdc;
+
+        {
             let memory = self.memory.read();
-            memory.stat.mode()
-        };
+            mode = memory.stat.mode();
+            lcdc = memory.lcdc;
+        }
+
+        if !lcdc.lcd_control_operation() {
+            let mut memory = self.memory.write();
+            memory.ly_reset_wo_interrupt();
+            self.cycles_accumulated = 0;
+
+            return;
+        }
 
         self.cycles_accumulated += last_instruction_cycles as u16;
 

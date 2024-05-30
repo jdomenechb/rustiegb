@@ -20,6 +20,8 @@ pub struct Cpu {
     last_instruction_ccycles: u8,
     ime: bool,
     halted: bool,
+
+    last_instruction: String,
 }
 
 impl Cpu {
@@ -36,6 +38,7 @@ impl Cpu {
             last_instruction_ccycles: 0,
             ime: false,
             halted: false,
+            last_instruction: String::new(),
         }
     }
 
@@ -43,7 +46,8 @@ impl Cpu {
         self.registers.pc = 0x100;
     }
 
-    pub fn step(&mut self) -> u8 {
+    pub fn step(&mut self, debug: bool) -> u8 {
+        self.last_instruction = "".to_string();
         self.pc_to_increment = -1;
         self.last_instruction_ccycles = 0;
 
@@ -350,6 +354,10 @@ impl Cpu {
         } else {
             self.last_instruction_ccycles = 4;
             self.pc_to_increment = 0;
+        }
+
+        if debug {
+            println!("{:X}: {}", self.registers.pc, self.last_instruction);
         }
 
         self.registers.pc += self.pc_to_increment as Word;
@@ -659,6 +667,8 @@ impl Cpu {
     fn nop(&mut self) {
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 4;
+
+        self.last_instruction = "NOP".to_string();
     }
 
     // --- ARITHMETIC INSTRUCTIONS ----------------------------------------------------------------------------------------------------------
@@ -1129,6 +1139,8 @@ impl Cpu {
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
+
+        self.last_instruction = format!("CP {:X}", n);
     }
 
     fn cp_mhl(&mut self) {
@@ -1206,6 +1218,8 @@ impl Cpu {
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 12;
+
+        self.last_instruction = format!("LDH ($FF{:X}, A)", to_sum)
     }
 
     /**
@@ -1246,6 +1260,8 @@ impl Cpu {
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 12;
+
+        self.last_instruction = format!("LDH (A, $FF{:X})", to_sum)
     }
 
     /**

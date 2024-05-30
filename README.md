@@ -18,4 +18,18 @@ This project's original intention was to learn Rust by coding something cool and
 - [x] 09: op r,r
 - [x] 10: bit ops
 - [x] 11: op a,(hl)
+
+### Instruction timing
 - [x] Instruction timing
+
+### OAM Bug
+- [ ] 01: LCD sync
+- [ ] 02: Causes
+- [x] 03: Non Causes
+- [ ] 04: Scanline timing
+- [ ] 05: Timing bug
+- [X] 06: Timing no bug
+- [ ] 07: Timing effect
+- [ ] 08: Instr effect
+
+

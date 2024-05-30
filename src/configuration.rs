@@ -46,6 +46,7 @@ pub struct RuntimeConfig {
     pub muted: bool,
     pub available_cycles: i32,
     pub reset: bool,
+    pub debug: bool,
 }
 
 impl Default for RuntimeConfig {
@@ -55,6 +56,7 @@ impl Default for RuntimeConfig {
             muted: false,
             available_cycles: Cpu::AVAILABLE_CCYCLES_PER_FRAME,
             reset: false,
+            debug: false,
         }
     }
 }
@@ -78,5 +80,13 @@ impl RuntimeConfig {
 
     pub fn cpu_has_available_ccycles(&self) -> bool {
         self.available_cycles > 0
+    }
+
+    pub fn is_debug(&self) -> bool {
+        self.debug
+    }
+
+    pub fn toggle_debug(&mut self) {
+        self.debug = !self.debug;
     }
 }
