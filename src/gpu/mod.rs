@@ -135,10 +135,7 @@ impl Gpu {
         let sprite_size = if lcdc.obj_sprite_size { 16 } else { 8 };
 
         for oam_entry in memory.oam_ram() {
-            if oam_entry.x() != 0
-                && ly + 16 >= oam_entry.y()
-                && ly + 16 < oam_entry.y() + sprite_size
-            {
+            if oam_entry.x != 0 && ly + 16 >= oam_entry.y && ly + 16 < oam_entry.y + sprite_size {
                 if oam_entry.priority() {
                     self.sprites_to_be_drawn_with_priority.push(oam_entry);
                 } else {
@@ -147,11 +144,10 @@ impl Gpu {
             }
         }
 
-        self.sprites_to_be_drawn_with_priority
-            .sort_by_key(|a| a.x());
+        self.sprites_to_be_drawn_with_priority.sort_by_key(|a| a.x);
 
         self.sprites_to_be_drawn_without_priority
-            .sort_by_key(|a| a.x());
+            .sort_by_key(|a| a.x);
     }
 
     fn lcd_transfer(&mut self, canvas: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
@@ -364,16 +360,13 @@ impl Gpu {
         let mut screen_x = -1;
 
         for sprite in sprites_to_be_drawn {
-            screen_x = max(
-                screen_x + 1,
-                sprite.x() as i16 - Gpu::PIXELS_PER_TILE as i16,
-            );
+            screen_x = max(screen_x + 1, sprite.x as i16 - Gpu::PIXELS_PER_TILE as i16);
 
             let current_pixel_y: i16 =
-                screen_y as i16 + (Gpu::PIXELS_PER_TILE * 2) as i16 - sprite.y() as i16;
+                screen_y as i16 + (Gpu::PIXELS_PER_TILE * 2) as i16 - sprite.y as i16;
 
             let sprite_addr =
-                SPRITE_TILES_ADDR_START + sprite.tile_number() as u16 * Gpu::TILE_SIZE_BYTES as u16;
+                SPRITE_TILES_ADDR_START + sprite.tile_number as u16 * Gpu::TILE_SIZE_BYTES as u16;
 
             let row = if sprite.flip_y() {
                 sprite_size - 1 - current_pixel_y
@@ -383,7 +376,7 @@ impl Gpu {
 
             let tile_row = self.read_tile_row(sprite_addr, row);
 
-            let limit = min(sprite.x() as i16, Gpu::PIXEL_WIDTH as i16);
+            let limit = min(sprite.x as i16, Gpu::PIXEL_WIDTH as i16);
             let mut sprite_end = screen_x;
 
             let palette = if !sprite.palette() {
@@ -394,7 +387,7 @@ impl Gpu {
 
             for current_screen_x in screen_x..limit {
                 let current_pixel_x: i16 =
-                    current_screen_x + Gpu::PIXELS_PER_TILE as i16 - sprite.x() as i16;
+                    current_screen_x + Gpu::PIXELS_PER_TILE as i16 - sprite.x as i16;
 
                 if !(0..8).contains(&current_pixel_x) {
                     continue;

@@ -94,17 +94,17 @@ fn main() {
                     let mut memory_thread = memory_thread.write();
                     memory_thread.step(last_instruction_cycles);
 
-                    check_vblank = memory_thread.interrupt_enable().is_vblank()
-                        && memory_thread.interrupt_flag.is_vblank();
+                    check_vblank = memory_thread.interrupt_enable().vblank
+                        && memory_thread.interrupt_flag.vblank;
 
-                    check_lcd_stat = memory_thread.interrupt_enable().is_lcd_stat()
-                        && memory_thread.interrupt_flag.is_lcd_stat();
+                    check_lcd_stat = memory_thread.interrupt_enable().lcd_stat
+                        && memory_thread.interrupt_flag.lcd_stat;
 
-                    check_timer_overflow = memory_thread.interrupt_enable().is_timer_overflow()
-                        && memory_thread.interrupt_flag.is_timer_overflow();
+                    check_timer_overflow = memory_thread.interrupt_enable().timer_overflow
+                        && memory_thread.interrupt_flag.timer_overflow;
 
-                    check_joystick = memory_thread.interrupt_enable().is_p10_p13_transition()
-                        && memory_thread.interrupt_flag.is_p10_p13_transition();
+                    check_joystick = memory_thread.interrupt_enable().p10_13_transition
+                        && memory_thread.interrupt_flag.p10_13_transition;
                 }
 
                 {

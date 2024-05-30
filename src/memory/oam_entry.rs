@@ -1,41 +1,25 @@
 use crate::Byte;
 
+#[readonly::make]
 pub struct OamEntry {
-    position_y: Byte,
-    position_x: Byte,
-    tile_number: Byte,
+    pub y: Byte,
+    pub x: Byte,
+    pub tile_number: Byte,
     flags: Byte,
 }
 
 impl OamEntry {
-    pub fn with_bytes(
-        position_y: Byte,
-        position_x: Byte,
-        tile_number: Byte,
-        flags: Byte,
-    ) -> OamEntry {
+    pub fn with_bytes(y: Byte, x: Byte, tile_number: Byte, flags: Byte) -> OamEntry {
         OamEntry {
-            position_y,
-            position_x,
+            y,
+            x,
             tile_number,
             flags,
         }
     }
 
-    pub fn x(&self) -> Byte {
-        self.position_x
-    }
-
-    pub fn y(&self) -> Byte {
-        self.position_y
-    }
-
     pub fn priority(&self) -> bool {
         self.flags & 0b10000000 == 0b10000000
-    }
-
-    pub fn tile_number(&self) -> Byte {
-        self.tile_number
     }
 
     pub fn palette(&self) -> bool {
