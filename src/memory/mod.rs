@@ -1,9 +1,7 @@
-use std::fs::File;
-use std::io::Read;
-
 use crate::cartridge::Cartridge;
 use crate::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::memory::audio_registers::AudioRegisters;
+use crate::memory::bootstrap_rom::BootstrapRom;
 use crate::memory::dma::Dma;
 use crate::memory::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use crate::memory::internal_ram_memory_sector::InternalRamMemorySector;
@@ -15,7 +13,6 @@ use crate::memory::ly::LY;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::memory::nr52::NR52;
 use crate::memory::oam_memory_sector::{OamMemorySector, OAM_MEMORY_SECTOR_SIZE};
-use crate::memory::read_only_memory_sector::ReadOnlyMemorySector;
 use crate::memory::sio_control::SioControl;
 use crate::memory::stat::{STATMode, Stat};
 use crate::memory::timer_control::TimerControl;
@@ -24,6 +21,7 @@ use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, SignedByte, Word};
 
 pub mod audio_registers;
+pub mod bootstrap_rom;
 mod dma;
 pub mod internal_ram_8k_memory_sector;
 pub mod internal_ram_memory_sector;
@@ -36,7 +34,6 @@ pub mod memory_sector;
 pub mod nr52;
 pub mod oam_entry;
 pub mod oam_memory_sector;
-pub mod read_only_memory_sector;
 mod sio_control;
 pub mod stat;
 pub mod timer_control;
@@ -67,7 +64,7 @@ impl AudioRegWritten {
 #[readonly::make]
 #[derive(Default)]
 pub struct Memory {
-    bootstrap_rom: Option<ReadOnlyMemorySector>,
+    bootstrap_rom: Option<BootstrapRom>,
 
     cartridge: Cartridge,
 
@@ -185,22 +182,8 @@ impl Memory {
     pub const ADDR_DMA: Word = 0xFF46;
     pub const ADDR_IE: Word = 0xFFFF;
 
-    pub fn new(cartridge: Cartridge, bootstrap: bool) -> Memory {
-        let bootstrap_rom = if bootstrap {
-            let bootstrap_rom_path = "./DMG_ROM.bin";
-            let mut bootstrap_data: Vec<Byte> = Vec::with_capacity(0x256);
-
-            let mut bootstrap_rom_file = File::open(bootstrap_rom_path).expect("file not found");
-            bootstrap_rom_file
-                .read_to_end(&mut bootstrap_data)
-                .expect("Error on reading ROM contents");
-
-            Some(ReadOnlyMemorySector::new(&bootstrap_data))
-        } else {
-            None
-        };
-
-        Memory {
+    pub fn new(cartridge: Cartridge, bootstrap_rom: Option<BootstrapRom>) -> Self {
+        Self {
             bootstrap_rom,
             cartridge,
             video_ram: VideoRam8kMemorySector::default(),

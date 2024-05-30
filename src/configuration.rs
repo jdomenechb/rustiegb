@@ -4,7 +4,7 @@ use clap::{Arg, Command};
 #[readonly::make]
 pub struct Configuration {
     pub debug_header: bool,
-    pub bootstrap: bool,
+    pub bootstrap_path: Option<String>,
     pub rom_file: String,
 
     pub user_speed_multiplier: i32,
@@ -33,7 +33,9 @@ impl Configuration {
 
         Self {
             debug_header: matches.contains_id("debug-header"),
-            bootstrap: matches.contains_id("bootstrap"),
+            bootstrap_path: matches
+                .get_one::<String>("bootstrap")
+                .map(|x| x.to_string()),
             rom_file: matches.get_one::<String>("ROMFILE").unwrap().to_string(),
 
             user_speed_multiplier: 1,
