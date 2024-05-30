@@ -1,4 +1,3 @@
-use crate::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::Byte;
 
 pub trait ReadCartridgeMemory {
