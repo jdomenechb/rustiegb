@@ -3,12 +3,10 @@ use crate::{Byte, Word};
 
 pub trait ReadCartridgeMemory {
     fn read_byte(&self, position: usize) -> Byte;
-    fn read_word(&self, position: usize) -> Word;
 }
 
 pub trait WriteCartridgeMemory {
     fn write_byte(&mut self, position: usize, value: Byte);
-    fn write_word(&mut self, position: usize, value: Word);
 }
 
 pub struct CartridgeMemorySector {
