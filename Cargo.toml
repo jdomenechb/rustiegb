@@ -12,11 +12,11 @@ image = "0"
 readonly = "0"
 cpal = "0"
 anyhow = "1"
-parking_lot = {version = "0"}
-nix = "0.25"
+parking_lot = { version = "0" }
+nix = "0"
 
 [dev-dependencies]
-test-case = "2"
+test-case = "3"
 
 #[profile.release]
 #debug = true
