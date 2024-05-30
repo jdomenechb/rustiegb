@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Lcdc {
     // 0 - Stop completely (no picture on screen)
     // 1 - operation
@@ -36,19 +36,6 @@ pub struct Lcdc {
 }
 
 impl Lcdc {
-    pub fn new() -> Lcdc {
-        Lcdc {
-            lcd_control_operation: false,
-            window_tile_map_display_select: true,
-            window_display: false,
-            bg_and_window_tile_data_select: true,
-            bg_tile_map_display_select: true,
-            obj_sprite_size: false,
-            obj_sprite_display: true,
-            bg_display: true,
-        }
-    }
-
     pub fn lcd_control_operation(&self) -> bool {
         self.lcd_control_operation
     }
@@ -107,5 +94,11 @@ impl From<&Lcdc> for Byte {
             | ((original.obj_sprite_size as Byte) << 2)
             | ((original.obj_sprite_display as Byte) << 1)
             | (original.bg_display as Byte)
+    }
+}
+
+impl Default for Lcdc {
+    fn default() -> Self {
+        Lcdc::from(0x91)
     }
 }

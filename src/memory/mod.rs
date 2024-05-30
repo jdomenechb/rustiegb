@@ -238,7 +238,7 @@ impl Memory {
             nr51: 0xf3,
             nr52: NR52::default(),
             wave_pattern_ram: WavePatternRam::default(),
-            lcdc: Lcdc::new(),
+            lcdc: Lcdc::default(),
             stat: Stat::default(),
             scy: 0x00,
             scx: 0x00,
