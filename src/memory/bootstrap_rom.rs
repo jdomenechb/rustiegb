@@ -17,7 +17,7 @@ impl BootstrapRom {
             .expect("Error on reading Bootstrap ROM contents");
 
         Self {
-            data: MemorySector::with_data(bootstrap_data[0x0..bootstrap_data.len()].to_vec()),
+            data: MemorySector::with_data(bootstrap_data),
         }
     }
 }
