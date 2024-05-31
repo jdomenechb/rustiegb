@@ -1,4 +1,5 @@
 use crate::math::{two_bytes_to_word, word_to_two_bytes};
+use crate::memory::address::Address;
 use crate::{Byte, Word};
 
 #[derive(Copy, Clone)]
@@ -48,7 +49,11 @@ impl CpuRegisters {
             f: 0xb0,
             h: 0x01,
             l: 0x4d,
-            pc: if bootstrap { 0x0001 } else { 0x0100 },
+            pc: if bootstrap {
+                Address::BOOTSTRAP_ROM_START
+            } else {
+                Address::CARTRIDGE_START
+            },
             sp: 0xFFFE,
         }
     }
