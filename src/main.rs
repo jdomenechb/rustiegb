@@ -4,8 +4,8 @@ mod configuration;
 mod cpu;
 mod gpu;
 mod joypad;
-mod math;
 mod memory;
+mod utils;
 
 extern crate anyhow;
 extern crate cpal;
