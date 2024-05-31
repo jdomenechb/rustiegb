@@ -1,4 +1,4 @@
-use crate::math::{two_bytes_to_word, word_to_two_bytes};
+use crate::utils::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::{Byte, Word};
 
 #[derive(Copy, Clone)]
