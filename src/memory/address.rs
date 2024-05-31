@@ -25,7 +25,15 @@ impl Address {
     pub const NR13_SOUND_1_FR_LO: Word = 0xFF13;
     pub const NR14_SOUND_1_FR_HI: Word = 0xFF14;
     pub const NR52_SOUND: Word = 0xFF26;
+    pub const LCDC: Word = 0xFF40;
     pub const STAT: Word = 0xFF41;
+    pub const SCY_SCROLL_Y: Word = 0xFF42;
+    pub const SCX_SCROLL_X: Word = 0xFF43;
     pub const DMA: Word = 0xFF46;
+    pub const BGP_BG_WIN_PALETTE: Word = 0xFF47;
+    pub const OBP1_OBJ_PALETTE: Word = 0xFF48;
+    pub const OBP2_OBJ_PALETTE: Word = 0xFF49;
+    pub const WY_WINDOW_Y_POSITION: Word = 0xFF4A;
+    pub const WX_WINDOW_X_POSITION: Word = 0xFF4B;
     pub const IE_INTERRUPT_ENABLE: Word = 0xFFFF;
 }

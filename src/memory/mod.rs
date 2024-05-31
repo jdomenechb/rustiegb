@@ -82,7 +82,6 @@ pub struct Memory {
     tima: Byte,
     tma: Byte,
     timer_control: TimerControl,
-    // FF0F
     pub interrupt_flag: InterruptFlag,
     nr10: Byte,
     nr11: Byte,
@@ -123,34 +122,26 @@ pub struct Memory {
     nr50: Byte,
     // FF25
     nr51: Byte,
-    // FF26
     pub nr52: NR52,
     // Wave pattern ram (FF30 - FF3F)
     pub wave_pattern_ram: WavePatternRam,
-    // FF40
     pub lcdc: Lcdc,
-    // FF41
     pub stat: Stat,
-    // FF42 - FF43
     scy: Byte,
     scx: Byte,
     // FF44
     pub ly: LY,
     // FF45
     lyc: Byte,
-    // FF46
     dma: Dma,
-    // FF47 - FF49
     bgp: Byte,
     obp1: Byte,
     obp2: Byte,
-    // FF4A - FF4B
     pub wy: Byte,
     pub wx: Byte,
 
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
-    // FFFF
     pub interrupt_enable: InterruptEnable,
 
     // -- Other
@@ -299,18 +290,18 @@ impl Memory {
             0xFF25 => Some(self.nr51),
             Address::NR52_SOUND => Some((&self.nr52).into()),
             0xFF30..=0xFF3F => Some(self.wave_pattern_ram.read_byte(position - 0xFF30)),
-            0xFF40 => Some((&self.lcdc).into()),
+            Address::LCDC => Some((&self.lcdc).into()),
             Address::STAT => Some((&self.stat).into()),
-            0xFF42 => Some(self.scy),
-            0xFF43 => Some(self.scx),
+            Address::SCY_SCROLL_Y => Some(self.scy),
+            Address::SCX_SCROLL_X => Some(self.scx),
             0xFF44 => Some(self.ly.clone().into()),
             0xFF45 => Some(self.lyc),
             Address::DMA => Some((&self.dma).into()),
-            0xFF47 => Some(self.bgp),
-            0xFF48 => Some(self.obp1),
-            0xFF49 => Some(self.obp2),
-            0xFF4A => Some(self.wy),
-            0xFF4B => Some(self.wx),
+            Address::BGP_BG_WIN_PALETTE => Some(self.bgp),
+            Address::OBP1_OBJ_PALETTE => Some(self.obp1),
+            Address::OBP2_OBJ_PALETTE => Some(self.obp2),
+            Address::WY_WINDOW_Y_POSITION => Some(self.wy),
+            Address::WX_WINDOW_X_POSITION => Some(self.wx),
             0xFF4D => Some(0xFF),
             0xFF80..=0xFFFE => Some(self.internal_ram.read_byte(position - 0xFF80)),
             Address::IE_INTERRUPT_ENABLE => Some((&self.interrupt_enable).into()),
@@ -541,18 +532,18 @@ impl Memory {
                 self.wave_pattern_ram.write_byte(position - 0xFF30, value);
                 self.audio_3_reg_written.wave_pattern = true;
             }
-            0xFF40 => self.lcdc = value.into(),
+            Address::LCDC => self.lcdc = value.into(),
             Address::STAT => self.stat = value.into(),
-            0xFF42 => self.scy = value,
-            0xFF43 => self.scx = value,
+            Address::SCY_SCROLL_Y => self.scy = value,
+            Address::SCX_SCROLL_X => self.scx = value,
             0xFF44 => self.ly = value.into(),
             0xFF45 => self.lyc = value,
             Address::DMA => self.dma = value.into(),
-            0xFF47 => self.bgp = value,
-            0xFF48 => self.obp1 = value,
-            0xFF49 => self.obp2 = value,
-            0xFF4A => self.wy = value,
-            0xFF4B => self.wx = value,
+            Address::BGP_BG_WIN_PALETTE => self.bgp = value,
+            Address::OBP1_OBJ_PALETTE => self.obp1 = value,
+            Address::OBP2_OBJ_PALETTE => self.obp2 = value,
+            Address::WY_WINDOW_Y_POSITION => self.wy = value,
+            Address::WX_WINDOW_X_POSITION => self.wx = value,
             0xFF4C..=0xFF7F => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
@@ -613,15 +604,15 @@ impl Memory {
     }
 
     pub fn scx(&self) -> Byte {
-        self.read_byte(0xFF43)
+        self.read_byte(Address::SCX_SCROLL_X)
     }
 
     pub fn scy(&self) -> Byte {
-        self.read_byte(0xFF42)
+        self.read_byte(Address::SCY_SCROLL_Y)
     }
 
     pub fn bgp(&self) -> Byte {
-        self.read_byte(0xFF47)
+        self.read_byte(Address::BGP_BG_WIN_PALETTE)
     }
 
     pub fn has_bootstrap_rom(&self) -> bool {
