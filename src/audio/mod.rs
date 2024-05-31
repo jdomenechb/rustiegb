@@ -4,6 +4,7 @@ use parking_lot::RwLock;
 
 use crate::{Byte, CpalAudioUnitOutput};
 
+use crate::memory::address::Address;
 use crate::memory::memory_sector::MemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::memory::{AudioRegWritten, Memory};
@@ -46,7 +47,7 @@ impl AudioUnit {
         {
             let mut memory = self.memory.write();
 
-            nr52 = memory.read_byte(Memory::ADDR_NR52);
+            nr52 = memory.read_byte(Address::NR52_SOUND);
             audio_triggers = memory.audio_reg_have_been_written();
         }
 

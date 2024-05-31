@@ -75,75 +75,75 @@ impl Default for Cartridge {
 }
 
 impl ReadMemory for Cartridge {
-    fn read_byte(&self, position: Word) -> Byte {
-        if position < 0x4000 {
-            return self.data.read_byte(position as usize);
+    fn read_byte(&self, address: Word) -> Byte {
+        if address < 0x4000 {
+            return self.data.read_byte(address as usize);
         }
 
-        if (0x4000..0x8000).contains(&position) {
+        if (0x4000..0x8000).contains(&address) {
             return self.data.read_byte(
-                position as usize - 0x4000
+                address as usize - 0x4000
                     + 0x4000 * (self.selected_rom_bank & self.header.rom_size.mask()) as usize,
             );
         }
 
         match self.header.cartridge_type {
-            CartridgeType::Rom(false, false) => self.data.read_byte(position as usize),
+            CartridgeType::Rom(false, false) => self.data.read_byte(address as usize),
             CartridgeType::Mbc1(_, _) => {
-                if (0xA000..0xC000).contains(&position) {
+                if (0xA000..0xC000).contains(&address) {
                     if !self.ram_enabled {
                         return 0xFF;
                     }
 
                     return self.ram.read_byte(
-                        position as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
+                        address as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
                     );
                 }
 
                 panic!(
                     "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
+                    address,
                     self.header.cartridge_type
                 );
             }
             CartridgeType::Mbc3(_, _, _) => {
-                if (0xA000..0xC000).contains(&position) {
+                if (0xA000..0xC000).contains(&address) {
                     if !self.ram_enabled {
                         return 0xFF;
                     }
 
                     return self.ram.read_byte(
-                        position as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
+                        address as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
                     );
                 }
 
                 panic!(
                     "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
+                    address,
                     self.header.cartridge_type
                 );
             }
             CartridgeType::Mbc5(_, _, _) => {
-                if (0xA000..0xC000).contains(&position) {
+                if (0xA000..0xC000).contains(&address) {
                     if !self.ram_enabled {
                         return 0xFF;
                     }
 
                     return self.ram.read_byte(
-                        position as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
+                        address as usize - 0xA000 + 0x2000 * self.selected_ram_bank as usize,
                     );
                 }
 
                 panic!(
                     "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
+                    address,
                     self.header.cartridge_type
                 );
             }
             _ => {
                 panic!(
                     "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    position,
+                    address,
                     self.header.cartridge_type
                 );
             }
