@@ -806,7 +806,7 @@ mod tests {
     fn test_correct_data_when_writing_audio_registers() {
         let mut memory = Memory::default();
 
-        for position in Memory::ADDR_NR10..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
             memory.write_byte(position, 0xFF);
             memory.write_byte(position, 0);
         }
@@ -814,7 +814,7 @@ mod tests {
         check_basic_audio_registers_are_reset(&mut memory);
 
         // NR52
-        let position = Memory::ADDR_NR52;
+        let position = Address::NR52_SOUND;
 
         memory.write_byte(position, 0xFF);
         memory.write_byte(position, 0);
@@ -894,12 +894,12 @@ mod tests {
     fn test_when_sound_is_turned_off_all_audio_registers_are_reset() {
         let mut memory = Memory::default();
 
-        for position in Memory::ADDR_NR10..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
             memory.write_byte(position, 0xFF);
         }
 
-        memory.write_byte(Memory::ADDR_NR52, 0);
-        memory.write_byte(Memory::ADDR_NR52, 0b10000000);
+        memory.write_byte(Address::NR52_SOUND, 0);
+        memory.write_byte(Address::NR52_SOUND, 0b10000000);
 
         check_basic_audio_registers_are_reset(&mut memory);
     }
@@ -908,9 +908,9 @@ mod tests {
     fn test_when_sound_is_turned_off_audio_registers_ignore_writes() {
         let mut memory = Memory::default();
 
-        memory.write_byte(Memory::ADDR_NR52, 0);
+        memory.write_byte(Address::NR52_SOUND, 0);
 
-        for position in Memory::ADDR_NR10..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
             memory.write_byte(position, 0xFF);
         }
 
