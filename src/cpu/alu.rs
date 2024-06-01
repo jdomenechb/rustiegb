@@ -153,7 +153,7 @@ mod tests {
         expected_c: bool,
         expected_z: bool,
     ) {
-        let mut registers = CpuRegisters::new(false);
+        let mut registers = CpuRegisters::default();
         let alu = Alu {};
 
         let result = alu.add_n(&mut registers, a, b, carry);
