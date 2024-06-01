@@ -1,5 +1,4 @@
 use crate::cartridge::Cartridge;
-use crate::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::memory::address::Address;
 use crate::memory::audio_registers::AudioRegisters;
 use crate::memory::bootstrap_rom::BootstrapRom;
@@ -19,6 +18,7 @@ use crate::memory::stat::{STATMode, Stat};
 use crate::memory::timer_control::TimerControl;
 use crate::memory::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use crate::memory::wave_pattern_ram::WavePatternRam;
+use crate::utils::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::{Byte, SignedByte, Word};
 
 pub mod address;
@@ -27,7 +27,7 @@ pub mod bootstrap_rom;
 mod dma;
 pub mod internal_ram_8k_memory_sector;
 pub mod internal_ram_memory_sector;
-mod interrupt_enable;
+pub mod interrupt_enable;
 pub mod interrupt_flag;
 pub mod joypad;
 pub mod lcdc;
@@ -548,7 +548,7 @@ impl Memory {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
             0xFF80..=0xFFFE => self.internal_ram.write_byte(position - 0xFF80, value),
-            Address::IE_INTERRUPT_ENABLE => self.interrupt_enable = value.into(),
+            Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.update(value),
         };
     }
 

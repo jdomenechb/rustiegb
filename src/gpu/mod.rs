@@ -5,11 +5,11 @@ use image::{ImageBuffer, Rgba, RgbaImage};
 use parking_lot::RwLock;
 
 use crate::gpu::color::Color;
-use crate::math::word_to_two_bytes;
 use crate::memory::address::Address;
 use crate::memory::oam_entry::OamEntry;
 use crate::memory::stat::STATMode;
 use crate::memory::Memory;
+use crate::utils::math::word_to_two_bytes;
 use crate::{Byte, Word};
 
 pub mod color;
