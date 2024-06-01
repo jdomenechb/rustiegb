@@ -39,23 +39,14 @@ pub struct CpuRegisters {
 }
 
 impl CpuRegisters {
-    pub fn new(bootstrap: bool) -> CpuRegisters {
-        CpuRegisters {
-            a: 0x01,
-            b: 0x0,
-            c: 0x13,
-            d: 0x0,
-            e: 0xd8,
-            f: 0xb0,
-            h: 0x01,
-            l: 0x4d,
-            pc: if bootstrap {
-                Address::BOOTSTRAP_ROM_START
-            } else {
-                Address::CARTRIDGE_START
-            },
-            sp: 0xFFFE,
+    pub fn new(bootstrap: bool) -> Self {
+        let mut cpu_registers = Self::default();
+
+        if bootstrap {
+            cpu_registers.pc = Address::BOOTSTRAP_ROM_START;
         }
+
+        cpu_registers
     }
 
     pub fn read_byte(&self, register: &ByteRegister) -> Byte {
@@ -167,5 +158,22 @@ impl CpuRegisters {
 
     pub fn is_flag_c(&self) -> bool {
         self.read_flag(4)
+    }
+}
+
+impl Default for CpuRegisters {
+    fn default() -> Self {
+        Self {
+            a: 0x01,
+            b: 0x0,
+            c: 0x13,
+            d: 0x0,
+            e: 0xd8,
+            f: 0xb0,
+            h: 0x01,
+            l: 0x4d,
+            pc: Address::CARTRIDGE_START,
+            sp: 0xFFFE,
+        }
     }
 }
