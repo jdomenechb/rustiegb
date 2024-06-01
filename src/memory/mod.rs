@@ -83,21 +83,19 @@ pub struct Memory {
     tma: Byte,
     timer_control: TimerControl,
     pub interrupt_flag: InterruptFlag,
+
     nr10: Byte,
     nr11: Byte,
     nr12: Byte,
     nr13: Byte,
     nr14: Byte,
-    // FF15
+
     nr20: Byte,
-    // FF16
     nr21: Byte,
-    // FF17
     nr22: Byte,
-    // FF18
     nr23: Byte,
-    // FF19
     nr24: Byte,
+
     // FF1A
     nr30: Byte,
     // FF1B
@@ -227,11 +225,11 @@ impl Memory {
             Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => byte | 0b00111111, // 0x3F
             Address::NR13_SOUND_1_FR_LO => 0xFF,
             Address::NR14_SOUND_1_FR_HI => byte | 0b10111111, // 0xBF
-            0xFF15 => 0xFF,
-            0xFF16 => byte | 0b00111111, // 0x3F
-            0xFF18 => 0xFF,
-            0xFF19 => byte | 0b10111111, // 0xBF
-            0xFF1A => byte | 0b01111111, // 0x7F
+            Address::NR20_SOUND_2_UNUSED => 0xFF,
+            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => byte | 0b00111111, // 0x3F
+            Address::NR23_SOUND_2_FR_LO => 0xFF,
+            Address::NR24_SOUND_3_FR_HI => byte | 0b10111111, // 0xBF
+            0xFF1A => byte | 0b01111111,                      // 0x7F
             0xFF1B => 0xFF,
             0xFF1C => byte | 0b10011111, // 0x9F
             0xFF1D => byte | 0xFF,
@@ -271,11 +269,11 @@ impl Memory {
             Address::NR12_SOUND_1_ENVELOPE => Some(self.nr12),
             Address::NR13_SOUND_1_FR_LO => Some(self.nr13),
             Address::NR14_SOUND_1_FR_HI => Some(self.nr14),
-            0xFF15 => Some(self.nr20),
-            0xFF16 => Some(self.nr21),
-            0xFF17 => Some(self.nr22),
-            0xFF18 => Some(self.nr23),
-            0xFF19 => Some(self.nr24),
+            Address::NR20_SOUND_2_UNUSED => Some(self.nr20),
+            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => Some(self.nr21),
+            Address::NR22_SOUND_2_ENVELOPE => Some(self.nr22),
+            Address::NR23_SOUND_2_FR_LO => Some(self.nr23),
+            Address::NR24_SOUND_3_FR_HI => Some(self.nr24),
             0xFF1A => Some(self.nr30),
             0xFF1B => Some(self.nr31),
             0xFF1C => Some(self.nr32),
@@ -379,30 +377,30 @@ impl Memory {
 
                 self.nr14 = value;
             }
-            0xFF15 => {
+            Address::NR20_SOUND_2_UNUSED => {
                 if self.nr52.is_on() {
                     self.nr20 = value;
                 }
             }
-            0xFF16 => {
+            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => {
                 if self.nr52.is_on() {
                     self.nr21 = value;
                     self.audio_2_reg_written.length = true;
                 }
             }
-            0xFF17 => {
+            Address::NR22_SOUND_2_ENVELOPE => {
                 if self.nr52.is_on() {
                     self.nr22 = value;
                     self.audio_2_reg_written.envelope_or_wave_out_lvl = true;
                 }
             }
-            0xFF18 => {
+            Address::NR23_SOUND_2_FR_LO => {
                 if self.nr52.is_on() {
                     self.nr23 = value;
                     self.audio_2_reg_written.frequency_or_poly_counter = true;
                 }
             }
-            0xFF19 => {
+            Address::NR24_SOUND_3_FR_HI => {
                 if !self.nr52.is_on() {
                     return;
                 }
@@ -721,7 +719,7 @@ impl Memory {
                 sweep = self.internally_read_byte(Address::NR10_SOUND_1_SWEEP);
                 Address::NR14_SOUND_1_FR_HI
             }
-            2 => 0xFF19,
+            2 => Address::NR24_SOUND_3_FR_HI,
             3 => {
                 sweep = self.internally_read_byte(0xFF1A);
                 0xFF1E
@@ -762,11 +760,11 @@ mod tests {
             (Address::NR13_SOUND_1_FR_LO, 0xFF),
             (Address::NR14_SOUND_1_FR_HI, 0xBF),
             // NR20
-            (0xFF15, 0xFF),
-            (0xFF16, 0x3F),
-            (0xFF17, 0x00),
-            (0xFF18, 0xFF),
-            (0xFF19, 0xBF),
+            (Address::NR20_SOUND_2_UNUSED, 0xFF),
+            (Address::NR21_SOUND_2_WAVE_PATTERN_DUTY, 0x3F),
+            (Address::NR22_SOUND_2_ENVELOPE, 0x00),
+            (Address::NR23_SOUND_2_FR_LO, 0xFF),
+            (Address::NR24_SOUND_3_FR_HI, 0xBF),
             // NR30
             (0xFF1A, 0x7F),
             (0xFF1B, 0xFF),
