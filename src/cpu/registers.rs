@@ -1,3 +1,4 @@
+use crate::memory::address::Address;
 use crate::utils::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::{Byte, Word};
 
@@ -42,7 +43,7 @@ impl CpuRegisters {
         let mut cpu_registers = Self::default();
 
         if bootstrap {
-            cpu_registers.pc = 0x0001;
+            cpu_registers.pc = Address::BOOTSTRAP_ROM_START;
         }
 
         cpu_registers
@@ -171,7 +172,7 @@ impl Default for CpuRegisters {
             f: 0xb0,
             h: 0x01,
             l: 0x4d,
-            pc: 0x0100,
+            pc: Address::CARTRIDGE_START,
             sp: 0xFFFE,
         }
     }

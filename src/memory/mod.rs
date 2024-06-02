@@ -1,4 +1,5 @@
 use crate::cartridge::Cartridge;
+use crate::memory::address::Address;
 use crate::memory::audio_registers::AudioRegisters;
 use crate::memory::bootstrap_rom::BootstrapRom;
 use crate::memory::dma::Dma;
@@ -20,6 +21,7 @@ use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::utils::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::{Byte, SignedByte, Word};
 
+pub mod address;
 pub mod audio_registers;
 pub mod bootstrap_rom;
 mod dma;
@@ -72,42 +74,28 @@ pub struct Memory {
     switchable_ram_bank: InternalRam8kMemorySector,
     internal_ram_8k: InternalRam8kMemorySector,
     pub oam_ram: OamMemorySector,
-    // FF00
+
     p1: Joypad,
-    // FF01
     serial_transfer_data: Byte,
-    // FF02
     sio_control: SioControl,
-    // FF04
     div: Byte,
-    // FF05
     tima: Byte,
-    // FF06
     tma: Byte,
-    // FF07
     timer_control: TimerControl,
-    // FF0F
     pub interrupt_flag: InterruptFlag,
-    // FF10
+
     nr10: Byte,
-    // FF11
     nr11: Byte,
-    // FF12
     nr12: Byte,
-    // FF13
     nr13: Byte,
-    // FF14
     nr14: Byte,
-    // FF15
+
     nr20: Byte,
-    // FF16
     nr21: Byte,
-    // FF17
     nr22: Byte,
-    // FF18
     nr23: Byte,
-    // FF19
     nr24: Byte,
+
     // FF1A
     nr30: Byte,
     // FF1B
@@ -132,34 +120,26 @@ pub struct Memory {
     nr50: Byte,
     // FF25
     nr51: Byte,
-    // FF26
     pub nr52: NR52,
     // Wave pattern ram (FF30 - FF3F)
     pub wave_pattern_ram: WavePatternRam,
-    // FF40
     pub lcdc: Lcdc,
-    // FF41
     pub stat: Stat,
-    // FF42 - FF43
     scy: Byte,
     scx: Byte,
     // FF44
     pub ly: LY,
     // FF45
     lyc: Byte,
-    // FF46
     dma: Dma,
-    // FF47 - FF49
     bgp: Byte,
     obp1: Byte,
     obp2: Byte,
-    // FF4A - FF4B
     pub wy: Byte,
     pub wx: Byte,
 
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
-    // FFFF
     pub interrupt_enable: InterruptEnable,
 
     // -- Other
@@ -174,14 +154,6 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub const ADDR_SIO_CONTROL: Word = 0xFF02;
-    pub const ADDR_IF: Word = 0xFF0F;
-    pub const ADDR_NR10: Word = 0xFF10;
-    pub const ADDR_NR52: Word = 0xFF26;
-    pub const ADDR_STAT: Word = 0xFF41;
-    pub const ADDR_DMA: Word = 0xFF46;
-    pub const ADDR_IE: Word = 0xFFFF;
-
     pub fn new(cartridge: Cartridge, bootstrap_rom: Option<BootstrapRom>) -> Self {
         Self {
             bootstrap_rom,
@@ -249,22 +221,22 @@ impl Memory {
         let byte = self.internally_read_byte(position).unwrap_or(0xFF);
 
         match position {
-            Self::ADDR_NR10 => byte | 0b10000000, // 0x80
-            0xFF11 => byte | 0b00111111,          // 0x3F
-            0xFF13 => 0xFF,
-            0xFF14 => byte | 0b10111111, // 0xBF
-            0xFF15 => 0xFF,
-            0xFF16 => byte | 0b00111111, // 0x3F
-            0xFF18 => 0xFF,
-            0xFF19 => byte | 0b10111111, // 0xBF
-            0xFF1A => byte | 0b01111111, // 0x7F
+            Address::NR10_SOUND_1_SWEEP => byte | 0b10000000, // 0x80
+            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => byte | 0b00111111, // 0x3F
+            Address::NR13_SOUND_1_FR_LO => 0xFF,
+            Address::NR14_SOUND_1_FR_HI => byte | 0b10111111, // 0xBF
+            Address::NR20_SOUND_2_UNUSED => 0xFF,
+            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => byte | 0b00111111, // 0x3F
+            Address::NR23_SOUND_2_FR_LO => 0xFF,
+            Address::NR24_SOUND_3_FR_HI => byte | 0b10111111, // 0xBF
+            0xFF1A => byte | 0b01111111,                      // 0x7F
             0xFF1B => 0xFF,
             0xFF1C => byte | 0b10011111, // 0x9F
             0xFF1D => byte | 0xFF,
             0xFF1E => byte | 0b10111111, // 0xBF
             0xFF1F..=0xFF20 => 0xFF,
             0xFF23 => byte | 0b10111111, // 0xBF
-            Self::ADDR_NR52 => byte | 0b1110000,
+            Address::NR52_SOUND => byte | 0b1110000,
             0xFF27..=0xFF2F => 0xFF,
             _ => byte,
         }
@@ -283,25 +255,25 @@ impl Memory {
             0xC000..=0xDFFF => Some(self.internal_ram_8k.read_byte(position - 0xC000)),
             0xE000..=0xFDFF => Some(self.internal_ram_8k.read_byte(position - 0xE000)),
             0xFE00..=0xFE9F => Some(self.oam_ram.read_byte(position - 0xFE00)),
-            0xFF00 => Some(self.p1.to_byte()),
-            0xFF01 => Some(self.serial_transfer_data),
-            Self::ADDR_SIO_CONTROL => Some((&self.sio_control).into()),
-            0xFF03 => Some(0xFF),
-            0xFF04 => Some(self.div),
-            0xFF05 => Some(self.tima),
-            0xFF06 => Some(self.tma),
+            Address::P1_JOYPAD => Some(self.p1.to_byte()),
+            Address::SB_SERIAL_TRANSFER_DATA => Some(self.serial_transfer_data),
+            Address::SC_SIO_CONTROL => Some((&self.sio_control).into()),
+            Address::UNUSED_FF03 => Some(0xFF),
+            Address::DIV_DIVIDER_REGISTER => Some(self.div),
+            Address::TIMA_TIMER_COUNTER => Some(self.tima),
+            Address::TMA_TIMER_MODULO => Some(self.tma),
             0xFF08..=0xFF0E => Some(0xFF),
-            Self::ADDR_IF => Some((&self.interrupt_flag).into()),
-            Self::ADDR_NR10 => Some(self.nr10),
-            0xFF11 => Some(self.nr11),
-            0xFF12 => Some(self.nr12),
-            0xFF13 => Some(self.nr13),
-            0xFF14 => Some(self.nr14),
-            0xFF15 => Some(self.nr20),
-            0xFF16 => Some(self.nr21),
-            0xFF17 => Some(self.nr22),
-            0xFF18 => Some(self.nr23),
-            0xFF19 => Some(self.nr24),
+            Address::IF_INTERRUPT_FLAG => Some((&self.interrupt_flag).into()),
+            Address::NR10_SOUND_1_SWEEP => Some(self.nr10),
+            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => Some(self.nr11),
+            Address::NR12_SOUND_1_ENVELOPE => Some(self.nr12),
+            Address::NR13_SOUND_1_FR_LO => Some(self.nr13),
+            Address::NR14_SOUND_1_FR_HI => Some(self.nr14),
+            Address::NR20_SOUND_2_UNUSED => Some(self.nr20),
+            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => Some(self.nr21),
+            Address::NR22_SOUND_2_ENVELOPE => Some(self.nr22),
+            Address::NR23_SOUND_2_FR_LO => Some(self.nr23),
+            Address::NR24_SOUND_3_FR_HI => Some(self.nr24),
             0xFF1A => Some(self.nr30),
             0xFF1B => Some(self.nr31),
             0xFF1C => Some(self.nr32),
@@ -314,23 +286,23 @@ impl Memory {
             0xFF23 => Some(self.nr44),
             0xFF24 => Some(self.nr50),
             0xFF25 => Some(self.nr51),
-            Self::ADDR_NR52 => Some((&self.nr52).into()),
+            Address::NR52_SOUND => Some((&self.nr52).into()),
             0xFF30..=0xFF3F => Some(self.wave_pattern_ram.read_byte(position - 0xFF30)),
-            0xFF40 => Some((&self.lcdc).into()),
-            Self::ADDR_STAT => Some((&self.stat).into()),
-            0xFF42 => Some(self.scy),
-            0xFF43 => Some(self.scx),
+            Address::LCDC => Some((&self.lcdc).into()),
+            Address::STAT => Some((&self.stat).into()),
+            Address::SCY_SCROLL_Y => Some(self.scy),
+            Address::SCX_SCROLL_X => Some(self.scx),
             0xFF44 => Some(self.ly.clone().into()),
             0xFF45 => Some(self.lyc),
-            Self::ADDR_DMA => Some((&self.dma).into()),
-            0xFF47 => Some(self.bgp),
-            0xFF48 => Some(self.obp1),
-            0xFF49 => Some(self.obp2),
-            0xFF4A => Some(self.wy),
-            0xFF4B => Some(self.wx),
+            Address::DMA => Some((&self.dma).into()),
+            Address::BGP_BG_WIN_PALETTE => Some(self.bgp),
+            Address::OBP1_OBJ_PALETTE => Some(self.obp1),
+            Address::OBP2_OBJ_PALETTE => Some(self.obp2),
+            Address::WY_WINDOW_Y_POSITION => Some(self.wy),
+            Address::WX_WINDOW_X_POSITION => Some(self.wx),
             0xFF4D => Some(0xFF),
             0xFF80..=0xFFFE => Some(self.internal_ram.read_byte(position - 0xFF80)),
-            Self::ADDR_IE => Some((&self.interrupt_enable).into()),
+            Address::IE_INTERRUPT_ENABLE => Some((&self.interrupt_enable).into()),
             _ => None,
         }
     }
@@ -354,43 +326,45 @@ impl Memory {
             0xFEA0..=0xFEFF => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
-            0xFF00 => self.p1.parse_byte(value),
-            0xFF01 => self.serial_transfer_data = value,
-            Self::ADDR_SIO_CONTROL => self.sio_control = value.into(),
-            0xFF03 => println!("Attempt to write at an unused RAM position {:X}", position),
-            0xFF04 => self.div = 0,
-            0xFF05 => self.tima = value,
-            0xFF06 => self.tma = value,
-            0xFF07 => self.timer_control = value.into(),
+            Address::P1_JOYPAD => self.p1.parse_byte(value),
+            Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data = value,
+            Address::SC_SIO_CONTROL => self.sio_control = value.into(),
+            Address::UNUSED_FF03 => {
+                println!("Attempt to write at an unused RAM position {:X}", position)
+            }
+            Address::DIV_DIVIDER_REGISTER => self.div = 0,
+            Address::TIMA_TIMER_COUNTER => self.tima = value,
+            Address::TMA_TIMER_MODULO => self.tma = value,
+            Address::TAC_TIMER_CONTROL => self.timer_control = value.into(),
             0xFF08..=0xFF0E => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
-            Self::ADDR_IF => self.interrupt_flag = value.into(),
-            Self::ADDR_NR10 => {
+            Address::IF_INTERRUPT_FLAG => self.interrupt_flag = value.into(),
+            Address::NR10_SOUND_1_SWEEP => {
                 if self.nr52.is_on() {
                     self.nr10 = value;
                     self.audio_1_reg_written.sweep_or_wave_onoff = true;
                 }
             }
-            0xFF11 => {
+            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => {
                 if self.nr52.is_on() {
                     self.nr11 = value;
                     self.audio_1_reg_written.length = true;
                 }
             }
-            0xFF12 => {
+            Address::NR12_SOUND_1_ENVELOPE => {
                 if self.nr52.is_on() {
                     self.nr12 = value;
                     self.audio_1_reg_written.envelope_or_wave_out_lvl = true;
                 }
             }
-            0xFF13 => {
+            Address::NR13_SOUND_1_FR_LO => {
                 if self.nr52.is_on() {
                     self.nr13 = value;
                     self.audio_1_reg_written.frequency_or_poly_counter = true;
                 }
             }
-            0xFF14 => {
+            Address::NR14_SOUND_1_FR_HI => {
                 if !self.nr52.is_on() {
                     return;
                 }
@@ -403,30 +377,30 @@ impl Memory {
 
                 self.nr14 = value;
             }
-            0xFF15 => {
+            Address::NR20_SOUND_2_UNUSED => {
                 if self.nr52.is_on() {
                     self.nr20 = value;
                 }
             }
-            0xFF16 => {
+            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => {
                 if self.nr52.is_on() {
                     self.nr21 = value;
                     self.audio_2_reg_written.length = true;
                 }
             }
-            0xFF17 => {
+            Address::NR22_SOUND_2_ENVELOPE => {
                 if self.nr52.is_on() {
                     self.nr22 = value;
                     self.audio_2_reg_written.envelope_or_wave_out_lvl = true;
                 }
             }
-            0xFF18 => {
+            Address::NR23_SOUND_2_FR_LO => {
                 if self.nr52.is_on() {
                     self.nr23 = value;
                     self.audio_2_reg_written.frequency_or_poly_counter = true;
                 }
             }
-            0xFF19 => {
+            Address::NR24_SOUND_3_FR_HI => {
                 if !self.nr52.is_on() {
                     return;
                 }
@@ -521,7 +495,7 @@ impl Memory {
                     self.nr51 = value;
                 }
             }
-            Self::ADDR_NR52 => {
+            Address::NR52_SOUND => {
                 self.nr52 = (value & 0b10000000).into();
 
                 if self.nr52.is_on() {
@@ -556,23 +530,23 @@ impl Memory {
                 self.wave_pattern_ram.write_byte(position - 0xFF30, value);
                 self.audio_3_reg_written.wave_pattern = true;
             }
-            0xFF40 => self.lcdc = value.into(),
-            Self::ADDR_STAT => self.stat = value.into(),
-            0xFF42 => self.scy = value,
-            0xFF43 => self.scx = value,
+            Address::LCDC => self.lcdc = value.into(),
+            Address::STAT => self.stat = value.into(),
+            Address::SCY_SCROLL_Y => self.scy = value,
+            Address::SCX_SCROLL_X => self.scx = value,
             0xFF44 => self.ly = value.into(),
             0xFF45 => self.lyc = value,
-            Self::ADDR_DMA => self.dma = value.into(),
-            0xFF47 => self.bgp = value,
-            0xFF48 => self.obp1 = value,
-            0xFF49 => self.obp2 = value,
-            0xFF4A => self.wy = value,
-            0xFF4B => self.wx = value,
+            Address::DMA => self.dma = value.into(),
+            Address::BGP_BG_WIN_PALETTE => self.bgp = value,
+            Address::OBP1_OBJ_PALETTE => self.obp1 = value,
+            Address::OBP2_OBJ_PALETTE => self.obp2 = value,
+            Address::WY_WINDOW_Y_POSITION => self.wy = value,
+            Address::WX_WINDOW_X_POSITION => self.wx = value,
             0xFF4C..=0xFF7F => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
             0xFF80..=0xFFFE => self.internal_ram.write_byte(position - 0xFF80, value),
-            Self::ADDR_IE => self.interrupt_enable.update(value),
+            Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.update(value),
         };
     }
 
@@ -628,15 +602,15 @@ impl Memory {
     }
 
     pub fn scx(&self) -> Byte {
-        self.read_byte(0xFF43)
+        self.read_byte(Address::SCX_SCROLL_X)
     }
 
     pub fn scy(&self) -> Byte {
-        self.read_byte(0xFF42)
+        self.read_byte(Address::SCY_SCROLL_Y)
     }
 
     pub fn bgp(&self) -> Byte {
-        self.read_byte(0xFF47)
+        self.read_byte(Address::BGP_BG_WIN_PALETTE)
     }
 
     pub fn has_bootstrap_rom(&self) -> bool {
@@ -742,10 +716,10 @@ impl Memory {
         let mut sweep = None;
         let start_address = match channel {
             1 => {
-                sweep = self.internally_read_byte(Self::ADDR_NR10);
-                0xFF14
+                sweep = self.internally_read_byte(Address::NR10_SOUND_1_SWEEP);
+                Address::NR14_SOUND_1_FR_HI
             }
-            2 => 0xFF19,
+            2 => Address::NR24_SOUND_3_FR_HI,
             3 => {
                 sweep = self.internally_read_byte(0xFF1A);
                 0xFF1E
@@ -780,17 +754,17 @@ mod tests {
     fn check_basic_audio_registers_are_reset(memory: &mut Memory) {
         let items = vec![
             // NR10
-            (Memory::ADDR_NR10, 0x80),
-            (0xFF11, 0x3F),
-            (0xFF12, 0x00),
-            (0xFF13, 0xFF),
-            (0xFF14, 0xBF),
+            (Address::NR10_SOUND_1_SWEEP, 0x80),
+            (Address::NR11_SOUND_1_WAVE_PATTERN_DUTY, 0x3F),
+            (Address::NR12_SOUND_1_ENVELOPE, 0x00),
+            (Address::NR13_SOUND_1_FR_LO, 0xFF),
+            (Address::NR14_SOUND_1_FR_HI, 0xBF),
             // NR20
-            (0xFF15, 0xFF),
-            (0xFF16, 0x3F),
-            (0xFF17, 0x00),
-            (0xFF18, 0xFF),
-            (0xFF19, 0xBF),
+            (Address::NR20_SOUND_2_UNUSED, 0xFF),
+            (Address::NR21_SOUND_2_WAVE_PATTERN_DUTY, 0x3F),
+            (Address::NR22_SOUND_2_ENVELOPE, 0x00),
+            (Address::NR23_SOUND_2_FR_LO, 0xFF),
+            (Address::NR24_SOUND_3_FR_HI, 0xBF),
             // NR30
             (0xFF1A, 0x7F),
             (0xFF1B, 0xFF),
@@ -830,7 +804,7 @@ mod tests {
     fn test_correct_data_when_writing_audio_registers() {
         let mut memory = Memory::default();
 
-        for position in Memory::ADDR_NR10..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
             memory.write_byte(position, 0xFF);
             memory.write_byte(position, 0);
         }
@@ -838,7 +812,7 @@ mod tests {
         check_basic_audio_registers_are_reset(&mut memory);
 
         // NR52
-        let position = Memory::ADDR_NR52;
+        let position = Address::NR52_SOUND;
 
         memory.write_byte(position, 0xFF);
         memory.write_byte(position, 0);
@@ -918,12 +892,12 @@ mod tests {
     fn test_when_sound_is_turned_off_all_audio_registers_are_reset() {
         let mut memory = Memory::default();
 
-        for position in Memory::ADDR_NR10..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
             memory.write_byte(position, 0xFF);
         }
 
-        memory.write_byte(Memory::ADDR_NR52, 0);
-        memory.write_byte(Memory::ADDR_NR52, 0b10000000);
+        memory.write_byte(Address::NR52_SOUND, 0);
+        memory.write_byte(Address::NR52_SOUND, 0b10000000);
 
         check_basic_audio_registers_are_reset(&mut memory);
     }
@@ -932,9 +906,9 @@ mod tests {
     fn test_when_sound_is_turned_off_audio_registers_ignore_writes() {
         let mut memory = Memory::default();
 
-        memory.write_byte(Memory::ADDR_NR52, 0);
+        memory.write_byte(Address::NR52_SOUND, 0);
 
-        for position in Memory::ADDR_NR10..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
             memory.write_byte(position, 0xFF);
         }
 
@@ -943,7 +917,7 @@ mod tests {
 
     #[test]
     fn test_unmapped_addresses() {
-        let mut addresses = vec![0xFF03];
+        let mut addresses = vec![Address::UNUSED_FF03];
         let mut first_range: Vec<Word> = (0xFF08..=0xFF0E).collect();
         addresses.append(&mut first_range);
 

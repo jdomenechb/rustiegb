@@ -4,6 +4,7 @@ use parking_lot::RwLock;
 
 use crate::cpu::alu::Alu;
 use crate::cpu::registers::{ByteRegister, CpuRegisters, WordRegister};
+use crate::memory::address::Address;
 use crate::memory::Memory;
 use crate::{Byte, Word};
 
@@ -1212,7 +1213,7 @@ impl Cpu {
         let mut memory = self.memory.write();
         let to_sum = memory.read_byte(self.registers.pc + 1) as Word;
 
-        let mem_addr = 0xFF00 + to_sum;
+        let mem_addr = Address::IO_REGISTERS_START + to_sum;
 
         memory.write_byte(mem_addr, self.registers.a);
 
@@ -1228,7 +1229,8 @@ impl Cpu {
     fn ld_mc_a(&mut self) {
         let mut memory = self.memory.write();
 
-        let mem_addr = 0xFF00 + self.registers.read_byte(&ByteRegister::C) as Word;
+        let mem_addr =
+            Address::IO_REGISTERS_START + self.registers.read_byte(&ByteRegister::C) as Word;
         memory.write_byte(mem_addr, self.registers.a);
 
         self.pc_to_increment = 1;
@@ -1239,7 +1241,8 @@ impl Cpu {
      * Writes value from memory address $FF00 + C to register A.
      */
     fn ld_a_mc(&mut self) {
-        let mem_addr = 0xFF00 + self.registers.read_byte(&ByteRegister::C) as Word;
+        let mem_addr =
+            Address::IO_REGISTERS_START + self.registers.read_byte(&ByteRegister::C) as Word;
 
         let memory = self.memory.read();
         self.registers.a = memory.read_byte(mem_addr);
@@ -1255,7 +1258,7 @@ impl Cpu {
         let memory = self.memory.read();
         let to_sum = memory.read_byte(self.registers.pc + 1) as Word;
 
-        let mem_addr = 0xFF00 + to_sum;
+        let mem_addr = Address::IO_REGISTERS_START + to_sum;
         self.registers.a = memory.read_byte(mem_addr);
 
         self.pc_to_increment = 2;

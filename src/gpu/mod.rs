@@ -5,6 +5,7 @@ use image::{ImageBuffer, Rgba, RgbaImage};
 use parking_lot::RwLock;
 
 use crate::gpu::color::Color;
+use crate::memory::address::Address;
 use crate::memory::oam_entry::OamEntry;
 use crate::memory::stat::STATMode;
 use crate::memory::Memory;
@@ -182,8 +183,8 @@ impl Gpu {
 
             screen_y = Byte::from(memory.ly.clone()) as u16;
 
-            sprite_palette0 = memory.read_byte(0xFF48);
-            sprite_palette1 = memory.read_byte(0xFF49);
+            sprite_palette0 = memory.read_byte(Address::OBP1_OBJ_PALETTE);
+            sprite_palette1 = memory.read_byte(Address::OBP2_OBJ_PALETTE);
 
             sprite_size = if memory.lcdc.obj_sprite_size {
                 16i16
