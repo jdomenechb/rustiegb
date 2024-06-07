@@ -1,8 +1,8 @@
-use crate::configuration::RuntimeConfig;
-use crate::memory::Memory;
+use std::sync::Arc;
 use parking_lot::RwLock;
 use piston_window::Key;
-use std::sync::Arc;
+use crate::configuration::RuntimeConfig;
+use crate::memory::Memory;
 
 pub struct JoypadHandler {
     memory: Arc<RwLock<Memory>>,
