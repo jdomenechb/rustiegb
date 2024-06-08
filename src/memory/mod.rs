@@ -1,46 +1,30 @@
 use crate::cartridge::Cartridge;
+use crate::io::interrupt_flag::InterruptFlag;
+use crate::io::joypad::Joypad;
+use crate::io::registers::IORegisters;
+use crate::io::stat::STATMode;
 use crate::memory::address::Address;
 use crate::memory::audio_registers::AudioRegisters;
 use crate::memory::bootstrap_rom::BootstrapRom;
-use crate::memory::dma::Dma;
 use crate::memory::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use crate::memory::internal_ram_memory_sector::InternalRamMemorySector;
 use crate::memory::interrupt_enable::InterruptEnable;
-use crate::memory::interrupt_flag::InterruptFlag;
-use crate::memory::joypad::Joypad;
-use crate::memory::lcdc::Lcdc;
-use crate::memory::ly::LY;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
-use crate::memory::nr52::NR52;
 use crate::memory::oam_memory_sector::{OamMemorySector, OAM_MEMORY_SECTOR_SIZE};
-use crate::memory::sio_control::SioControl;
-use crate::memory::stat::{STATMode, Stat};
-use crate::memory::timer_control::TimerControl;
 use crate::memory::video_ram_8k_memory_sector::VideoRam8kMemorySector;
-use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::utils::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::{Byte, SignedByte, Word};
 
 pub mod address;
 pub mod audio_registers;
 pub mod bootstrap_rom;
-mod dma;
 pub mod internal_ram_8k_memory_sector;
 pub mod internal_ram_memory_sector;
 pub mod interrupt_enable;
-pub mod interrupt_flag;
-pub mod joypad;
-pub mod lcdc;
-mod ly;
 pub mod memory_sector;
-pub mod nr52;
 pub mod oam_entry;
 pub mod oam_memory_sector;
-mod sio_control;
-pub mod stat;
-pub mod timer_control;
 pub mod video_ram_8k_memory_sector;
-pub mod wave_pattern_ram;
 
 #[derive(Default, Clone)]
 pub struct AudioRegWritten {
@@ -75,68 +59,7 @@ pub struct Memory {
     internal_ram_8k: InternalRam8kMemorySector,
     pub oam_ram: OamMemorySector,
 
-    p1: Joypad,
-    serial_transfer_data: Byte,
-    sio_control: SioControl,
-    div: Byte,
-    tima: Byte,
-    tma: Byte,
-    timer_control: TimerControl,
-    pub interrupt_flag: InterruptFlag,
-
-    nr10: Byte,
-    nr11: Byte,
-    nr12: Byte,
-    nr13: Byte,
-    nr14: Byte,
-
-    nr20: Byte,
-    nr21: Byte,
-    nr22: Byte,
-    nr23: Byte,
-    nr24: Byte,
-
-    // FF1A
-    nr30: Byte,
-    // FF1B
-    nr31: Byte,
-    // FF1C
-    nr32: Byte,
-    // FF1D
-    nr33: Byte,
-    // FF1E
-    nr34: Byte,
-    // FF1F
-    nr40: Byte,
-    // FF20
-    nr41: Byte,
-    // FF21
-    nr42: Byte,
-    // FF22
-    nr43: Byte,
-    // FF23
-    nr44: Byte,
-    // FF24
-    nr50: Byte,
-    // FF25
-    nr51: Byte,
-    pub nr52: NR52,
-    // Wave pattern ram (FF30 - FF3F)
-    pub wave_pattern_ram: WavePatternRam,
-    pub lcdc: Lcdc,
-    pub stat: Stat,
-    scy: Byte,
-    scx: Byte,
-    // FF44
-    pub ly: LY,
-    // FF45
-    lyc: Byte,
-    dma: Dma,
-    bgp: Byte,
-    obp1: Byte,
-    obp2: Byte,
-    pub wy: Byte,
-    pub wx: Byte,
+    pub io_registers: IORegisters,
 
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
@@ -145,12 +68,6 @@ pub struct Memory {
     // -- Other
     remaining_timer_cycles: u32,
     remaining_div_cycles: u32,
-
-    // Audio
-    audio_1_reg_written: AudioRegWritten,
-    audio_2_reg_written: AudioRegWritten,
-    audio_3_reg_written: AudioRegWritten,
-    audio_4_reg_written: AudioRegWritten,
 }
 
 impl Memory {
@@ -161,59 +78,12 @@ impl Memory {
             video_ram: VideoRam8kMemorySector::default(),
             switchable_ram_bank: InternalRam8kMemorySector::default(),
             internal_ram_8k: InternalRam8kMemorySector::default(),
-            p1: Joypad::new(),
-            serial_transfer_data: 0,
-            sio_control: SioControl::default(),
-            div: 0,
-            tima: 0,
-            tma: 0,
-            timer_control: TimerControl::default(),
-            interrupt_flag: InterruptFlag::new(),
-            nr10: 0x80,
-            nr11: 0xBF,
-            nr12: 0xF3,
-            nr13: 0x00,
-            nr14: 0xBF,
-            nr20: 0xFF,
-            nr21: 0x3F,
-            nr22: 0x00,
-            nr23: 0x00,
-            nr24: 0xBF,
-            nr30: 0x7F,
-            nr31: 0xFF,
-            nr32: 0x9f,
-            nr33: 0x00,
-            nr34: 0xBF,
-            nr40: 0xFF,
-            nr41: 0xFF,
-            nr42: 0x00,
-            nr43: 0x00,
-            nr44: 0xBF,
-            nr50: 0x77,
-            nr51: 0xf3,
-            nr52: NR52::default(),
-            wave_pattern_ram: WavePatternRam::default(),
-            lcdc: Lcdc::default(),
-            stat: Stat::default(),
-            scy: 0x00,
-            scx: 0x00,
-            ly: LY::default(),
-            lyc: 0x00,
-            dma: Dma::default(),
-            bgp: 0xFC,
-            obp1: 0xFF,
-            obp2: 0xFF,
-            wy: 0x00,
-            wx: 0x00,
+            io_registers: IORegisters::default(),
             internal_ram: InternalRamMemorySector::default(),
             interrupt_enable: InterruptEnable::default(),
             oam_ram: OamMemorySector::default(),
             remaining_timer_cycles: 0,
             remaining_div_cycles: 0,
-            audio_1_reg_written: AudioRegWritten::default(),
-            audio_2_reg_written: AudioRegWritten::default(),
-            audio_3_reg_written: AudioRegWritten::default(),
-            audio_4_reg_written: AudioRegWritten::default(),
         }
     }
 
@@ -255,51 +125,10 @@ impl Memory {
             0xC000..=0xDFFF => Some(self.internal_ram_8k.read_byte(position - 0xC000)),
             0xE000..=0xFDFF => Some(self.internal_ram_8k.read_byte(position - 0xE000)),
             0xFE00..=0xFE9F => Some(self.oam_ram.read_byte(position - 0xFE00)),
-            Address::P1_JOYPAD => Some(self.p1.to_byte()),
-            Address::SB_SERIAL_TRANSFER_DATA => Some(self.serial_transfer_data),
-            Address::SC_SIO_CONTROL => Some((&self.sio_control).into()),
-            Address::UNUSED_FF03 => Some(0xFF),
-            Address::DIV_DIVIDER_REGISTER => Some(self.div),
-            Address::TIMA_TIMER_COUNTER => Some(self.tima),
-            Address::TMA_TIMER_MODULO => Some(self.tma),
-            0xFF08..=0xFF0E => Some(0xFF),
-            Address::IF_INTERRUPT_FLAG => Some((&self.interrupt_flag).into()),
-            Address::NR10_SOUND_1_SWEEP => Some(self.nr10),
-            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => Some(self.nr11),
-            Address::NR12_SOUND_1_ENVELOPE => Some(self.nr12),
-            Address::NR13_SOUND_1_FR_LO => Some(self.nr13),
-            Address::NR14_SOUND_1_FR_HI => Some(self.nr14),
-            Address::NR20_SOUND_2_UNUSED => Some(self.nr20),
-            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => Some(self.nr21),
-            Address::NR22_SOUND_2_ENVELOPE => Some(self.nr22),
-            Address::NR23_SOUND_2_FR_LO => Some(self.nr23),
-            Address::NR24_SOUND_3_FR_HI => Some(self.nr24),
-            0xFF1A => Some(self.nr30),
-            0xFF1B => Some(self.nr31),
-            0xFF1C => Some(self.nr32),
-            0xFF1D => Some(self.nr33),
-            0xFF1E => Some(self.nr34),
-            0xFF1F => Some(self.nr40),
-            0xFF20 => Some(self.nr41),
-            0xFF21 => Some(self.nr42),
-            0xFF22 => Some(self.nr43),
-            0xFF23 => Some(self.nr44),
-            0xFF24 => Some(self.nr50),
-            0xFF25 => Some(self.nr51),
-            Address::NR52_SOUND => Some((&self.nr52).into()),
-            0xFF30..=0xFF3F => Some(self.wave_pattern_ram.read_byte(position - 0xFF30)),
-            Address::LCDC => Some((&self.lcdc).into()),
-            Address::STAT => Some((&self.stat).into()),
-            Address::SCY_SCROLL_Y => Some(self.scy),
-            Address::SCX_SCROLL_X => Some(self.scx),
-            0xFF44 => Some(self.ly.clone().into()),
-            0xFF45 => Some(self.lyc),
-            Address::DMA => Some((&self.dma).into()),
-            Address::BGP_BG_WIN_PALETTE => Some(self.bgp),
-            Address::OBP1_OBJ_PALETTE => Some(self.obp1),
-            Address::OBP2_OBJ_PALETTE => Some(self.obp2),
-            Address::WY_WINDOW_Y_POSITION => Some(self.wy),
-            Address::WX_WINDOW_X_POSITION => Some(self.wx),
+            Address::UNUSED_FF27..=Address::UNUSED_FF2F => None,
+            Address::IO_REGISTERS_START..=Address::IO_REGISTERS_END => {
+                Some(self.io_registers.read_byte(position))
+            }
             0xFF4D => Some(0xFF),
             0xFF80..=0xFFFE => Some(self.internal_ram.read_byte(position - 0xFF80)),
             Address::IE_INTERRUPT_ENABLE => Some((&self.interrupt_enable).into()),
@@ -326,222 +155,9 @@ impl Memory {
             0xFEA0..=0xFEFF => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
-            Address::P1_JOYPAD => self.p1.parse_byte(value),
-            Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data = value,
-            Address::SC_SIO_CONTROL => self.sio_control = value.into(),
-            Address::UNUSED_FF03 => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
+            Address::IO_REGISTERS_START..=Address::IO_REGISTERS_END => {
+                self.io_registers.write_byte(position, value)
             }
-            Address::DIV_DIVIDER_REGISTER => self.div = 0,
-            Address::TIMA_TIMER_COUNTER => self.tima = value,
-            Address::TMA_TIMER_MODULO => self.tma = value,
-            Address::TAC_TIMER_CONTROL => self.timer_control = value.into(),
-            0xFF08..=0xFF0E => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
-            }
-            Address::IF_INTERRUPT_FLAG => self.interrupt_flag = value.into(),
-            Address::NR10_SOUND_1_SWEEP => {
-                if self.nr52.is_on() {
-                    self.nr10 = value;
-                    self.audio_1_reg_written.sweep_or_wave_onoff = true;
-                }
-            }
-            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => {
-                if self.nr52.is_on() {
-                    self.nr11 = value;
-                    self.audio_1_reg_written.length = true;
-                }
-            }
-            Address::NR12_SOUND_1_ENVELOPE => {
-                if self.nr52.is_on() {
-                    self.nr12 = value;
-                    self.audio_1_reg_written.envelope_or_wave_out_lvl = true;
-                }
-            }
-            Address::NR13_SOUND_1_FR_LO => {
-                if self.nr52.is_on() {
-                    self.nr13 = value;
-                    self.audio_1_reg_written.frequency_or_poly_counter = true;
-                }
-            }
-            Address::NR14_SOUND_1_FR_HI => {
-                if !self.nr52.is_on() {
-                    return;
-                }
-
-                self.audio_1_reg_written.control = true;
-
-                if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_channel_active(1);
-                }
-
-                self.nr14 = value;
-            }
-            Address::NR20_SOUND_2_UNUSED => {
-                if self.nr52.is_on() {
-                    self.nr20 = value;
-                }
-            }
-            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => {
-                if self.nr52.is_on() {
-                    self.nr21 = value;
-                    self.audio_2_reg_written.length = true;
-                }
-            }
-            Address::NR22_SOUND_2_ENVELOPE => {
-                if self.nr52.is_on() {
-                    self.nr22 = value;
-                    self.audio_2_reg_written.envelope_or_wave_out_lvl = true;
-                }
-            }
-            Address::NR23_SOUND_2_FR_LO => {
-                if self.nr52.is_on() {
-                    self.nr23 = value;
-                    self.audio_2_reg_written.frequency_or_poly_counter = true;
-                }
-            }
-            Address::NR24_SOUND_3_FR_HI => {
-                if !self.nr52.is_on() {
-                    return;
-                }
-
-                self.audio_2_reg_written.control = true;
-
-                if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_channel_active(2);
-                }
-
-                self.nr24 = value;
-            }
-            0xFF1A => {
-                if self.nr52.is_on() {
-                    self.nr30 = value;
-                    self.audio_3_reg_written.sweep_or_wave_onoff = true;
-                }
-            }
-            0xFF1B => {
-                if self.nr52.is_on() {
-                    self.nr31 = value;
-                    self.audio_3_reg_written.length = true;
-                }
-            }
-            0xFF1C => {
-                if self.nr52.is_on() {
-                    self.nr32 = value;
-                }
-            }
-            0xFF1D => {
-                if self.nr52.is_on() {
-                    self.nr33 = value;
-                    self.audio_3_reg_written.frequency_or_poly_counter = true;
-                }
-            }
-            0xFF1E => {
-                if !self.nr52.is_on() {
-                    return;
-                }
-
-                self.audio_3_reg_written.control = true;
-
-                if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_channel_active(3);
-                }
-
-                self.nr34 = value;
-            }
-            0xFF1F => {
-                if self.nr52.is_on() {
-                    self.nr40 = value;
-                }
-            }
-            0xFF20 => {
-                if self.nr52.is_on() {
-                    self.nr41 = value;
-                    self.audio_4_reg_written.length = true;
-                }
-            }
-            0xFF21 => {
-                if self.nr52.is_on() {
-                    self.nr42 = value;
-                    self.audio_4_reg_written.envelope_or_wave_out_lvl = true;
-                }
-            }
-            0xFF22 => {
-                if self.nr52.is_on() {
-                    self.nr43 = value;
-                    self.audio_4_reg_written.frequency_or_poly_counter = true;
-                }
-            }
-            0xFF23 => {
-                if !self.nr52.is_on() {
-                    return;
-                }
-
-                self.audio_4_reg_written.control = true;
-
-                if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_channel_active(4);
-                }
-
-                self.nr44 = value;
-            }
-            0xFF24 => {
-                if self.nr52.is_on() {
-                    self.nr50 = value;
-                }
-            }
-            0xFF25 => {
-                if self.nr52.is_on() {
-                    self.nr51 = value;
-                }
-            }
-            Address::NR52_SOUND => {
-                self.nr52 = (value & 0b10000000).into();
-
-                if self.nr52.is_on() {
-                    self.nr10 = 0;
-                    self.nr11 = 0;
-                    self.nr12 = 0;
-                    self.nr13 = 0;
-                    self.nr14 = 0;
-                    self.nr20 = 0;
-                    self.nr21 = 0;
-                    self.nr22 = 0;
-                    self.nr23 = 0;
-                    self.nr24 = 0;
-                    self.nr30 = 0;
-                    self.nr31 = 0;
-                    self.nr32 = 0;
-                    self.nr33 = 0;
-                    self.nr34 = 0;
-                    self.nr40 = 0;
-                    self.nr41 = 0;
-                    self.nr42 = 0;
-                    self.nr43 = 0;
-                    self.nr44 = 0;
-                    self.nr50 = 0;
-                    self.nr51 = 0;
-                }
-            }
-            0xFF27..=0xFF2F => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
-            }
-            0xFF30..=0xFF3F => {
-                self.wave_pattern_ram.write_byte(position - 0xFF30, value);
-                self.audio_3_reg_written.wave_pattern = true;
-            }
-            Address::LCDC => self.lcdc = value.into(),
-            Address::STAT => self.stat = value.into(),
-            Address::SCY_SCROLL_Y => self.scy = value,
-            Address::SCX_SCROLL_X => self.scx = value,
-            0xFF44 => self.ly = value.into(),
-            0xFF45 => self.lyc = value,
-            Address::DMA => self.dma = value.into(),
-            Address::BGP_BG_WIN_PALETTE => self.bgp = value,
-            Address::OBP1_OBJ_PALETTE => self.obp1 = value,
-            Address::OBP2_OBJ_PALETTE => self.obp2 = value,
-            Address::WY_WINDOW_Y_POSITION => self.wy = value,
-            Address::WX_WINDOW_X_POSITION => self.wx = value,
             0xFF4C..=0xFF7F => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
@@ -558,8 +174,8 @@ impl Memory {
     }
 
     pub fn step(&mut self, last_instruction_cycles: u8) {
-        if self.dma.step(last_instruction_cycles) {
-            let init_address = Word::from(&self.dma);
+        if self.io_registers.dma.step(last_instruction_cycles) {
+            let init_address = Word::from(&self.io_registers.dma);
 
             for i in 0..OAM_MEMORY_SECTOR_SIZE {
                 self.oam_ram.write_byte(i, self.read_byte(init_address + i));
@@ -569,18 +185,18 @@ impl Memory {
         self.remaining_div_cycles += last_instruction_cycles as u32;
 
         while self.remaining_div_cycles as i16 - 256_i16 > 0 {
-            self.div = self.div.wrapping_add(1);
+            self.io_registers.div = self.io_registers.div.wrapping_add(1);
             self.remaining_div_cycles -= 256_u32;
         }
 
-        if !self.timer_control.started {
+        if !self.io_registers.timer_control.started {
             self.remaining_timer_cycles = 0;
             return;
         }
 
         self.remaining_timer_cycles += last_instruction_cycles as u32;
 
-        let divider: u16 = match self.timer_control.input_clock_select {
+        let divider: u16 = match self.io_registers.timer_control.input_clock_select {
             0 => 1024,
             1 => 16,
             2 => 64,
@@ -589,12 +205,12 @@ impl Memory {
         };
 
         while self.remaining_timer_cycles as i16 - divider as i16 > 0 {
-            let result = self.tima.overflowing_add(1);
-            self.tima = result.0;
+            let result = self.io_registers.tima.overflowing_add(1);
+            self.io_registers.tima = result.0;
 
             if result.1 {
-                self.interrupt_flag.set_timer_overflow(true);
-                self.tima = self.tma;
+                self.io_registers.interrupt_flag.set_timer_overflow(true);
+                self.io_registers.tima = self.io_registers.tma;
             }
 
             self.remaining_timer_cycles -= divider as u32;
@@ -626,11 +242,11 @@ impl Memory {
     }
 
     pub fn interrupt_flag(&mut self) -> &mut InterruptFlag {
-        &mut self.interrupt_flag
+        &mut self.io_registers.interrupt_flag
     }
 
     pub fn joypad(&mut self) -> &mut Joypad {
-        &mut self.p1
+        &mut self.io_registers.p1
     }
 
     pub fn oam_ram(&mut self) -> &mut OamMemorySector {
@@ -640,52 +256,52 @@ impl Memory {
     pub fn set_stat_mode(&mut self, mode: STATMode) {
         match mode {
             STATMode::HBlank => {
-                if self.stat.mode_0 {
-                    self.interrupt_flag.set_lcd_stat(true);
+                if self.io_registers.stat.mode_0 {
+                    self.io_registers.interrupt_flag.set_lcd_stat(true);
                 }
             }
 
             STATMode::VBlank => {
-                if self.stat.mode_1 {
-                    self.interrupt_flag.set_lcd_stat(true);
+                if self.io_registers.stat.mode_1 {
+                    self.io_registers.interrupt_flag.set_lcd_stat(true);
                 }
 
-                self.interrupt_flag().set_vblank(true);
+                self.io_registers.interrupt_flag.set_vblank(true);
             }
             STATMode::SearchOamRam => {
-                if self.stat.mode_2 {
-                    self.interrupt_flag.set_lcd_stat(true);
+                if self.io_registers.stat.mode_2 {
+                    self.io_registers.interrupt_flag.set_lcd_stat(true);
                 }
             }
             _ => {}
         }
 
-        self.stat.set_mode(mode);
+        self.io_registers.stat.set_mode(mode);
     }
 
     pub fn ly_increment(&mut self) {
-        self.ly.increment();
+        self.io_registers.ly.increment();
         self.determine_ly_interrupt();
     }
 
     pub fn ly_reset(&mut self) {
-        self.ly.reset();
+        self.io_registers.ly.reset();
         self.determine_ly_interrupt();
     }
 
     pub fn ly_reset_wo_interrupt(&mut self) {
-        self.ly.reset();
+        self.io_registers.ly.reset();
     }
 
     fn determine_ly_interrupt(&mut self) {
-        let ly = Byte::from(self.ly.clone());
+        let ly = Byte::from(self.io_registers.ly.clone());
 
-        let new_value = ly == self.lyc;
+        let new_value = ly == self.io_registers.lyc;
 
-        self.stat.coincidence_flag = new_value;
+        self.io_registers.stat.coincidence_flag = new_value;
 
-        if self.stat.lyc_ly_coincidence && new_value {
-            self.interrupt_flag.set_lcd_stat(true);
+        if self.io_registers.stat.lyc_ly_coincidence && new_value {
+            self.io_registers.interrupt_flag.set_lcd_stat(true);
         }
     }
 
@@ -698,16 +314,16 @@ impl Memory {
         AudioRegWritten,
     ) {
         let to_return = (
-            self.audio_1_reg_written.clone(),
-            self.audio_2_reg_written.clone(),
-            self.audio_3_reg_written.clone(),
-            self.audio_4_reg_written.clone(),
+            self.io_registers.audio_1_reg_written.clone(),
+            self.io_registers.audio_2_reg_written.clone(),
+            self.io_registers.audio_3_reg_written.clone(),
+            self.io_registers.audio_4_reg_written.clone(),
         );
 
-        self.audio_1_reg_written = AudioRegWritten::default();
-        self.audio_2_reg_written = AudioRegWritten::default();
-        self.audio_3_reg_written = AudioRegWritten::default();
-        self.audio_4_reg_written = AudioRegWritten::default();
+        self.io_registers.audio_1_reg_written = AudioRegWritten::default();
+        self.io_registers.audio_2_reg_written = AudioRegWritten::default();
+        self.io_registers.audio_3_reg_written = AudioRegWritten::default();
+        self.io_registers.audio_4_reg_written = AudioRegWritten::default();
 
         to_return
     }
@@ -738,12 +354,13 @@ impl Memory {
     }
 
     pub fn set_audio_channel_inactive(&mut self, channel_n: Byte) {
-        self.nr52.set_channel_inactive(channel_n);
+        self.io_registers.nr52.set_channel_inactive(channel_n);
     }
 
     pub fn update_audio_1_frequency(&mut self, frequency: Word) {
-        self.nr13 = (frequency & 0xFF) as Byte;
-        self.nr14 = (self.nr14 & 0b11111000) | ((frequency >> 8) & 0b111) as Byte;
+        self.io_registers.nr13 = (frequency & 0xFF) as Byte;
+        self.io_registers.nr14 =
+            (self.io_registers.nr14 & 0b11111000) | ((frequency >> 8) & 0b111) as Byte;
     }
 }
 
@@ -905,6 +522,10 @@ mod tests {
     #[test]
     fn test_when_sound_is_turned_off_audio_registers_ignore_writes() {
         let mut memory = Memory::default();
+
+        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
+            memory.write_byte(position, 0x00);
+        }
 
         memory.write_byte(Address::NR52_SOUND, 0);
 

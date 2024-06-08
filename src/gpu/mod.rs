@@ -5,9 +5,9 @@ use image::{ImageBuffer, Rgba, RgbaImage};
 use parking_lot::RwLock;
 
 use crate::gpu::color::Color;
+use crate::io::stat::STATMode;
 use crate::memory::address::Address;
 use crate::memory::oam_entry::OamEntry;
-use crate::memory::stat::STATMode;
 use crate::memory::Memory;
 use crate::utils::math::word_to_two_bytes;
 use crate::{Byte, Word};
@@ -49,8 +49,8 @@ impl Gpu {
 
         {
             let memory = self.memory.read();
-            mode = memory.stat.mode();
-            lcdc = memory.lcdc;
+            mode = memory.io_registers.stat.mode();
+            lcdc = memory.io_registers.lcdc;
         }
 
         if !lcdc.lcd_control_operation {
@@ -86,7 +86,7 @@ impl Gpu {
                 let mut memory = self.memory.write();
                 memory.ly_increment();
 
-                if memory.ly.has_reached_end_of_screen() {
+                if memory.io_registers.ly.has_reached_end_of_screen() {
                     memory.set_stat_mode(STATMode::VBlank);
                 } else {
                     memory.set_stat_mode(STATMode::SearchOamRam);
@@ -103,7 +103,7 @@ impl Gpu {
                 let mut memory = self.memory.write();
                 memory.ly_increment();
 
-                if memory.ly.has_reached_end_of_vblank() {
+                if memory.io_registers.ly.has_reached_end_of_vblank() {
                     // Enter Searching OAM-RAM mode
                     memory.set_stat_mode(STATMode::SearchOamRam);
                     memory.ly_reset();
@@ -126,13 +126,13 @@ impl Gpu {
         self.sprites_to_be_drawn_with_priority.clear();
         self.sprites_to_be_drawn_without_priority.clear();
 
-        let lcdc = &memory.lcdc;
+        let lcdc = &memory.io_registers.lcdc;
 
         if !lcdc.obj_sprite_display {
             return;
         }
 
-        let ly: u8 = memory.ly.clone().into();
+        let ly: u8 = memory.io_registers.ly.clone().into();
         let sprite_size = if lcdc.obj_sprite_size { 16 } else { 8 };
 
         for oam_entry in memory.oam_ram() {
@@ -176,17 +176,17 @@ impl Gpu {
             let memory = self.memory.read();
 
             // Draw pixel line
-            lcdc = memory.lcdc;
+            lcdc = memory.io_registers.lcdc;
             scx = memory.scx();
             scy = memory.scy();
             bgp = memory.bgp();
 
-            screen_y = Byte::from(memory.ly.clone()) as u16;
+            screen_y = Byte::from(memory.io_registers.ly.clone()) as u16;
 
             sprite_palette0 = memory.read_byte(Address::OBP1_OBJ_PALETTE);
             sprite_palette1 = memory.read_byte(Address::OBP2_OBJ_PALETTE);
 
-            sprite_size = if memory.lcdc.obj_sprite_size {
+            sprite_size = if memory.io_registers.lcdc.obj_sprite_size {
                 16i16
             } else {
                 8i16
@@ -261,8 +261,8 @@ impl Gpu {
 
                 {
                     let memory = self.memory.read();
-                    wy = memory.wy;
-                    wx = memory.wx;
+                    wy = memory.io_registers.wy;
+                    wx = memory.io_registers.wx;
                 }
 
                 // Window

@@ -6,6 +6,7 @@ impl Address {
     pub const BOOTSTRAP_ROM_START: Word = 0x0001;
     pub const CARTRIDGE_START: Word = 0x0100;
     pub const IO_REGISTERS_START: Word = 0xFF00;
+    pub const IO_REGISTERS_END: Word = 0xFF4B;
 
     /*
        I/O Registers
@@ -31,6 +32,9 @@ impl Address {
     pub const NR23_SOUND_2_FR_LO: Word = 0xFF18;
     pub const NR24_SOUND_3_FR_HI: Word = 0xFF19;
     pub const NR52_SOUND: Word = 0xFF26;
+
+    pub const UNUSED_FF27: Word = 0xFF27;
+    pub const UNUSED_FF2F: Word = 0xFF2F;
 
     pub const LCDC: Word = 0xFF40;
     pub const STAT: Word = 0xFF41;

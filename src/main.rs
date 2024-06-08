@@ -3,9 +3,9 @@ mod cartridge;
 mod configuration;
 mod cpu;
 mod gpu;
+mod io;
 mod memory;
 mod utils;
-mod io;
 
 extern crate anyhow;
 extern crate cpal;
@@ -17,11 +17,11 @@ use crate::audio::AudioUnit;
 use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
-use io::joypad::JoypadHandler;
 use crate::memory::bootstrap_rom::BootstrapRom;
 use cpu::Cpu;
 use gpu::Gpu;
 use image::ImageBuffer;
+use io::joypad::JoypadHandler;
 use memory::Memory;
 use parking_lot::RwLock;
 use piston_window::*;
@@ -102,16 +102,16 @@ fn main() {
                     memory_thread.step(last_instruction_cycles);
 
                     check_vblank = memory_thread.interrupt_enable().vblank
-                        && memory_thread.interrupt_flag.vblank;
+                        && memory_thread.io_registers.interrupt_flag.vblank;
 
                     check_lcd_stat = memory_thread.interrupt_enable().lcd_stat
-                        && memory_thread.interrupt_flag.lcd_stat;
+                        && memory_thread.io_registers.interrupt_flag.lcd_stat;
 
                     check_timer_overflow = memory_thread.interrupt_enable().timer_overflow
-                        && memory_thread.interrupt_flag.timer_overflow;
+                        && memory_thread.io_registers.interrupt_flag.timer_overflow;
 
                     check_joystick = memory_thread.interrupt_enable().p10_13_transition
-                        && memory_thread.interrupt_flag.p10_13_transition;
+                        && memory_thread.io_registers.interrupt_flag.p10_13_transition;
                 }
 
                 {
@@ -208,7 +208,7 @@ fn main() {
 
                 clear(Color::white().to_f_rgba(), graphics);
 
-                if !memory.lcdc.lcd_control_operation {
+                if !memory.io_registers.lcdc.lcd_control_operation {
                     return;
                 }
 

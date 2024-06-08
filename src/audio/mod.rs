@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
+use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, CpalAudioUnitOutput};
 
 use crate::memory::address::Address;
 use crate::memory::memory_sector::MemorySector;
-use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::memory::{AudioRegWritten, Memory};
 
 pub mod audio_unit_output;
@@ -185,7 +185,13 @@ impl AudioUnit {
         if changes.wave_pattern {
             self.auo.update_wave_pattern(WavePatternRam {
                 data: MemorySector::with_data(
-                    self.memory.read().wave_pattern_ram.data.data.clone(),
+                    self.memory
+                        .read()
+                        .io_registers
+                        .wave_pattern_ram
+                        .data
+                        .data
+                        .clone(),
                 ),
             });
         }

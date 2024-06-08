@@ -2306,7 +2306,7 @@ impl Cpu {
                 let mut memory = self.memory.write();
                 memory.interrupt_flag().set_lcd_stat(false);
 
-                lcd_enabled = memory.lcdc.lcd_control_operation;
+                lcd_enabled = memory.io_registers.lcdc.lcd_control_operation;
             }
 
             if lcd_enabled {

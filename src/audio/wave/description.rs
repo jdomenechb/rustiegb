@@ -3,7 +3,7 @@ use crate::audio::registers::{
     FrequencyUpdatable, LengthRegisterUpdatable, LengthUpdatable,
 };
 use crate::audio::wave::WaveOutputLevel;
-use crate::memory::wave_pattern_ram::WavePatternRam;
+use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, Word};
 
 #[derive(Default)]

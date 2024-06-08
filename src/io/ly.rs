@@ -6,11 +6,11 @@ pub struct LY {
 }
 
 impl LY {
-    pub(in crate::memory) fn increment(&mut self) {
+    pub(crate) fn increment(&mut self) {
         self.ly += 1
     }
 
-    pub(in crate::memory) fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         self.ly = 0
     }
 

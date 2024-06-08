@@ -12,8 +12,8 @@ use crate::audio::registers::{
 };
 use crate::audio::wave::WaveDescription;
 use crate::audio::wave::WaveOutputLevel;
+use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::ReadMemory;
-use crate::memory::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, Memory, Word};
 
 pub struct CpalAudioUnitOutput {
