@@ -60,11 +60,7 @@ impl Memory {
         let byte = self.internally_read_byte(position).unwrap_or(0xFF);
 
         match position {
-            Address::NR20_SOUND_2_UNUSED => 0xFF,
-            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => byte | 0b00111111, // 0x3F
-            Address::NR23_SOUND_2_FR_LO => 0xFF,
-            Address::NR24_SOUND_3_FR_HI => byte | 0b10111111, // 0xBF
-            0xFF1A => byte | 0b01111111,                      // 0x7F
+            0xFF1A => byte | 0b01111111, // 0x7F
             0xFF1B => 0xFF,
             0xFF1C => byte | 0b10011111, // 0x9F
             0xFF1D => byte | 0xFF,
@@ -169,37 +165,34 @@ mod tests {
 
     fn check_basic_audio_registers_are_reset(memory: &mut Memory) {
         let items = vec![
-            // NR10
+            // NR1X
             (Address::NR10_SOUND_1_SWEEP, 0x80),
             (Address::NR11_SOUND_1_WAVE_PATTERN_DUTY, 0x3F),
             (Address::NR12_SOUND_1_ENVELOPE, 0x00),
             (Address::NR13_SOUND_1_FR_LO, 0xFF),
             (Address::NR14_SOUND_1_FR_HI, 0xBF),
-            /*
-            // NR20
+            // NR2X
             (Address::NR20_SOUND_2_UNUSED, 0xFF),
             (Address::NR21_SOUND_2_WAVE_PATTERN_DUTY, 0x3F),
             (Address::NR22_SOUND_2_ENVELOPE, 0x00),
             (Address::NR23_SOUND_2_FR_LO, 0xFF),
             (Address::NR24_SOUND_3_FR_HI, 0xBF),
-            // NR30
+            // NR3X
             (0xFF1A, 0x7F),
             (0xFF1B, 0xFF),
             (0xFF1C, 0x9F),
             (0xFF1D, 0xFF),
             (0xFF1E, 0xBF),
-            // NR40
+            // NR4X
             (0xFF1F, 0xFF),
             (0xFF20, 0xFF),
             (0xFF21, 0x00),
             (0xFF22, 0x00),
             (0xFF23, 0xBF),
-            // NR50
+            // NR5X
             (0xFF24, 0x00),
             (0xFF25, 0x00),
             // NR52 Skipped as it is special
-
-             */
         ];
 
         for item in items {
