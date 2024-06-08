@@ -1,4 +1,3 @@
-use crate::io::UpdatableRegister;
 use crate::Byte;
 
 #[derive(Clone)]
@@ -19,10 +18,8 @@ impl NR52 {
     pub fn set_channel_inactive(&mut self, channel: u8) {
         self.value &= !(0b1 << (channel - 1));
     }
-}
 
-impl UpdatableRegister for NR52 {
-    fn update(&mut self, value: Byte) {
+    pub fn update(&mut self, value: Byte) {
         self.value = (value & 0b10000000) | 0b01110000
     }
 }

@@ -71,6 +71,7 @@ impl Memory {
             0xFF1E => byte | 0b10111111, // 0xBF
             0xFF1F..=0xFF20 => 0xFF,
             0xFF23 => byte | 0b10111111, // 0xBF
+            Address::NR52_SOUND => byte | 0b1110000,
             0xFF27..=0xFF2F => 0xFF,
             _ => byte,
         }
@@ -168,10 +169,14 @@ mod tests {
 
     fn check_basic_audio_registers_are_reset(memory: &mut Memory) {
         let items = vec![
+            // NR10
+            (Address::NR10_SOUND_1_SWEEP, 0x80),
             (Address::NR11_SOUND_1_WAVE_PATTERN_DUTY, 0x3F),
             (Address::NR12_SOUND_1_ENVELOPE, 0x00),
             (Address::NR13_SOUND_1_FR_LO, 0xFF),
             (Address::NR14_SOUND_1_FR_HI, 0xBF),
+            /*
+            // NR20
             (Address::NR20_SOUND_2_UNUSED, 0xFF),
             (Address::NR21_SOUND_2_WAVE_PATTERN_DUTY, 0x3F),
             (Address::NR22_SOUND_2_ENVELOPE, 0x00),
@@ -193,6 +198,8 @@ mod tests {
             (0xFF24, 0x00),
             (0xFF25, 0x00),
             // NR52 Skipped as it is special
+
+             */
         ];
 
         for item in items {

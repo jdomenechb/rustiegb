@@ -1,6 +1,4 @@
 use crate::bus::address::Address;
-use crate::io::audio_registers::nr10::NR10;
-use crate::io::audio_registers::nr14::NR14;
 use crate::io::audio_registers::nr52::NR52;
 use crate::io::audio_registers::nrxx::NRxx;
 use crate::io::audio_registers::AudioRegWritten;
@@ -17,7 +15,6 @@ use crate::io::stat::{STATMode, Stat};
 use crate::io::tima::Tima;
 use crate::io::timer_control::TimerControl;
 use crate::io::wave_pattern_ram::WavePatternRam;
-use crate::io::{ResettableRegister, UpdatableRegister};
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 
@@ -31,11 +28,11 @@ pub struct IORegisters {
     pub timer_control: TimerControl,
     pub interrupt_flag: InterruptFlag,
 
-    nr10: NR10,
+    nr10: NRxx,
     nr11: NRxx,
     nr12: NRxx,
     nr13: NRxx,
-    nr14: NR14,
+    nr14: NRxx,
 
     nr20: Byte,
     nr21: Byte,
@@ -146,8 +143,8 @@ impl IORegisters {
     }
 
     pub fn update_audio_1_frequency(&mut self, frequency: Word) {
-        self.nr13.value = (frequency & 0xFF) as Byte;
-        self.nr14.update_frequency(frequency)
+        self.nr13.update_low_frequency(frequency);
+        self.nr14.update_high_frequency(frequency)
     }
 
     pub fn read_audio_registers(&self, channel: u8) -> AudioRegisters {
@@ -239,11 +236,11 @@ impl Default for IORegisters {
             tma: 0,
             timer_control: TimerControl::default(),
             interrupt_flag: InterruptFlag::new(),
-            nr10: NR10::default(),
-            nr11: NRxx::new(0xBF),
+            nr10: NRxx::new_with_used_bits(0x80, 0b0111_1111),
+            nr11: NRxx::new_with_read_ored_bits(0xBF, 0x3F),
             nr12: NRxx::new(0xF3),
-            nr13: NRxx::new(0x00),
-            nr14: NR14::default(),
+            nr13: NRxx::new_with_read_ored_bits(0xFF, 0xFF),
+            nr14: NRxx::new_with(0xBF, 0b1100_0111, 0xBF),
             nr20: 0xFF,
             nr21: 0x3F,
             nr22: 0x00,
@@ -297,11 +294,11 @@ impl ReadMemory for IORegisters {
             0xFF08..=0xFF0E => 0xFF,
             Address::IF_INTERRUPT_FLAG => (&self.interrupt_flag).into(),
 
-            Address::NR10_SOUND_1_SWEEP => self.nr10.value,
-            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => self.nr11.value,
-            Address::NR12_SOUND_1_ENVELOPE => self.nr12.value,
-            Address::NR13_SOUND_1_FR_LO => self.nr13.value,
-            Address::NR14_SOUND_1_FR_HI => self.nr14.value,
+            Address::NR10_SOUND_1_SWEEP => self.nr10.read(),
+            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => self.nr11.read(),
+            Address::NR12_SOUND_1_ENVELOPE => self.nr12.read(),
+            Address::NR13_SOUND_1_FR_LO => self.nr13.read(),
+            Address::NR14_SOUND_1_FR_HI => self.nr14.read(),
 
             Address::NR20_SOUND_2_UNUSED => self.nr20,
             Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => self.nr21,
@@ -365,19 +362,19 @@ impl WriteMemory for IORegisters {
             }
             Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => {
                 if self.nr52.is_on() {
-                    self.nr11.value = value;
+                    self.nr11.update(value);
                     self.audio_1_reg_written.length = true;
                 }
             }
             Address::NR12_SOUND_1_ENVELOPE => {
                 if self.nr52.is_on() {
-                    self.nr12.value = value;
+                    self.nr12.update(value);
                     self.audio_1_reg_written.envelope_or_wave_out_lvl = true;
                 }
             }
             Address::NR13_SOUND_1_FR_LO => {
                 if self.nr52.is_on() {
-                    self.nr13.value = value;
+                    self.nr13.update(value);
                     self.audio_1_reg_written.frequency_or_poly_counter = true;
                 }
             }
