@@ -15,6 +15,10 @@ mod tima;
 mod timer_control;
 pub mod wave_pattern_ram;
 
+trait ResettableRegister {
+    fn reset(&mut self) {}
+}
+
 trait UpdatableRegister {
     fn update(&mut self, value: Byte);
     fn reset(&mut self) {

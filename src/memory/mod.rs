@@ -60,9 +60,6 @@ impl Memory {
         let byte = self.internally_read_byte(position).unwrap_or(0xFF);
 
         match position {
-            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => byte | 0b00111111, // 0x3F
-            Address::NR13_SOUND_1_FR_LO => 0xFF,
-            Address::NR14_SOUND_1_FR_HI => byte | 0b10111111, // 0xBF
             Address::NR20_SOUND_2_UNUSED => 0xFF,
             Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => byte | 0b00111111, // 0x3F
             Address::NR23_SOUND_2_FR_LO => 0xFF,
