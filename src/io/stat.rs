@@ -85,8 +85,8 @@ impl From<&Stat> for Byte {
 
 #[cfg(test)]
 mod tests {
-    use crate::Byte;
     use crate::io::stat::Stat;
+    use crate::Byte;
 
     #[test]
     fn test_ok() {

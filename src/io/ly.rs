@@ -2,35 +2,23 @@ use crate::Byte;
 
 #[derive(Default, Clone)]
 pub struct LY {
-    ly: Byte,
+    pub value: Byte,
 }
 
 impl LY {
     pub(crate) fn increment(&mut self) {
-        self.ly += 1
+        self.value += 1
     }
 
     pub(crate) fn reset(&mut self) {
-        self.ly = 0
+        self.value = 0
     }
 
     pub fn has_reached_end_of_screen(&self) -> bool {
-        self.ly >= 143
+        self.value >= 143
     }
 
     pub fn has_reached_end_of_vblank(&self) -> bool {
-        self.ly > 153
-    }
-}
-
-impl From<Byte> for LY {
-    fn from(value: Byte) -> Self {
-        Self { ly: value }
-    }
-}
-
-impl From<LY> for Byte {
-    fn from(original: LY) -> Self {
-        original.ly
+        self.value > 153
     }
 }

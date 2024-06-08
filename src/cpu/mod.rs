@@ -4,6 +4,7 @@ use parking_lot::RwLock;
 
 use crate::cpu::alu::Alu;
 use crate::cpu::registers::{ByteRegister, CpuRegisters, WordRegister};
+use crate::io::registers::IORegisters;
 use crate::memory::address::Address;
 use crate::memory::Memory;
 use crate::{Byte, Word};
@@ -13,6 +14,7 @@ pub mod registers;
 
 pub struct Cpu {
     memory: Arc<RwLock<Memory>>,
+    io_registers: Arc<RwLock<IORegisters>>,
 
     pub registers: CpuRegisters,
     alu: Alu,
@@ -28,9 +30,14 @@ pub struct Cpu {
 impl Cpu {
     pub const AVAILABLE_CCYCLES_PER_FRAME: i32 = 70221;
 
-    pub fn new(memory: Arc<RwLock<Memory>>, bootstrap: bool) -> Cpu {
+    pub fn new(
+        memory: Arc<RwLock<Memory>>,
+        io_registers: Arc<RwLock<IORegisters>>,
+        bootstrap: bool,
+    ) -> Cpu {
         Cpu {
             memory,
+            io_registers,
 
             registers: CpuRegisters::new(bootstrap),
             alu: Alu {},
@@ -2290,7 +2297,7 @@ impl Cpu {
     pub fn vblank_interrupt(&mut self) {
         if self.ime {
             {
-                self.memory.write().interrupt_flag().set_vblank(false);
+                self.io_registers.write().interrupt_flag.set_vblank(false);
             }
 
             self.interrupt_vv(0x40)
@@ -2302,11 +2309,12 @@ impl Cpu {
     pub fn lcd_stat_interrupt(&mut self) {
         if self.ime {
             let lcd_enabled;
-            {
-                let mut memory = self.memory.write();
-                memory.interrupt_flag().set_lcd_stat(false);
 
-                lcd_enabled = memory.io_registers.lcdc.lcd_control_operation;
+            {
+                let mut io_registers = self.io_registers.write();
+                io_registers.interrupt_flag.set_lcd_stat(false);
+
+                lcd_enabled = io_registers.lcdc.lcd_control_operation;
             }
 
             if lcd_enabled {
@@ -2320,9 +2328,9 @@ impl Cpu {
     pub fn timer_overflow_interrupt(&mut self) {
         if self.ime {
             {
-                self.memory
+                self.io_registers
                     .write()
-                    .interrupt_flag()
+                    .interrupt_flag
                     .set_timer_overflow(false);
             }
 
@@ -2335,9 +2343,9 @@ impl Cpu {
     pub fn p10_p13_transition_interrupt(&mut self) {
         if self.ime {
             {
-                self.memory
+                self.io_registers
                     .write()
-                    .interrupt_flag()
+                    .interrupt_flag
                     .set_p10_p13_transition(false);
             }
 
@@ -2404,6 +2412,7 @@ mod test {
 
     use crate::cpu::registers::{ByteRegister, WordRegister};
     use crate::cpu::Cpu;
+    use crate::gpu::color::Color;
     use crate::memory::Memory;
 
     #[test_case(0x0000, 0x0001)]
@@ -2416,7 +2425,7 @@ mod test {
             WordRegister::SP,
         ];
 
-        let mut cpu = Cpu::new(Arc::new(RwLock::new(Memory::default())), false);
+        let mut cpu = create_empty_cpu();
 
         for register in registers.iter() {
             cpu.registers.write_word(register, a);
@@ -2438,7 +2447,7 @@ mod test {
             WordRegister::SP,
         ];
 
-        let mut cpu = Cpu::new(Arc::new(RwLock::new(Memory::default())), false);
+        let mut cpu = create_empty_cpu();
 
         for register in registers.iter() {
             cpu.registers.write_word(register, a);
@@ -2464,7 +2473,7 @@ mod test {
         expected_c: bool,
     ) {
         let registers = [WordRegister::BC, WordRegister::DE, WordRegister::SP];
-        let mut cpu = Cpu::new(Arc::new(RwLock::new(Memory::default())), false);
+        let mut cpu = create_empty_cpu();
 
         for register in registers.iter() {
             cpu.registers.write_word(&WordRegister::HL, a);
@@ -2481,5 +2490,13 @@ mod test {
             assert_eq!(expected_h, cpu.registers.is_flag_h());
             assert_eq!(expected_c, cpu.registers.is_flag_c());
         }
+    }
+
+    fn create_empty_cpu() -> Cpu {
+        Cpu::new(
+            Arc::new(RwLock::new(Memory::default())),
+            Arc::new(RwLock::new(IORegisters::default())),
+            false,
+        )
     }
 }

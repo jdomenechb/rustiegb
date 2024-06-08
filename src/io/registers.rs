@@ -1,3 +1,4 @@
+use crate::io::div::Div;
 use crate::io::dma::Dma;
 use crate::io::interrupt_flag::InterruptFlag;
 use crate::io::joypad::Joypad;
@@ -6,6 +7,7 @@ use crate::io::ly::LY;
 use crate::io::nr52::NR52;
 use crate::io::sio_control::SioControl;
 use crate::io::stat::Stat;
+use crate::io::tima::Tima;
 use crate::io::timer_control::TimerControl;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::address::Address;
@@ -14,13 +16,13 @@ use crate::memory::AudioRegWritten;
 use crate::{Byte, Word};
 
 pub struct IORegisters {
-    pub(crate) p1: Joypad,
+    pub p1: Joypad,
     serial_transfer_data: Byte,
     sio_control: SioControl,
-    pub(crate) div: Byte,
-    pub(crate) tima: Byte,
-    pub(crate) tma: Byte,
-    pub(crate) timer_control: TimerControl,
+    pub div: Div,
+    pub tima: Tima,
+    pub tma: Byte,
+    pub timer_control: TimerControl,
     pub interrupt_flag: InterruptFlag,
 
     nr10: Byte,
@@ -85,14 +87,42 @@ pub struct IORegisters {
     pub(crate) audio_4_reg_written: AudioRegWritten,
 }
 
+impl IORegisters {
+    pub fn step(&mut self, last_instruction_cycles: u8) -> Option<Word> {
+        let mut to_return = None;
+
+        if self.dma.step(last_instruction_cycles) {
+            to_return = Some(Word::from(&self.dma));
+        }
+
+        self.div.step(last_instruction_cycles);
+
+        if !self.timer_control.started {
+            self.tima.reset_cycles();
+            return to_return;
+        }
+
+        let tima_cycles_overflowed = self
+            .tima
+            .step(last_instruction_cycles, self.timer_control.get_divider());
+
+        if tima_cycles_overflowed {
+            self.interrupt_flag.set_timer_overflow(true);
+            self.tima.value = self.tma;
+        }
+
+        to_return
+    }
+}
+
 impl Default for IORegisters {
     fn default() -> Self {
         Self {
             p1: Joypad::new(),
             serial_transfer_data: 0,
             sio_control: SioControl::default(),
-            div: 0,
-            tima: 0,
+            div: Div::default(),
+            tima: Tima::default(),
             tma: 0,
             timer_control: TimerControl::default(),
             interrupt_flag: InterruptFlag::new(),
@@ -147,8 +177,8 @@ impl ReadMemory for IORegisters {
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data,
             Address::SC_SIO_CONTROL => (&self.sio_control).into(),
             Address::UNUSED_FF03 => 0xFF,
-            Address::DIV_DIVIDER_REGISTER => self.div,
-            Address::TIMA_TIMER_COUNTER => self.tima,
+            Address::DIV_DIVIDER_REGISTER => self.div.value,
+            Address::TIMA_TIMER_COUNTER => self.tima.value,
             Address::TMA_TIMER_MODULO => self.tma,
             0xFF08..=0xFF0E => 0xFF,
             Address::IF_INTERRUPT_FLAG => (&self.interrupt_flag).into(),
@@ -180,7 +210,7 @@ impl ReadMemory for IORegisters {
             Address::STAT => (&self.stat).into(),
             Address::SCY_SCROLL_Y => self.scy,
             Address::SCX_SCROLL_X => self.scx,
-            0xFF44 => self.ly.clone().into(),
+            0xFF44 => self.ly.value,
             0xFF45 => self.lyc,
             Address::DMA => (&self.dma).into(),
             Address::BGP_BG_WIN_PALETTE => self.bgp,
@@ -202,8 +232,8 @@ impl WriteMemory for IORegisters {
             Address::UNUSED_FF03 => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
-            Address::DIV_DIVIDER_REGISTER => self.div = 0,
-            Address::TIMA_TIMER_COUNTER => self.tima = value,
+            Address::DIV_DIVIDER_REGISTER => self.div.reset_value(),
+            Address::TIMA_TIMER_COUNTER => self.tima.value = value,
             Address::TMA_TIMER_MODULO => self.tma = value,
             Address::TAC_TIMER_CONTROL => self.timer_control = value.into(),
             0xFF08..=0xFF0E => {
@@ -404,7 +434,7 @@ impl WriteMemory for IORegisters {
             Address::STAT => self.stat = value.into(),
             Address::SCY_SCROLL_Y => self.scy = value,
             Address::SCX_SCROLL_X => self.scx = value,
-            0xFF44 => self.ly = value.into(),
+            0xFF44 => self.ly.value = value,
             0xFF45 => self.lyc = value,
             Address::DMA => self.dma = value.into(),
             Address::BGP_BG_WIN_PALETTE => self.bgp = value,

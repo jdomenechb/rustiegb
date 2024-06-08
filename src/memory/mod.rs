@@ -1,6 +1,4 @@
 use crate::cartridge::Cartridge;
-use crate::io::interrupt_flag::InterruptFlag;
-use crate::io::joypad::Joypad;
 use crate::io::registers::IORegisters;
 use crate::io::stat::STATMode;
 use crate::memory::address::Address;
@@ -14,6 +12,8 @@ use crate::memory::oam_memory_sector::{OamMemorySector, OAM_MEMORY_SECTOR_SIZE};
 use crate::memory::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use crate::utils::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::{Byte, SignedByte, Word};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 pub mod address;
 pub mod audio_registers;
@@ -59,31 +59,29 @@ pub struct Memory {
     internal_ram_8k: InternalRam8kMemorySector,
     pub oam_ram: OamMemorySector,
 
-    pub io_registers: IORegisters,
+    pub io_registers: Arc<RwLock<IORegisters>>,
 
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
     pub interrupt_enable: InterruptEnable,
-
-    // -- Other
-    remaining_timer_cycles: u32,
-    remaining_div_cycles: u32,
 }
 
 impl Memory {
-    pub fn new(cartridge: Cartridge, bootstrap_rom: Option<BootstrapRom>) -> Self {
+    pub fn new(
+        io_registers: Arc<RwLock<IORegisters>>,
+        cartridge: Cartridge,
+        bootstrap_rom: Option<BootstrapRom>,
+    ) -> Self {
         Self {
             bootstrap_rom,
             cartridge,
             video_ram: VideoRam8kMemorySector::default(),
             switchable_ram_bank: InternalRam8kMemorySector::default(),
             internal_ram_8k: InternalRam8kMemorySector::default(),
-            io_registers: IORegisters::default(),
+            io_registers,
             internal_ram: InternalRamMemorySector::default(),
             interrupt_enable: InterruptEnable::default(),
             oam_ram: OamMemorySector::default(),
-            remaining_timer_cycles: 0,
-            remaining_div_cycles: 0,
         }
     }
 
@@ -127,7 +125,7 @@ impl Memory {
             0xFE00..=0xFE9F => Some(self.oam_ram.read_byte(position - 0xFE00)),
             Address::UNUSED_FF27..=Address::UNUSED_FF2F => None,
             Address::IO_REGISTERS_START..=Address::IO_REGISTERS_END => {
-                Some(self.io_registers.read_byte(position))
+                Some(self.io_registers.read().read_byte(position))
             }
             0xFF4D => Some(0xFF),
             0xFF80..=0xFFFE => Some(self.internal_ram.read_byte(position - 0xFF80)),
@@ -156,7 +154,7 @@ impl Memory {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
             Address::IO_REGISTERS_START..=Address::IO_REGISTERS_END => {
-                self.io_registers.write_byte(position, value)
+                self.io_registers.write().write_byte(position, value)
             }
             0xFF4C..=0xFF7F => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
@@ -174,46 +172,18 @@ impl Memory {
     }
 
     pub fn step(&mut self, last_instruction_cycles: u8) {
-        if self.io_registers.dma.step(last_instruction_cycles) {
-            let init_address = Word::from(&self.io_registers.dma);
-
-            for i in 0..OAM_MEMORY_SECTOR_SIZE {
-                self.oam_ram.write_byte(i, self.read_byte(init_address + i));
-            }
-        }
-
-        self.remaining_div_cycles += last_instruction_cycles as u32;
-
-        while self.remaining_div_cycles as i16 - 256_i16 > 0 {
-            self.io_registers.div = self.io_registers.div.wrapping_add(1);
-            self.remaining_div_cycles -= 256_u32;
-        }
-
-        if !self.io_registers.timer_control.started {
-            self.remaining_timer_cycles = 0;
-            return;
-        }
-
-        self.remaining_timer_cycles += last_instruction_cycles as u32;
-
-        let divider: u16 = match self.io_registers.timer_control.input_clock_select {
-            0 => 1024,
-            1 => 16,
-            2 => 64,
-            3 => 256,
-            _ => panic!("Invalid input clock select"),
+        let dma_init_address = {
+            let mut io_registers = self.io_registers.write();
+            io_registers.step(last_instruction_cycles)
         };
 
-        while self.remaining_timer_cycles as i16 - divider as i16 > 0 {
-            let result = self.io_registers.tima.overflowing_add(1);
-            self.io_registers.tima = result.0;
+        if dma_init_address.is_some() {
+            let dma_init_address = dma_init_address.unwrap();
 
-            if result.1 {
-                self.io_registers.interrupt_flag.set_timer_overflow(true);
-                self.io_registers.tima = self.io_registers.tma;
+            for i in 0..OAM_MEMORY_SECTOR_SIZE {
+                self.oam_ram
+                    .write_byte(i, self.read_byte(dma_init_address + i));
             }
-
-            self.remaining_timer_cycles -= divider as u32;
         }
     }
 
@@ -241,67 +211,62 @@ impl Memory {
         &self.interrupt_enable
     }
 
-    pub fn interrupt_flag(&mut self) -> &mut InterruptFlag {
-        &mut self.io_registers.interrupt_flag
-    }
-
-    pub fn joypad(&mut self) -> &mut Joypad {
-        &mut self.io_registers.p1
-    }
-
     pub fn oam_ram(&mut self) -> &mut OamMemorySector {
         &mut self.oam_ram
     }
 
     pub fn set_stat_mode(&mut self, mode: STATMode) {
+        let mut io_registers = self.io_registers.write();
         match mode {
             STATMode::HBlank => {
-                if self.io_registers.stat.mode_0 {
-                    self.io_registers.interrupt_flag.set_lcd_stat(true);
+                if io_registers.stat.mode_0 {
+                    io_registers.interrupt_flag.set_lcd_stat(true);
                 }
             }
 
             STATMode::VBlank => {
-                if self.io_registers.stat.mode_1 {
-                    self.io_registers.interrupt_flag.set_lcd_stat(true);
+                if io_registers.stat.mode_1 {
+                    io_registers.interrupt_flag.set_lcd_stat(true);
                 }
 
-                self.io_registers.interrupt_flag.set_vblank(true);
+                io_registers.interrupt_flag.set_vblank(true);
             }
             STATMode::SearchOamRam => {
-                if self.io_registers.stat.mode_2 {
-                    self.io_registers.interrupt_flag.set_lcd_stat(true);
+                if io_registers.stat.mode_2 {
+                    io_registers.interrupt_flag.set_lcd_stat(true);
                 }
             }
             _ => {}
         }
 
-        self.io_registers.stat.set_mode(mode);
+        io_registers.stat.set_mode(mode);
     }
 
     pub fn ly_increment(&mut self) {
-        self.io_registers.ly.increment();
+        self.io_registers.write().ly.increment();
         self.determine_ly_interrupt();
     }
 
     pub fn ly_reset(&mut self) {
-        self.io_registers.ly.reset();
+        self.io_registers.write().ly.reset();
         self.determine_ly_interrupt();
     }
 
     pub fn ly_reset_wo_interrupt(&mut self) {
-        self.io_registers.ly.reset();
+        self.io_registers.write().ly.reset();
     }
 
     fn determine_ly_interrupt(&mut self) {
-        let ly = Byte::from(self.io_registers.ly.clone());
+        let mut io_registers = self.io_registers.write();
 
-        let new_value = ly == self.io_registers.lyc;
+        let ly = io_registers.ly.value;
 
-        self.io_registers.stat.coincidence_flag = new_value;
+        let new_value = ly == io_registers.lyc;
 
-        if self.io_registers.stat.lyc_ly_coincidence && new_value {
-            self.io_registers.interrupt_flag.set_lcd_stat(true);
+        io_registers.stat.coincidence_flag = new_value;
+
+        if io_registers.stat.lyc_ly_coincidence && new_value {
+            io_registers.interrupt_flag.set_lcd_stat(true);
         }
     }
 
@@ -313,17 +278,19 @@ impl Memory {
         AudioRegWritten,
         AudioRegWritten,
     ) {
+        let mut io_registers = self.io_registers.write();
+
         let to_return = (
-            self.io_registers.audio_1_reg_written.clone(),
-            self.io_registers.audio_2_reg_written.clone(),
-            self.io_registers.audio_3_reg_written.clone(),
-            self.io_registers.audio_4_reg_written.clone(),
+            io_registers.audio_1_reg_written.clone(),
+            io_registers.audio_2_reg_written.clone(),
+            io_registers.audio_3_reg_written.clone(),
+            io_registers.audio_4_reg_written.clone(),
         );
 
-        self.io_registers.audio_1_reg_written = AudioRegWritten::default();
-        self.io_registers.audio_2_reg_written = AudioRegWritten::default();
-        self.io_registers.audio_3_reg_written = AudioRegWritten::default();
-        self.io_registers.audio_4_reg_written = AudioRegWritten::default();
+        io_registers.audio_1_reg_written = AudioRegWritten::default();
+        io_registers.audio_2_reg_written = AudioRegWritten::default();
+        io_registers.audio_3_reg_written = AudioRegWritten::default();
+        io_registers.audio_4_reg_written = AudioRegWritten::default();
 
         to_return
     }
@@ -354,13 +321,16 @@ impl Memory {
     }
 
     pub fn set_audio_channel_inactive(&mut self, channel_n: Byte) {
-        self.io_registers.nr52.set_channel_inactive(channel_n);
+        self.io_registers
+            .write()
+            .nr52
+            .set_channel_inactive(channel_n);
     }
 
     pub fn update_audio_1_frequency(&mut self, frequency: Word) {
-        self.io_registers.nr13 = (frequency & 0xFF) as Byte;
-        self.io_registers.nr14 =
-            (self.io_registers.nr14 & 0b11111000) | ((frequency >> 8) & 0b111) as Byte;
+        let mut io_registers = self.io_registers.write();
+        io_registers.nr13 = (frequency & 0xFF) as Byte;
+        io_registers.nr14 = (io_registers.nr14 & 0b11111000) | ((frequency >> 8) & 0b111) as Byte;
     }
 }
 

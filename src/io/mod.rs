@@ -1,3 +1,4 @@
+mod div;
 mod dma;
 pub mod interrupt_flag;
 pub mod joypad;
@@ -7,5 +8,6 @@ mod nr52;
 pub mod registers;
 mod sio_control;
 pub mod stat;
+mod tima;
 mod timer_control;
 pub mod wave_pattern_ram;

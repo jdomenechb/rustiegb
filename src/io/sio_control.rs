@@ -27,8 +27,8 @@ impl Default for SioControl {
 
 #[cfg(test)]
 mod tests {
-    use crate::Byte;
     use crate::io::sio_control::SioControl;
+    use crate::Byte;
 
     #[test]
     fn test_ok() {

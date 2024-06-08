@@ -1,19 +1,22 @@
 use crate::configuration::RuntimeConfig;
-use crate::memory::Memory;
+use crate::io::registers::IORegisters;
 use crate::Byte;
 use parking_lot::RwLock;
 use piston_window::Key;
 use std::sync::Arc;
 
 pub struct JoypadHandler {
-    memory: Arc<RwLock<Memory>>,
+    io_registers: Arc<RwLock<IORegisters>>,
     runtime_config: Arc<RwLock<RuntimeConfig>>,
 }
 
 impl JoypadHandler {
-    pub fn new(memory: Arc<RwLock<Memory>>, runtime_config: Arc<RwLock<RuntimeConfig>>) -> Self {
+    pub fn new(
+        io_registers: Arc<RwLock<IORegisters>>,
+        runtime_config: Arc<RwLock<RuntimeConfig>>,
+    ) -> Self {
         Self {
-            memory,
+            io_registers,
             runtime_config,
         }
     }
@@ -21,44 +24,44 @@ impl JoypadHandler {
     pub fn press(&self, key: Key) {
         match key {
             Key::X => {
-                let mut memory = self.memory.write();
-                memory.joypad().a = true;
-                memory.interrupt_flag().set_p10_p13_transition(true);
+                let mut io_registers = self.io_registers.write();
+                io_registers.p1.a = true;
+                io_registers.interrupt_flag.set_p10_p13_transition(true);
             }
             Key::Z => {
-                let mut memory = self.memory.write();
-                memory.joypad().b = true;
-                memory.interrupt_flag().set_p10_p13_transition(true);
+                let mut io_registers = self.io_registers.write();
+                io_registers.p1.b = true;
+                io_registers.interrupt_flag.set_p10_p13_transition(true);
             }
             Key::Return => {
-                let mut memory = self.memory.write();
-                memory.joypad().start = true;
-                memory.interrupt_flag().set_p10_p13_transition(true);
+                let mut io_registers = self.io_registers.write();
+                io_registers.p1.start = true;
+                io_registers.interrupt_flag.set_p10_p13_transition(true);
             }
             Key::RShift => {
-                let mut memory = self.memory.write();
-                memory.joypad().select = true;
-                memory.interrupt_flag().set_p10_p13_transition(true);
+                let mut io_registers = self.io_registers.write();
+                io_registers.p1.select = true;
+                io_registers.interrupt_flag.set_p10_p13_transition(true);
             }
             Key::Left => {
-                let mut memory = self.memory.write();
-                memory.joypad().left = true;
-                memory.interrupt_flag().set_p10_p13_transition(true);
+                let mut io_registers = self.io_registers.write();
+                io_registers.p1.left = true;
+                io_registers.interrupt_flag.set_p10_p13_transition(true);
             }
             Key::Right => {
-                let mut memory = self.memory.write();
-                memory.joypad().right = true;
-                memory.interrupt_flag().set_p10_p13_transition(true);
+                let mut io_registers = self.io_registers.write();
+                io_registers.p1.right = true;
+                io_registers.interrupt_flag.set_p10_p13_transition(true);
             }
             Key::Up => {
-                let mut memory = self.memory.write();
-                memory.joypad().up = true;
-                memory.interrupt_flag().set_p10_p13_transition(true);
+                let mut io_registers = self.io_registers.write();
+                io_registers.p1.up = true;
+                io_registers.interrupt_flag.set_p10_p13_transition(true);
             }
             Key::Down => {
-                let mut memory = self.memory.write();
-                memory.joypad().down = true;
-                memory.interrupt_flag().set_p10_p13_transition(true);
+                let mut io_registers = self.io_registers.write();
+                io_registers.p1.down = true;
+                io_registers.interrupt_flag.set_p10_p13_transition(true);
             }
             Key::M => {
                 self.runtime_config.write().toggle_mute();
@@ -77,15 +80,16 @@ impl JoypadHandler {
     }
 
     pub fn release(&self, key: Key) {
+        let mut io_registers = self.io_registers.write();
         match key {
-            Key::X => self.memory.write().joypad().a = false,
-            Key::Z => self.memory.write().joypad().b = false,
-            Key::Return => self.memory.write().joypad().start = false,
-            Key::RShift => self.memory.write().joypad().select = false,
-            Key::Left => self.memory.write().joypad().left = false,
-            Key::Right => self.memory.write().joypad().right = false,
-            Key::Up => self.memory.write().joypad().up = false,
-            Key::Down => self.memory.write().joypad().down = false,
+            Key::X => io_registers.p1.a = false,
+            Key::Z => io_registers.p1.b = false,
+            Key::Return => io_registers.p1.start = false,
+            Key::RShift => io_registers.p1.select = false,
+            Key::Left => io_registers.p1.left = false,
+            Key::Right => io_registers.p1.right = false,
+            Key::Up => io_registers.p1.up = false,
+            Key::Down => io_registers.p1.down = false,
             Key::Space => self.runtime_config.write().user_speed_multiplier = 1,
             _ => {}
         }

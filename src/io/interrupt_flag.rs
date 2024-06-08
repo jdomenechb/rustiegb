@@ -63,8 +63,8 @@ impl From<&InterruptFlag> for Byte {
 
 #[cfg(test)]
 mod tests {
-    use crate::Byte;
     use crate::io::interrupt_flag::InterruptFlag;
+    use crate::Byte;
 
     #[test]
     fn test_ok() {

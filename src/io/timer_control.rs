@@ -4,7 +4,19 @@ use crate::Byte;
 #[derive(Default)]
 pub struct TimerControl {
     pub started: bool,
-    pub input_clock_select: u8,
+    input_clock_select: u8,
+}
+
+impl TimerControl {
+    pub fn get_divider(&self) -> u32 {
+        match self.input_clock_select {
+            0 => 1024,
+            1 => 16,
+            2 => 64,
+            3 => 256,
+            _ => panic!("Invalid input clock select"),
+        }
+    }
 }
 
 impl From<Byte> for TimerControl {

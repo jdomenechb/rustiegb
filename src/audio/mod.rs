@@ -188,6 +188,7 @@ impl AudioUnit {
                     self.memory
                         .read()
                         .io_registers
+                        .read()
                         .wave_pattern_ram
                         .data
                         .data
