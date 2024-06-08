@@ -145,7 +145,7 @@ impl Gpu {
 
         let sprite_size = if obj_sprite_size { 16 } else { 8 };
 
-        let oam_ram = self.memory.read().oam_ram.clone();
+        let oam_ram = { self.memory.read().oam_ram.clone() };
 
         for oam_entry in oam_ram {
             if oam_entry.x != 0 && ly + 16 >= oam_entry.y && ly + 16 < oam_entry.y + sprite_size {
@@ -344,9 +344,7 @@ impl Gpu {
     }
 
     fn read_tile_row(&self, tile_address: Word, row: u16) -> (Byte, Byte) {
-        let memory = self.memory.read();
-
-        let word = memory.read_word(tile_address + row * 2);
+        let word = { self.memory.read().read_word(tile_address + row * 2) };
 
         word_to_two_bytes(word)
     }
