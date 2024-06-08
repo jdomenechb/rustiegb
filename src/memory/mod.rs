@@ -1,6 +1,6 @@
+use crate::bus::address::Address;
 use crate::cartridge::Cartridge;
 use crate::io::registers::IORegisters;
-use crate::memory::address::Address;
 use crate::memory::bootstrap_rom::BootstrapRom;
 use crate::memory::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use crate::memory::internal_ram_memory_sector::InternalRamMemorySector;
@@ -12,37 +12,13 @@ use crate::{Byte, SignedByte, Word};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-pub mod address;
-pub mod audio_registers;
 pub mod bootstrap_rom;
 pub mod internal_ram_8k_memory_sector;
 pub mod internal_ram_memory_sector;
-pub mod interrupt_enable;
 pub mod memory_sector;
 pub mod oam_entry;
 pub mod oam_memory_sector;
 pub mod video_ram_8k_memory_sector;
-
-#[derive(Default, Clone)]
-pub struct AudioRegWritten {
-    pub control: bool,
-    pub length: bool,
-    pub sweep_or_wave_onoff: bool,
-    pub envelope_or_wave_out_lvl: bool,
-    pub frequency_or_poly_counter: bool,
-    pub wave_pattern: bool,
-}
-
-impl AudioRegWritten {
-    pub fn has_change(&self) -> bool {
-        self.control
-            || self.length
-            || self.sweep_or_wave_onoff
-            || self.envelope_or_wave_out_lvl
-            || self.frequency_or_poly_counter
-            || self.wave_pattern
-    }
-}
 
 #[readonly::make]
 #[derive(Default)]

@@ -1,5 +1,4 @@
-use super::registers::CpuRegisters;
-use crate::cpu::registers::ByteRegister;
+use crate::cpu::registers::{ByteRegister, CpuRegisters};
 use crate::{Byte, Word};
 
 pub struct Alu {}

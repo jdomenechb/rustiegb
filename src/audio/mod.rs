@@ -6,8 +6,8 @@ use crate::io::registers::IORegisters;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, CpalAudioUnitOutput};
 
+use crate::io::audio_registers::AudioRegWritten;
 use crate::memory::memory_sector::MemorySector;
-use crate::memory::AudioRegWritten;
 
 pub mod audio_unit_output;
 mod noise;

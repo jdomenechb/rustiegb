@@ -1,6 +1,8 @@
+pub mod audio_registers;
 mod div;
 mod dma;
-pub mod interrupt_flag;
+mod interrupt_enable;
+mod interrupt_flag;
 pub mod joypad;
 mod lcdc;
 mod ly;

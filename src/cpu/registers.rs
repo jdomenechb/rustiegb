@@ -1,4 +1,4 @@
-use crate::memory::address::Address;
+use crate::bus::address::Address;
 use crate::utils::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::{Byte, Word};
 

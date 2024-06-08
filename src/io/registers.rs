@@ -1,5 +1,9 @@
+use crate::bus::address::Address;
+use crate::io::audio_registers::AudioRegWritten;
+use crate::io::audio_registers::AudioRegisters;
 use crate::io::div::Div;
 use crate::io::dma::Dma;
+use crate::io::interrupt_enable::InterruptEnable;
 use crate::io::interrupt_flag::InterruptFlag;
 use crate::io::joypad::Joypad;
 use crate::io::lcdc::Lcdc;
@@ -10,11 +14,7 @@ use crate::io::stat::{STATMode, Stat};
 use crate::io::tima::Tima;
 use crate::io::timer_control::TimerControl;
 use crate::io::wave_pattern_ram::WavePatternRam;
-use crate::memory::address::Address;
-use crate::memory::audio_registers::AudioRegisters;
-use crate::memory::interrupt_enable::InterruptEnable;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
-use crate::memory::AudioRegWritten;
 use crate::{Byte, Word};
 
 pub struct IORegisters {

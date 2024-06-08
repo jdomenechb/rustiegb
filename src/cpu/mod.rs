@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
+use crate::bus::address::Address;
 use crate::cpu::alu::Alu;
 use crate::cpu::registers::{ByteRegister, CpuRegisters, WordRegister};
 use crate::io::registers::IORegisters;
-use crate::memory::address::Address;
 use crate::memory::Memory;
 use crate::{Byte, Word};
 

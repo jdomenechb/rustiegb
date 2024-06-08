@@ -55,7 +55,8 @@ impl From<&InterruptEnable> for Byte {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::io::interrupt_enable::InterruptEnable;
+    use crate::Byte;
     use test_case::test_case;
 
     #[test]
