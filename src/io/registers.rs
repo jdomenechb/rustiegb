@@ -12,6 +12,7 @@ use crate::io::timer_control::TimerControl;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::address::Address;
 use crate::memory::audio_registers::AudioRegisters;
+use crate::memory::interrupt_enable::InterruptEnable;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::memory::AudioRegWritten;
 use crate::{Byte, Word};
@@ -79,6 +80,8 @@ pub struct IORegisters {
     pub obp2: Byte,
     pub wy: Byte,
     pub wx: Byte,
+
+    pub interrupt_enable: InterruptEnable,
 
     // --- OTHER - Out of scope of register
     // Audio
@@ -268,6 +271,7 @@ impl Default for IORegisters {
             obp2: 0xFF,
             wy: 0x00,
             wx: 0x00,
+            interrupt_enable: InterruptEnable::default(),
             audio_1_reg_written: AudioRegWritten::default(),
             audio_2_reg_written: AudioRegWritten::default(),
             audio_3_reg_written: AudioRegWritten::default(),
@@ -324,6 +328,7 @@ impl ReadMemory for IORegisters {
             Address::OBP2_OBJ_PALETTE => self.obp2,
             Address::WY_WINDOW_Y_POSITION => self.wy,
             Address::WX_WINDOW_X_POSITION => self.wx,
+            Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.value,
             _ => panic!("Read address not supported for IORegisters"),
         }
     }
@@ -548,6 +553,7 @@ impl WriteMemory for IORegisters {
             Address::OBP2_OBJ_PALETTE => self.obp2 = value,
             Address::WY_WINDOW_Y_POSITION => self.wy = value,
             Address::WX_WINDOW_X_POSITION => self.wx = value,
+            Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.update(value),
             _ => panic!("Write address not supported for IORegisters"),
         }
     }

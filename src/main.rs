@@ -77,7 +77,7 @@ fn main() {
             io_registers_thread.clone(),
             configuration.bootstrap_path.is_some(),
         );
-        let mut gpu = Gpu::new(memory_thread.clone(), io_registers.clone());
+        let mut gpu = Gpu::new(memory_thread.clone(), io_registers_thread.clone());
 
         let audio_unit_output = CpalAudioUnitOutput::new();
 
@@ -106,28 +106,22 @@ fn main() {
                 let check_joystick;
 
                 {
-                    let mut memory_thread = memory_thread.write();
-                    memory_thread.step(last_instruction_cycles);
+                    memory_thread.write().step(last_instruction_cycles);
+                }
+                {
+                    let io_registers = io_registers_thread.read();
 
-                    check_vblank = memory_thread.interrupt_enable().vblank
-                        && memory_thread.io_registers.read().interrupt_flag.vblank;
+                    check_vblank =
+                        io_registers.interrupt_enable.vblank && io_registers.interrupt_flag.vblank;
 
-                    check_lcd_stat = memory_thread.interrupt_enable().lcd_stat
-                        && memory_thread.io_registers.read().interrupt_flag.lcd_stat;
+                    check_lcd_stat = io_registers.interrupt_enable.lcd_stat
+                        && io_registers.interrupt_flag.lcd_stat;
 
-                    check_timer_overflow = memory_thread.interrupt_enable().timer_overflow
-                        && memory_thread
-                            .io_registers
-                            .read()
-                            .interrupt_flag
-                            .timer_overflow;
+                    check_timer_overflow = io_registers.interrupt_enable.timer_overflow
+                        && io_registers.interrupt_flag.timer_overflow;
 
-                    check_joystick = memory_thread.interrupt_enable().p10_13_transition
-                        && memory_thread
-                            .io_registers
-                            .read()
-                            .interrupt_flag
-                            .p10_13_transition;
+                    check_joystick = io_registers.interrupt_enable.p10_13_transition
+                        && io_registers.interrupt_flag.p10_13_transition;
                 }
 
                 {
@@ -212,8 +206,6 @@ fn main() {
                 .update(&mut texture_context, &canvas.read())
                 .unwrap();
 
-            let memory = memory.read();
-
             let pixel_size: (f64, f64) = (
                 render_args.window_size.first().unwrap() / (Gpu::PIXEL_WIDTH as f64),
                 render_args.window_size.get(1).unwrap() / (Gpu::PIXEL_HEIGHT as f64),
@@ -224,7 +216,7 @@ fn main() {
 
                 clear(Color::white().to_f_rgba(), graphics);
 
-                if !memory.io_registers.read().lcdc.lcd_control_operation {
+                if !io_registers.read().lcdc.lcd_control_operation {
                     return;
                 }
 
