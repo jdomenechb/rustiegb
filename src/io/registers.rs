@@ -1,4 +1,6 @@
 use crate::bus::address::Address;
+use crate::io::audio_registers::nr10::NR10;
+use crate::io::audio_registers::nr52::NR52;
 use crate::io::audio_registers::AudioRegWritten;
 use crate::io::audio_registers::AudioRegisters;
 use crate::io::div::Div;
@@ -8,12 +10,12 @@ use crate::io::interrupt_flag::InterruptFlag;
 use crate::io::joypad::Joypad;
 use crate::io::lcdc::Lcdc;
 use crate::io::ly::LY;
-use crate::io::nr52::NR52;
 use crate::io::sio_control::SioControl;
 use crate::io::stat::{STATMode, Stat};
 use crate::io::tima::Tima;
 use crate::io::timer_control::TimerControl;
 use crate::io::wave_pattern_ram::WavePatternRam;
+use crate::io::UpdatableRegister;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 
@@ -27,7 +29,7 @@ pub struct IORegisters {
     pub timer_control: TimerControl,
     pub interrupt_flag: InterruptFlag,
 
-    nr10: Byte,
+    nr10: NR10,
     nr11: Byte,
     nr12: Byte,
     pub(crate) nr13: Byte,
@@ -150,7 +152,7 @@ impl IORegisters {
         let mut sweep = None;
         let start_address = match channel {
             1 => {
-                sweep = Some(self.nr10);
+                sweep = Some(self.nr10.value);
                 Address::NR14_SOUND_1_FR_HI
             }
             2 => Address::NR24_SOUND_3_FR_HI,
@@ -235,7 +237,7 @@ impl Default for IORegisters {
             tma: 0,
             timer_control: TimerControl::default(),
             interrupt_flag: InterruptFlag::new(),
-            nr10: 0x80,
+            nr10: NR10::default(),
             nr11: 0xBF,
             nr12: 0xF3,
             nr13: 0x00,
@@ -292,7 +294,7 @@ impl ReadMemory for IORegisters {
             Address::TMA_TIMER_MODULO => self.tma,
             0xFF08..=0xFF0E => 0xFF,
             Address::IF_INTERRUPT_FLAG => (&self.interrupt_flag).into(),
-            Address::NR10_SOUND_1_SWEEP => self.nr10,
+            Address::NR10_SOUND_1_SWEEP => self.nr10.value,
             Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => self.nr11,
             Address::NR12_SOUND_1_ENVELOPE => self.nr12,
             Address::NR13_SOUND_1_FR_LO => self.nr13,
@@ -353,7 +355,7 @@ impl WriteMemory for IORegisters {
             Address::IF_INTERRUPT_FLAG => self.interrupt_flag.update(value),
             Address::NR10_SOUND_1_SWEEP => {
                 if self.nr52.is_on() {
-                    self.nr10 = value;
+                    self.nr10.update(value);
                     self.audio_1_reg_written.sweep_or_wave_onoff = true;
                 }
             }
@@ -507,28 +509,35 @@ impl WriteMemory for IORegisters {
                 }
             }
             Address::NR52_SOUND => {
-                self.nr52.value = value & 0b10000000;
+                self.nr52.update(value);
+
+                self.nr10.reset();
+                self.nr11 = 0;
+                self.nr12 = 0;
+                self.nr13 = 0;
+
+                self.nr21 = 0;
+                self.nr22 = 0;
+                self.nr23 = 0;
+
+                self.nr31 = 0;
+                self.nr33 = 0;
+                self.nr42 = 0;
+                self.nr43 = 0;
 
                 if self.nr52.is_on() {
-                    self.nr10 = 0;
-                    self.nr11 = 0;
-                    self.nr12 = 0;
-                    self.nr13 = 0;
                     self.nr14 = 0;
                     self.nr20 = 0;
-                    self.nr21 = 0;
-                    self.nr22 = 0;
-                    self.nr23 = 0;
+
                     self.nr24 = 0;
                     self.nr30 = 0;
-                    self.nr31 = 0;
+
                     self.nr32 = 0;
-                    self.nr33 = 0;
+
                     self.nr34 = 0;
                     self.nr40 = 0;
                     self.nr41 = 0;
-                    self.nr42 = 0;
-                    self.nr43 = 0;
+
                     self.nr44 = 0;
                     self.nr50 = 0;
                     self.nr51 = 0;

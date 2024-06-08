@@ -1,5 +1,8 @@
 use crate::Byte;
 
+pub mod nr10;
+pub mod nr52;
+
 #[readonly::make]
 pub struct AudioRegisters {
     pub control: Byte,

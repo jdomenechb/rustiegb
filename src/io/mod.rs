@@ -1,3 +1,5 @@
+use crate::Byte;
+
 pub mod audio_registers;
 mod div;
 mod dma;
@@ -6,10 +8,16 @@ mod interrupt_flag;
 pub mod joypad;
 mod lcdc;
 mod ly;
-mod nr52;
 pub mod registers;
 mod sio_control;
 pub mod stat;
 mod tima;
 mod timer_control;
 pub mod wave_pattern_ram;
+
+trait UpdatableRegister {
+    fn update(&mut self, value: Byte);
+    fn reset(&mut self) {
+        self.update(0);
+    }
+}

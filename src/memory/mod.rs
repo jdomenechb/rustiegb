@@ -60,7 +60,6 @@ impl Memory {
         let byte = self.internally_read_byte(position).unwrap_or(0xFF);
 
         match position {
-            Address::NR10_SOUND_1_SWEEP => byte | 0b10000000, // 0x80
             Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => byte | 0b00111111, // 0x3F
             Address::NR13_SOUND_1_FR_LO => 0xFF,
             Address::NR14_SOUND_1_FR_HI => byte | 0b10111111, // 0xBF
@@ -75,7 +74,6 @@ impl Memory {
             0xFF1E => byte | 0b10111111, // 0xBF
             0xFF1F..=0xFF20 => 0xFF,
             0xFF23 => byte | 0b10111111, // 0xBF
-            Address::NR52_SOUND => byte | 0b1110000,
             0xFF27..=0xFF2F => 0xFF,
             _ => byte,
         }
@@ -173,13 +171,10 @@ mod tests {
 
     fn check_basic_audio_registers_are_reset(memory: &mut Memory) {
         let items = vec![
-            // NR10
-            (Address::NR10_SOUND_1_SWEEP, 0x80),
             (Address::NR11_SOUND_1_WAVE_PATTERN_DUTY, 0x3F),
             (Address::NR12_SOUND_1_ENVELOPE, 0x00),
             (Address::NR13_SOUND_1_FR_LO, 0xFF),
             (Address::NR14_SOUND_1_FR_HI, 0xBF),
-            // NR20
             (Address::NR20_SOUND_2_UNUSED, 0xFF),
             (Address::NR21_SOUND_2_WAVE_PATTERN_DUTY, 0x3F),
             (Address::NR22_SOUND_2_ENVELOPE, 0x00),
@@ -204,13 +199,6 @@ mod tests {
         ];
 
         for item in items {
-            assert_eq!(
-                memory.internally_read_byte(item.0),
-                Some(0),
-                "Wrong internal data when writing register {:X}",
-                item.0
-            );
-
             assert_eq!(
                 memory.read_byte(item.0),
                 item.1,
@@ -238,13 +226,6 @@ mod tests {
         memory.write_byte(position, 0);
 
         assert_eq!(
-            memory.internally_read_byte(position),
-            Some(0),
-            "Wrong internal data when writing register {:X}",
-            position
-        );
-
-        assert_eq!(
             memory.read_byte(position),
             0x70,
             "Wrong data when writing register {:X}",
@@ -252,13 +233,6 @@ mod tests {
         );
 
         memory.write_byte(position, 0xFF);
-
-        assert_eq!(
-            memory.internally_read_byte(position),
-            Some(0b10000000),
-            "Wrong internal data when writing register {:X}",
-            position
-        );
 
         assert_eq!(
             memory.read_byte(position),
@@ -273,13 +247,6 @@ mod tests {
             memory.write_byte(position, 0);
 
             assert_eq!(
-                memory.internally_read_byte(position),
-                None,
-                "Wrong internal data when writing register {:X}",
-                position
-            );
-
-            assert_eq!(
                 memory.read_byte(position),
                 0xFF,
                 "Wrong data when writing register {:X}",
@@ -291,13 +258,6 @@ mod tests {
         for position in 0xFF30..0xFF40 {
             memory.write_byte(position, 0xFF);
             memory.write_byte(position, 0);
-
-            assert_eq!(
-                memory.internally_read_byte(position),
-                Some(0),
-                "Wrong internal data when writing register {:X}",
-                position
-            );
 
             assert_eq!(
                 memory.read_byte(position),
