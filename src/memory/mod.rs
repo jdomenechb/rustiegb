@@ -60,11 +60,6 @@ impl Memory {
         let byte = self.internally_read_byte(position).unwrap_or(0xFF);
 
         match position {
-            0xFF1A => byte | 0b01111111, // 0x7F
-            0xFF1B => 0xFF,
-            0xFF1C => byte | 0b10011111, // 0x9F
-            0xFF1D => byte | 0xFF,
-            0xFF1E => byte | 0b10111111, // 0xBF
             0xFF1F..=0xFF20 => 0xFF,
             0xFF23 => byte | 0b10111111, // 0xBF
             Address::NR52_SOUND => byte | 0b1110000,
@@ -176,13 +171,13 @@ mod tests {
             (Address::NR21_SOUND_2_WAVE_PATTERN_DUTY, 0x3F),
             (Address::NR22_SOUND_2_ENVELOPE, 0x00),
             (Address::NR23_SOUND_2_FR_LO, 0xFF),
-            (Address::NR24_SOUND_3_FR_HI, 0xBF),
+            (Address::NR24_SOUND_2_FR_HI, 0xBF),
             // NR3X
-            (0xFF1A, 0x7F),
-            (0xFF1B, 0xFF),
-            (0xFF1C, 0x9F),
-            (0xFF1D, 0xFF),
-            (0xFF1E, 0xBF),
+            (Address::NR30_SOUND_3_ON_OFF, 0x7F),
+            (Address::NR31_SOUND_3_LENGTH, 0xFF),
+            (Address::NR32_SOUND_3_OUTPUT_LEVEL, 0x9F),
+            (Address::NR33_SOUND_3_FR_LO, 0xFF),
+            (Address::NR34_SOUND_3_FR_HI, 0xBF),
             // NR4X
             (0xFF1F, 0xFF),
             (0xFF20, 0xFF),

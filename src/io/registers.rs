@@ -39,16 +39,12 @@ pub struct IORegisters {
     nr23: NRxx,
     nr24: NRxx,
 
-    // FF1A
-    nr30: Byte,
-    // FF1B
-    nr31: Byte,
-    // FF1C
-    nr32: Byte,
-    // FF1D
-    nr33: Byte,
-    // FF1E
-    nr34: Byte,
+    nr30: NRxx,
+    nr31: NRxx,
+    nr32: NRxx,
+    nr33: NRxx,
+    nr34: NRxx,
+
     // FF1F
     nr40: Byte,
     // FF20
@@ -162,7 +158,13 @@ impl IORegisters {
                 self.nr21.value,
                 None,
             ),
-            3 => AudioRegisters::new(self.nr34, self.nr33, self.nr32, self.nr31, Some(self.nr30)),
+            3 => AudioRegisters::new(
+                self.nr34.value,
+                self.nr33.value,
+                self.nr32.value,
+                self.nr31.value,
+                Some(self.nr30.value),
+            ),
             4 => AudioRegisters::new(self.nr44, self.nr43, self.nr42, self.nr41, None),
             _ => panic!("Invalid channel provided"),
         }
@@ -244,11 +246,11 @@ impl Default for IORegisters {
             nr23: NRxx::new_with_read_ored_bits(0xFF, 0xFF),
             nr24: NRxx::new_with(0xBF, 0b1100_0111, 0xBF),
 
-            nr30: 0x7F,
-            nr31: 0xFF,
-            nr32: 0x9f,
-            nr33: 0x00,
-            nr34: 0xBF,
+            nr30: NRxx::new_with_used_bits(0x7F, 0b1000_0000),
+            nr31: NRxx::new_with_read_ored_bits(0xFF, 0xFF),
+            nr32: NRxx::new_with_used_bits(0x9F, 0b0110_0000),
+            nr33: NRxx::new_with_read_ored_bits(0xFF, 0xFF),
+            nr34: NRxx::new_with(0xBF, 0b1100_0111, 0xBF),
 
             nr40: 0xFF,
             nr41: 0xFF,
@@ -304,13 +306,14 @@ impl ReadMemory for IORegisters {
             Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => self.nr21.read(),
             Address::NR22_SOUND_2_ENVELOPE => self.nr22.read(),
             Address::NR23_SOUND_2_FR_LO => self.nr23.read(),
-            Address::NR24_SOUND_3_FR_HI => self.nr24.read(),
+            Address::NR24_SOUND_2_FR_HI => self.nr24.read(),
 
-            0xFF1A => self.nr30,
-            0xFF1B => self.nr31,
-            0xFF1C => self.nr32,
-            0xFF1D => self.nr33,
-            0xFF1E => self.nr34,
+            Address::NR30_SOUND_3_ON_OFF => self.nr30.read(),
+            Address::NR31_SOUND_3_LENGTH => self.nr31.read(),
+            Address::NR32_SOUND_3_OUTPUT_LEVEL => self.nr32.read(),
+            Address::NR33_SOUND_3_FR_LO => self.nr33.read(),
+            Address::NR34_SOUND_3_FR_HI => self.nr34.read(),
+
             0xFF1F => self.nr40,
             0xFF20 => self.nr41,
             0xFF21 => self.nr42,
@@ -413,7 +416,7 @@ impl WriteMemory for IORegisters {
                     self.audio_2_reg_written.frequency_or_poly_counter = true;
                 }
             }
-            Address::NR24_SOUND_3_FR_HI => {
+            Address::NR24_SOUND_2_FR_HI => {
                 if !self.nr52.is_on() {
                     return;
                 }
@@ -426,30 +429,30 @@ impl WriteMemory for IORegisters {
 
                 self.nr24.update(value);
             }
-            0xFF1A => {
+            Address::NR30_SOUND_3_ON_OFF => {
                 if self.nr52.is_on() {
-                    self.nr30 = value;
+                    self.nr30.update(value);
                     self.audio_3_reg_written.sweep_or_wave_onoff = true;
                 }
             }
-            0xFF1B => {
+            Address::NR31_SOUND_3_LENGTH => {
                 if self.nr52.is_on() {
-                    self.nr31 = value;
+                    self.nr31.update(value);
                     self.audio_3_reg_written.length = true;
                 }
             }
-            0xFF1C => {
+            Address::NR32_SOUND_3_OUTPUT_LEVEL => {
                 if self.nr52.is_on() {
-                    self.nr32 = value;
+                    self.nr32.update(value);
                 }
             }
-            0xFF1D => {
+            Address::NR33_SOUND_3_FR_LO => {
                 if self.nr52.is_on() {
-                    self.nr33 = value;
+                    self.nr33.update(value);
                     self.audio_3_reg_written.frequency_or_poly_counter = true;
                 }
             }
-            0xFF1E => {
+            Address::NR34_SOUND_3_FR_HI => {
                 if !self.nr52.is_on() {
                     return;
                 }
@@ -460,7 +463,7 @@ impl WriteMemory for IORegisters {
                     self.nr52.set_channel_active(3);
                 }
 
-                self.nr34 = value;
+                self.nr34.update(value);
             }
             0xFF1F => {
                 if self.nr52.is_on() {
@@ -523,17 +526,16 @@ impl WriteMemory for IORegisters {
                 self.nr23.reset();
                 self.nr24.reset();
 
-                self.nr31 = 0;
-                self.nr33 = 0;
+                self.nr30.reset();
+                self.nr31.reset();
+                self.nr32.reset();
+                self.nr33.reset();
+                self.nr34.reset();
+
                 self.nr42 = 0;
                 self.nr43 = 0;
 
                 if self.nr52.is_on() {
-                    self.nr30 = 0;
-
-                    self.nr32 = 0;
-
-                    self.nr34 = 0;
                     self.nr40 = 0;
                     self.nr41 = 0;
 
