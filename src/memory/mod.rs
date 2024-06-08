@@ -4,7 +4,6 @@ use crate::memory::address::Address;
 use crate::memory::bootstrap_rom::BootstrapRom;
 use crate::memory::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use crate::memory::internal_ram_memory_sector::InternalRamMemorySector;
-use crate::memory::interrupt_enable::InterruptEnable;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::memory::oam_memory_sector::{OamMemorySector, OAM_MEMORY_SECTOR_SIZE};
 use crate::memory::video_ram_8k_memory_sector::VideoRam8kMemorySector;
@@ -61,7 +60,6 @@ pub struct Memory {
 
     // FF80 - FFFE
     internal_ram: InternalRamMemorySector,
-    pub interrupt_enable: InterruptEnable,
 }
 
 impl Memory {
@@ -78,7 +76,6 @@ impl Memory {
             internal_ram_8k: InternalRam8kMemorySector::default(),
             io_registers,
             internal_ram: InternalRamMemorySector::default(),
-            interrupt_enable: InterruptEnable::default(),
             oam_ram: OamMemorySector::default(),
         }
     }
@@ -127,7 +124,7 @@ impl Memory {
             }
             0xFF4D => Some(0xFF),
             0xFF80..=0xFFFE => Some(self.internal_ram.read_byte(position - 0xFF80)),
-            Address::IE_INTERRUPT_ENABLE => Some((&self.interrupt_enable).into()),
+            Address::IE_INTERRUPT_ENABLE => Some(self.io_registers.read().read_byte(position)),
             _ => None,
         }
     }
@@ -158,7 +155,7 @@ impl Memory {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
             0xFF80..=0xFFFE => self.internal_ram.write_byte(position - 0xFF80, value),
-            Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.update(value),
+            Address::IE_INTERRUPT_ENABLE => self.io_registers.write().write_byte(position, value),
         };
     }
 
@@ -191,10 +188,6 @@ impl Memory {
 
     pub fn erase_bootstrap_rom(&mut self) {
         self.bootstrap_rom = None;
-    }
-
-    pub fn interrupt_enable(&self) -> &InterruptEnable {
-        &self.interrupt_enable
     }
 }
 
