@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
+use crate::io::registers::IORegisters;
+use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, CpalAudioUnitOutput};
 
-use crate::memory::address::Address;
 use crate::memory::memory_sector::MemorySector;
-use crate::memory::wave_pattern_ram::WavePatternRam;
-use crate::memory::{AudioRegWritten, Memory};
+use crate::memory::AudioRegWritten;
 
 pub mod audio_unit_output;
 mod noise;
@@ -20,7 +20,7 @@ const CYCLES_1_512_SEC: u16 = 8192;
 
 pub struct AudioUnit {
     auo: CpalAudioUnitOutput,
-    memory: Arc<RwLock<Memory>>,
+    io_registers: Arc<RwLock<IORegisters>>,
 
     cycle_count: u16,
     frame_step: Byte,
@@ -28,10 +28,10 @@ pub struct AudioUnit {
 }
 
 impl AudioUnit {
-    pub fn new(au: CpalAudioUnitOutput, memory: Arc<RwLock<Memory>>) -> Self {
+    pub fn new(au: CpalAudioUnitOutput, io_registers: Arc<RwLock<IORegisters>>) -> Self {
         Self {
             auo: au,
-            memory,
+            io_registers,
             cycle_count: 0,
             frame_step: 7,
             was_stopped: true,
@@ -41,18 +41,18 @@ impl AudioUnit {
     pub fn step(&mut self, last_instruction_cycles: u8, muted: bool) {
         self.auo.set_mute(muted);
 
-        let nr52;
+        let nr52_is_on;
         let audio_triggers;
 
         {
-            let mut memory = self.memory.write();
+            let mut io_registers = self.io_registers.write();
+            nr52_is_on = io_registers.nr52.is_on();
 
-            nr52 = memory.read_byte(Address::NR52_SOUND);
-            audio_triggers = memory.audio_reg_have_been_written();
+            audio_triggers = io_registers.audio_reg_have_been_written();
         }
 
         // NR52 controls the general output
-        if nr52 & 0b10000000 != 0b10000000 {
+        if !nr52_is_on {
             self.auo.stop_all();
             self.was_stopped = true;
             return;
@@ -85,7 +85,7 @@ impl AudioUnit {
             self.update_noise(&audio_triggers.3);
         }
 
-        self.auo.update(self.memory.clone());
+        self.auo.update(self.io_registers.clone());
     }
 
     fn clock_frame_sequencer(&mut self, last_instruction_cycles: u8) {
@@ -104,15 +104,15 @@ impl AudioUnit {
             }
 
             if self.frame_step == 2 || self.frame_step == 6 {
-                self.auo.step_128(self.memory.clone())
+                self.auo.step_128(self.io_registers.clone())
             }
         }
     }
 
     fn update_pulse(&mut self, channel_n: u8, changes: &AudioRegWritten) {
         let audio_registers = {
-            let memory = self.memory.read();
-            memory.read_audio_registers(channel_n)
+            let io_registers = self.io_registers.read();
+            io_registers.read_audio_registers(channel_n)
         };
 
         if changes.length {
@@ -150,8 +150,8 @@ impl AudioUnit {
         let audio_registers;
 
         {
-            let memory = self.memory.read();
-            audio_registers = memory.read_audio_registers(3);
+            let io_registers = self.io_registers.read();
+            audio_registers = io_registers.read_audio_registers(3);
         }
 
         if changes.sweep_or_wave_onoff {
@@ -185,7 +185,7 @@ impl AudioUnit {
         if changes.wave_pattern {
             self.auo.update_wave_pattern(WavePatternRam {
                 data: MemorySector::with_data(
-                    self.memory.read().wave_pattern_ram.data.data.clone(),
+                    self.io_registers.read().wave_pattern_ram.data.data.clone(),
                 ),
             });
         }
@@ -193,8 +193,8 @@ impl AudioUnit {
 
     fn update_noise(&mut self, changes: &AudioRegWritten) {
         let audio_registers = {
-            let memory = self.memory.read();
-            memory.read_audio_registers(4)
+            let io_registers = self.io_registers.read();
+            io_registers.read_audio_registers(4)
         };
 
         if changes.length {

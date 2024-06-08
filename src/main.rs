@@ -3,7 +3,7 @@ mod cartridge;
 mod configuration;
 mod cpu;
 mod gpu;
-mod joypad;
+mod io;
 mod memory;
 mod utils;
 
@@ -17,11 +17,12 @@ use crate::audio::AudioUnit;
 use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
-use crate::joypad::JoypadHandler;
+use crate::io::registers::IORegisters;
 use crate::memory::bootstrap_rom::BootstrapRom;
 use cpu::Cpu;
 use gpu::Gpu;
 use image::ImageBuffer;
+use io::joypad::JoypadHandler;
 use memory::Memory;
 use parking_lot::RwLock;
 use piston_window::*;
@@ -51,8 +52,13 @@ fn main() {
     let window_title = format!("{} - {}", cartridge.header.title, APP_NAME);
 
     // --- Setting up GB components
-    let memory = Arc::new(RwLock::new(Memory::new(cartridge, bootstrap_rom)));
-    let joypad_handler = JoypadHandler::new(memory.clone(), runtime_config.clone());
+    let io_registers = Arc::new(RwLock::new(IORegisters::default()));
+    let memory = Arc::new(RwLock::new(Memory::new(
+        io_registers.clone(),
+        cartridge,
+        bootstrap_rom,
+    )));
+    let joypad_handler = JoypadHandler::new(io_registers.clone(), runtime_config.clone());
 
     let canvas = Arc::new(RwLock::new(ImageBuffer::new(
         Gpu::PIXEL_WIDTH as u32,
@@ -60,6 +66,7 @@ fn main() {
     )));
 
     let memory_thread = memory.clone();
+    let io_registers_thread = io_registers.clone();
     let canvas_thread = canvas.clone();
     let runtime_config_thread = runtime_config.clone();
     let (sx, rx) = mpsc::channel();
@@ -67,13 +74,14 @@ fn main() {
     std::thread::spawn(move || {
         let mut cpu = Cpu::new(
             memory_thread.clone(),
+            io_registers_thread.clone(),
             configuration.bootstrap_path.is_some(),
         );
-        let mut gpu = Gpu::new(memory_thread.clone());
+        let mut gpu = Gpu::new(memory_thread.clone(), io_registers.clone());
 
         let audio_unit_output = CpalAudioUnitOutput::new();
 
-        let mut audio_unit = AudioUnit::new(audio_unit_output, memory_thread.clone());
+        let mut audio_unit = AudioUnit::new(audio_unit_output, io_registers_thread.clone());
 
         loop {
             if runtime_config_thread.read().has_been_reset() {
@@ -102,16 +110,24 @@ fn main() {
                     memory_thread.step(last_instruction_cycles);
 
                     check_vblank = memory_thread.interrupt_enable().vblank
-                        && memory_thread.interrupt_flag.vblank;
+                        && memory_thread.io_registers.read().interrupt_flag.vblank;
 
                     check_lcd_stat = memory_thread.interrupt_enable().lcd_stat
-                        && memory_thread.interrupt_flag.lcd_stat;
+                        && memory_thread.io_registers.read().interrupt_flag.lcd_stat;
 
                     check_timer_overflow = memory_thread.interrupt_enable().timer_overflow
-                        && memory_thread.interrupt_flag.timer_overflow;
+                        && memory_thread
+                            .io_registers
+                            .read()
+                            .interrupt_flag
+                            .timer_overflow;
 
                     check_joystick = memory_thread.interrupt_enable().p10_13_transition
-                        && memory_thread.interrupt_flag.p10_13_transition;
+                        && memory_thread
+                            .io_registers
+                            .read()
+                            .interrupt_flag
+                            .p10_13_transition;
                 }
 
                 {
@@ -208,7 +224,7 @@ fn main() {
 
                 clear(Color::white().to_f_rgba(), graphics);
 
-                if !memory.lcdc.lcd_control_operation {
+                if !memory.io_registers.read().lcdc.lcd_control_operation {
                     return;
                 }
 

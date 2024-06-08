@@ -6,7 +6,8 @@ use crate::audio::registers::{
     LengthUpdatable,
 };
 use crate::audio::volume_envelope::VolumeEnvelopeDescription;
-use crate::{Byte, Memory, Word};
+use crate::io::registers::IORegisters;
+use crate::{Byte, Word};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -29,9 +30,9 @@ impl PulseDescription {
         self.sweep = Some(Sweep::default());
     }
 
-    pub fn step_128(&mut self, memory: Arc<RwLock<Memory>>) {
+    pub fn step_128(&mut self, io_registers: Arc<RwLock<IORegisters>>) {
         if let Some(mut sweep) = self.sweep {
-            sweep.step_128(memory, self);
+            sweep.step_128(io_registers, self);
             self.sweep = Some(sweep);
         }
     }
