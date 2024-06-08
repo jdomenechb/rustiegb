@@ -1,6 +1,7 @@
 use crate::audio::pulse::description::PulseDescription;
 use crate::audio::registers::{ChannelStopabble, FrequencyUpdatable};
-use crate::{Byte, Memory, Word};
+use crate::io::registers::IORegisters;
+use crate::{Byte, Word};
 use direction::SweepDirection;
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -59,7 +60,7 @@ impl Sweep {
 
     pub fn step_128(
         &mut self,
-        memory: Arc<RwLock<Memory>>,
+        io_registers: Arc<RwLock<IORegisters>>,
         pulse_description: &mut PulseDescription,
     ) {
         if self.timer > 0 {
@@ -76,7 +77,7 @@ impl Sweep {
                         pulse_description.frequency = new_frequency;
 
                         {
-                            memory.write().update_audio_1_frequency(new_frequency);
+                            io_registers.write().update_audio_1_frequency(new_frequency);
                         }
 
                         self.calculate_new_frequency(pulse_description);

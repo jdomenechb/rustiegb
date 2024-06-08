@@ -12,9 +12,10 @@ use crate::audio::registers::{
 };
 use crate::audio::wave::WaveDescription;
 use crate::audio::wave::WaveOutputLevel;
+use crate::io::registers::IORegisters;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::ReadMemory;
-use crate::{Byte, Memory, Word};
+use crate::{Byte, Word};
 
 pub struct CpalAudioUnitOutput {
     device: Device,
@@ -269,8 +270,8 @@ impl CpalAudioUnitOutput {
         self.noise_description.write().step_64();
     }
 
-    pub fn step_128(&mut self, memory: Arc<RwLock<Memory>>) {
-        self.pulse_description_1.write().step_128(memory);
+    pub fn step_128(&mut self, io_registers: Arc<RwLock<IORegisters>>) {
+        self.pulse_description_1.write().step_128(io_registers);
     }
 
     pub fn step_256(&mut self) {
@@ -280,28 +281,28 @@ impl CpalAudioUnitOutput {
         self.noise_description.write().step_256();
     }
 
-    pub fn update(&mut self, memory: Arc<RwLock<Memory>>) {
-        {
-            if self.pulse_description_1.read().stop {
-                memory.write().set_audio_channel_inactive(1);
-            }
+    pub fn update(&mut self, io_registers: Arc<RwLock<IORegisters>>) {
+        let mut io_registers = io_registers.write();
+
+        if self.pulse_description_1.read().stop {
+            io_registers.nr52.set_channel_inactive(1);
         }
 
         {
             if self.pulse_description_2.read().stop {
-                memory.write().set_audio_channel_inactive(2);
+                io_registers.nr52.set_channel_inactive(2);
             }
         }
 
         {
             if self.wave_description.read().stop {
-                memory.write().set_audio_channel_inactive(3);
+                io_registers.nr52.set_channel_inactive(3);
             }
         }
 
         {
             if self.noise_description.read().stop {
-                memory.write().set_audio_channel_inactive(4);
+                io_registers.nr52.set_channel_inactive(4);
             }
         }
     }

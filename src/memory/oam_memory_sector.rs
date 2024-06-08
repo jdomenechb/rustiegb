@@ -4,6 +4,7 @@ use crate::{Byte, Word};
 
 pub const OAM_MEMORY_SECTOR_SIZE: u16 = 0xA0;
 
+#[derive(Clone)]
 pub struct OamMemorySector {
     data: MemorySector,
     count: u16,

@@ -61,15 +61,17 @@ impl Cpu {
 
         if !self.halted {
             let instruction;
+            let memory_has_bootstrap_rom;
 
             {
-                let mut memory = self.memory.write();
-
-                if self.registers.pc == 0x100 && memory.has_bootstrap_rom() {
-                    memory.erase_bootstrap_rom();
-                }
+                let memory = self.memory.read();
 
                 instruction = memory.read_byte(self.registers.pc);
+                memory_has_bootstrap_rom = memory.has_bootstrap_rom();
+            }
+
+            if self.registers.pc == Address::CARTRIDGE_START && memory_has_bootstrap_rom {
+                self.memory.write().erase_bootstrap_rom();
             }
 
             match instruction {
@@ -374,10 +376,7 @@ impl Cpu {
     }
 
     fn prefix_cb(&mut self) {
-        let op: Byte = {
-            let memory = self.memory.read();
-            memory.read_byte(self.registers.pc + 1)
-        };
+        let op: Byte = { self.memory.read().read_byte(self.registers.pc + 1) };
 
         match op {
             0x00 => self.rlc_r(ByteRegister::B),
@@ -691,12 +690,16 @@ impl Cpu {
     }
 
     fn dec_mhl(&mut self) {
-        let mut memory = self.memory.write();
-
         let pos = self.registers.read_word(&WordRegister::HL);
-        let value = memory.read_byte(pos);
-        let value = self.alu.dec_n(&mut self.registers, value);
-        memory.write_byte(pos, value);
+
+        {
+            let mut memory = self.memory.write();
+            let value = memory.read_byte(pos);
+
+            let value = self.alu.dec_n(&mut self.registers, value);
+
+            memory.write_byte(pos, value);
+        }
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;
@@ -728,12 +731,14 @@ impl Cpu {
     }
 
     fn inc_mhl(&mut self) {
-        let mut memory = self.memory.write();
-
         let position = self.registers.read_word(&WordRegister::HL);
-        let value = memory.read_byte(position);
-        let value = self.alu.inc_n(&mut self.registers, value);
-        memory.write_byte(position, value);
+
+        {
+            let mut memory = self.memory.write();
+            let value = memory.read_byte(position);
+            let value = self.alu.inc_n(&mut self.registers, value);
+            memory.write_byte(position, value);
+        }
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 12;
@@ -754,10 +759,12 @@ impl Cpu {
     }
 
     fn adc_a_mhl(&mut self) {
-        let memory = self.memory.read();
-
         let value1 = self.registers.read_byte(&ByteRegister::A);
-        let value2 = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let value2 = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::HL))
+        };
 
         let carry = self.registers.is_flag_c();
 
@@ -769,10 +776,8 @@ impl Cpu {
     }
 
     fn adc_a_n(&mut self) {
-        let memory = self.memory.read();
-
         let value1 = self.registers.a;
-        let value2 = memory.read_byte(self.registers.pc + 1);
+        let value2 = { self.memory.read().read_byte(self.registers.pc + 1) };
 
         let carry = self.registers.is_flag_c();
 
@@ -795,8 +800,7 @@ impl Cpu {
     }
 
     fn add_a_n(&mut self) {
-        let memory = self.memory.read();
-        let value1 = memory.read_byte(self.registers.pc + 1);
+        let value1 = { self.memory.read().read_byte(self.registers.pc + 1) };
         let value2 = self.registers.read_byte(&ByteRegister::A);
 
         let result = self.alu.add_n(&mut self.registers, value1, value2, false);
@@ -807,8 +811,11 @@ impl Cpu {
     }
 
     fn add_a_mhl(&mut self) {
-        let memory = self.memory.read();
-        let value1 = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let value1 = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::HL))
+        };
         let value2 = self.registers.read_byte(&ByteRegister::A);
 
         let result = self.alu.add_n(&mut self.registers, value1, value2, false);
@@ -830,10 +837,11 @@ impl Cpu {
     }
 
     fn add_sp_n(&mut self) {
-        let memory = self.memory.read();
-
         let value1 = self.registers.read_word(&WordRegister::SP);
-        let value2 = memory.read_signed_byte(self.registers.read_word(&WordRegister::PC) + 1);
+        let value2 = self
+            .memory
+            .read()
+            .read_signed_byte(self.registers.read_word(&WordRegister::PC) + 1);
 
         let result = self
             .alu
@@ -845,10 +853,7 @@ impl Cpu {
     }
 
     fn sub_n(&mut self) {
-        let to_subtract = {
-            let memory = self.memory.read();
-            memory.read_byte(self.registers.pc + 1)
-        };
+        let to_subtract = { self.memory.read().read_byte(self.registers.pc + 1) };
 
         let value = self.registers.read_byte(&ByteRegister::A);
 
@@ -876,8 +881,11 @@ impl Cpu {
     fn sub_mhl(&mut self) {
         let value = self.registers.read_byte(&ByteRegister::A);
 
-        let memory = self.memory.read();
-        let to_subtract = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let to_subtract = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::HL))
+        };
 
         let value = self
             .alu
@@ -907,8 +915,11 @@ impl Cpu {
     fn sbc_mhl(&mut self) {
         let value = self.registers.read_byte(&ByteRegister::A);
 
-        let memory = self.memory.read();
-        let to_subtract = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let to_subtract = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::HL))
+        };
 
         let carry = self.registers.is_flag_c();
 
@@ -923,10 +934,12 @@ impl Cpu {
     }
 
     fn sbc_a_n(&mut self) {
-        let memory = self.memory.read();
-
         let value1 = self.registers.read_byte(&ByteRegister::A);
-        let value2 = memory.read_byte(self.registers.read_word(&WordRegister::PC) + 1);
+        let value2 = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::PC) + 1)
+        };
 
         let carry = self.registers.is_flag_c();
 
@@ -982,9 +995,7 @@ impl Cpu {
     }
 
     fn xor_n(&mut self) {
-        let memory = self.memory.read();
-
-        let value = memory.read_byte(self.registers.pc + 1);
+        let value = { self.memory.read().read_byte(self.registers.pc + 1) };
         let result = value ^ self.registers.read_byte(&ByteRegister::A);
 
         self.registers.set_flag_z(result == 0);
@@ -1002,9 +1013,11 @@ impl Cpu {
      * XORs value in memory address HL with register A. Saves result in A. Sets flag Z if result is 0, resets N, H and C.
      */
     fn xor_mhl(&mut self) {
-        let memory = self.memory.read();
-
-        let mut value = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let mut value = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::HL))
+        };
         value ^= self.registers.read_byte(&ByteRegister::A);
 
         self.registers.set_flag_z(value == 0);
@@ -1031,8 +1044,11 @@ impl Cpu {
     }
 
     fn or_mhl(&mut self) {
-        let memory = self.memory.read();
-        let value1 = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let value1 = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::HL))
+        };
         let value2 = self.registers.read_byte(&ByteRegister::A);
 
         let result = self.alu.or_n(&mut self.registers, value1, value2);
@@ -1044,9 +1060,7 @@ impl Cpu {
     }
 
     fn or_n(&mut self) {
-        let memory = self.memory.read();
-
-        let value1 = memory.read_byte(self.registers.pc + 1);
+        let value1 = { self.memory.read().read_byte(self.registers.pc + 1) };
         let value2 = self.registers.read_byte(&ByteRegister::A);
 
         let result = self.alu.or_n(&mut self.registers, value1, value2);
@@ -1070,9 +1084,11 @@ impl Cpu {
     }
 
     fn and_mhl(&mut self) {
-        let memory = self.memory.read();
-
-        let value1 = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let value1 = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::HL))
+        };
         let value2 = self.registers.read_byte(&ByteRegister::A);
 
         let result = self.alu.and_n(&mut self.registers, value1, value2);
@@ -1084,9 +1100,7 @@ impl Cpu {
     }
 
     fn and_n(&mut self) {
-        let memory = self.memory.read();
-
-        let value1 = memory.read_byte(self.registers.pc + 1);
+        let value1 = { self.memory.read().read_byte(self.registers.pc + 1) };
         let value2 = self.registers.a;
 
         let result = self.alu.and_n(&mut self.registers, value1, value2);
@@ -1138,10 +1152,7 @@ impl Cpu {
     }
 
     fn cp_n(&mut self) {
-        let n = {
-            let memory = self.memory.read();
-            memory.read_byte(self.registers.pc + 1)
-        };
+        let n = { self.memory.read().read_byte(self.registers.pc + 1) };
 
         self.alu.cp_n(&mut self.registers, n);
 
@@ -1153,8 +1164,9 @@ impl Cpu {
 
     fn cp_mhl(&mut self) {
         let n = {
-            let memory = self.memory.read();
-            memory.read_byte(self.registers.read_word(&WordRegister::HL))
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::HL))
         };
 
         self.alu.cp_n(&mut self.registers, n);
@@ -1164,9 +1176,11 @@ impl Cpu {
     }
 
     fn ld_r_n(&mut self, register: ByteRegister) {
-        let memory = self.memory.read();
-
-        let value = memory.read_byte(self.registers.read_word(&WordRegister::PC) + 1);
+        let value = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::PC) + 1)
+        };
         self.registers.write_byte(&register, value);
 
         self.pc_to_increment = 2;
@@ -1182,10 +1196,12 @@ impl Cpu {
     }
 
     fn ld_hl_sp_n(&mut self) {
-        let memory = self.memory.read();
-
         let add1 = self.registers.read_word(&WordRegister::SP);
-        let add2 = memory.read_signed_byte(self.registers.read_word(&WordRegister::PC) + 1);
+        let add2 = {
+            self.memory
+                .read()
+                .read_signed_byte(self.registers.read_word(&WordRegister::PC) + 1)
+        };
 
         let new_value = self
             .alu
@@ -1205,8 +1221,11 @@ impl Cpu {
     }
 
     fn ld_r_mrr(&mut self, register_to: ByteRegister, register_from: WordRegister) {
-        let memory = self.memory.read();
-        let value = memory.read_byte(self.registers.read_word(&register_from));
+        let value = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&register_from))
+        };
         self.registers.write_byte(&register_to, value);
 
         self.pc_to_increment = 1;
@@ -1217,12 +1236,15 @@ impl Cpu {
      * Writes value from register A to memory address $FF00 + n.
      */
     fn ldh_n_a(&mut self) {
-        let mut memory = self.memory.write();
-        let to_sum = memory.read_byte(self.registers.pc + 1) as Word;
+        let to_sum;
 
-        let mem_addr = Address::IO_REGISTERS_START + to_sum;
+        {
+            let mut memory = self.memory.write();
+            to_sum = memory.read_byte(self.registers.pc + 1) as Word;
+            let mem_addr = Address::IO_REGISTERS_START + to_sum;
 
-        memory.write_byte(mem_addr, self.registers.a);
+            memory.write_byte(mem_addr, self.registers.a);
+        }
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 12;
@@ -1234,11 +1256,13 @@ impl Cpu {
      * Writes value from register A to memory address $FF00 + C.
      */
     fn ld_mc_a(&mut self) {
-        let mut memory = self.memory.write();
+        {
+            let mut memory = self.memory.write();
 
-        let mem_addr =
-            Address::IO_REGISTERS_START + self.registers.read_byte(&ByteRegister::C) as Word;
-        memory.write_byte(mem_addr, self.registers.a);
+            let mem_addr =
+                Address::IO_REGISTERS_START + self.registers.read_byte(&ByteRegister::C) as Word;
+            memory.write_byte(mem_addr, self.registers.a);
+        }
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
@@ -1251,8 +1275,7 @@ impl Cpu {
         let mem_addr =
             Address::IO_REGISTERS_START + self.registers.read_byte(&ByteRegister::C) as Word;
 
-        let memory = self.memory.read();
-        self.registers.a = memory.read_byte(mem_addr);
+        self.registers.a = self.memory.read().read_byte(mem_addr);
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
@@ -1262,11 +1285,15 @@ impl Cpu {
      * Writes value from memory address $FF00 + n to register A.
      */
     fn ldh_a_n(&mut self) {
-        let memory = self.memory.read();
-        let to_sum = memory.read_byte(self.registers.pc + 1) as Word;
+        let to_sum;
 
-        let mem_addr = Address::IO_REGISTERS_START + to_sum;
-        self.registers.a = memory.read_byte(mem_addr);
+        {
+            let memory = self.memory.read();
+            to_sum = memory.read_byte(self.registers.pc + 1) as Word;
+
+            let mem_addr = Address::IO_REGISTERS_START + to_sum;
+            self.registers.a = memory.read_byte(mem_addr);
+        }
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 12;
@@ -1278,10 +1305,12 @@ impl Cpu {
      * Writes value from register A to memory address nn.
      */
     fn ld_nn_a(&mut self) {
-        let mut memory = self.memory.write();
-        let mem_addr = memory.read_word(self.registers.pc + 1);
+        {
+            let mut memory = self.memory.write();
+            let mem_addr = memory.read_word(self.registers.pc + 1);
 
-        memory.write_byte(mem_addr, self.registers.a);
+            memory.write_byte(mem_addr, self.registers.a);
+        }
 
         self.pc_to_increment = 3;
         self.last_instruction_ccycles = 16;
@@ -1291,10 +1320,12 @@ impl Cpu {
      * Writes value from memory address nn to register A.
      */
     fn ld_a_nn(&mut self) {
-        let memory = self.memory.read();
-        let mem_addr = memory.read_word(self.registers.pc + 1);
+        {
+            let memory = self.memory.read();
+            let mem_addr = memory.read_word(self.registers.pc + 1);
 
-        self.registers.a = memory.read_byte(mem_addr);
+            self.registers.a = memory.read_byte(mem_addr);
+        }
 
         self.pc_to_increment = 3;
         self.last_instruction_ccycles = 16;
@@ -1304,10 +1335,11 @@ impl Cpu {
      * Writes value from register A to memory address contained in HL and decreases HL.
      */
     fn ldd_mhl_a(&mut self) {
-        let mut memory = self.memory.write();
-
         let pos = self.registers.read_word(&WordRegister::HL);
-        memory.write_byte(pos, self.registers.a);
+
+        {
+            self.memory.write().write_byte(pos, self.registers.a);
+        }
 
         let value = pos;
         self.registers
@@ -1321,10 +1353,11 @@ impl Cpu {
      * Writes value from register A to memory address contained in HL and increases HL.
      */
     fn ldi_mhl_a(&mut self) {
-        let mut memory = self.memory.write();
         let pos = self.registers.read_word(&WordRegister::HL);
 
-        memory.write_byte(pos, self.registers.a);
+        {
+            self.memory.write().write_byte(pos, self.registers.a);
+        }
 
         let value = pos;
         self.registers
@@ -1335,12 +1368,12 @@ impl Cpu {
     }
 
     fn ld_mrr_r(&mut self, register_to: WordRegister, register_from: ByteRegister) {
-        let mut memory = self.memory.write();
-
-        memory.write_byte(
-            self.registers.read_word(&register_to),
-            self.registers.read_byte(&register_from),
-        );
+        {
+            self.memory.write().write_byte(
+                self.registers.read_word(&register_to),
+                self.registers.read_byte(&register_from),
+            );
+        }
 
         self.pc_to_increment = 1;
         self.last_instruction_ccycles = 8;
@@ -1350,11 +1383,13 @@ impl Cpu {
      * Writes 8bit value to memory address contained in HL.
      */
     fn ld_mhl_n(&mut self) {
-        let mut memory = self.memory.write();
+        {
+            let mut memory = self.memory.write();
 
-        let value = memory.read_byte(self.registers.pc + 1);
+            let value = memory.read_byte(self.registers.pc + 1);
 
-        memory.write_byte(self.registers.read_word(&WordRegister::HL), value);
+            memory.write_byte(self.registers.read_word(&WordRegister::HL), value);
+        }
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 12;
@@ -1363,8 +1398,7 @@ impl Cpu {
     fn ldi_a_mhl(&mut self) {
         let mut new_value_hl = self.registers.read_word(&WordRegister::HL);
 
-        let memory = self.memory.read();
-        let value = memory.read_byte(new_value_hl);
+        let value = { self.memory.read().read_byte(new_value_hl) };
         self.registers.a = value;
 
         new_value_hl = self.alu.inc_nn(new_value_hl);
@@ -1376,10 +1410,8 @@ impl Cpu {
     }
 
     fn ldd_a_mhl(&mut self) {
-        let memory = self.memory.read();
-
         let mut new_value_hl = self.registers.read_word(&WordRegister::HL);
-        let value = memory.read_byte(new_value_hl);
+        let value = { self.memory.read().read_byte(new_value_hl) };
         self.registers.a = value;
 
         new_value_hl = self.alu.dec_nn(new_value_hl);
@@ -1391,9 +1423,7 @@ impl Cpu {
     }
 
     fn ld_rr_nn(&mut self, register: WordRegister) {
-        let memory = self.memory.read();
-
-        let value = memory.read_word(self.registers.pc + 1);
+        let value = { self.memory.read().read_word(self.registers.pc + 1) };
         self.registers.write_word(&register, value);
 
         self.pc_to_increment = 3;
@@ -1401,11 +1431,13 @@ impl Cpu {
     }
 
     fn ld_mnn_sp(&mut self) {
-        let mut memory = self.memory.write();
-        let mem_addr = memory.read_word(self.registers.read_word(&WordRegister::PC) + 1);
+        {
+            let mut memory = self.memory.write();
+            let mem_addr = memory.read_word(self.registers.read_word(&WordRegister::PC) + 1);
 
-        let value = self.registers.read_word(&WordRegister::SP);
-        memory.write_word(mem_addr, value);
+            let value = self.registers.read_word(&WordRegister::SP);
+            memory.write_word(mem_addr, value);
+        }
 
         self.pc_to_increment = 3;
         self.last_instruction_ccycles = 20;
@@ -1417,9 +1449,7 @@ impl Cpu {
      * Jumps to the current PC + n
      */
     fn jr_n(&mut self) {
-        let memory = self.memory.read();
-
-        let to_sum = memory.read_signed_byte(self.registers.pc + 1) + 2;
+        let to_sum = { self.memory.read().read_signed_byte(self.registers.pc + 1) } + 2;
 
         self.registers.pc = self.registers.pc.wrapping_add(to_sum as Word);
 
@@ -1431,9 +1461,7 @@ impl Cpu {
      * Jumps to the current PC + n only if the flag Z is not set. Otherwise, continues to the next instruction.
      */
     fn jr_nz_n(&mut self) {
-        let memory = self.memory.read();
-
-        let possible_value: i8 = memory.read_signed_byte(self.registers.pc + 1);
+        let possible_value: i8 = { self.memory.read().read_signed_byte(self.registers.pc + 1) };
 
         self.registers.pc += 2;
 
@@ -1451,8 +1479,7 @@ impl Cpu {
      * Jumps to the current PC + n only if the flag Z is set. Otherwise, continues to the next instruction.
      */
     fn jr_z_n(&mut self) {
-        let memory = self.memory.read();
-        let possible_value: i8 = memory.read_signed_byte(self.registers.pc + 1);
+        let possible_value: i8 = { self.memory.read().read_signed_byte(self.registers.pc + 1) };
 
         self.registers.pc += 2;
 
@@ -1470,8 +1497,7 @@ impl Cpu {
      * Jumps to the current PC + n only if the flag C is set. Otherwise, continues to the next instruction.
      */
     fn jr_c_n(&mut self) {
-        let memory = self.memory.read();
-        let possible_value: i8 = memory.read_signed_byte(self.registers.pc + 1);
+        let possible_value: i8 = { self.memory.read().read_signed_byte(self.registers.pc + 1) };
 
         self.registers.pc += 2;
 
@@ -1489,8 +1515,7 @@ impl Cpu {
      * Jumps to the current PC + n only if the flag C is not set. Otherwise, continues to the next instruction.
      */
     fn jr_nc_n(&mut self) {
-        let memory = self.memory.read();
-        let possible_value: i8 = memory.read_signed_byte(self.registers.pc + 1);
+        let possible_value: i8 = { self.memory.read().read_signed_byte(self.registers.pc + 1) };
 
         self.registers.pc += 2;
 
@@ -1508,8 +1533,7 @@ impl Cpu {
      * Jumps to the 16 bit address given.
      */
     fn jp_nn(&mut self) {
-        let memory = self.memory.read();
-        self.registers.pc = memory.read_word(self.registers.pc + 1);
+        self.registers.pc = self.memory.read().read_word(self.registers.pc + 1);
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 16;
@@ -1526,8 +1550,7 @@ impl Cpu {
     }
 
     fn jp_c_nn(&mut self) {
-        let memory = self.memory.read();
-        let possible_value = memory.read_word(self.registers.pc + 1);
+        let possible_value = { self.memory.read().read_word(self.registers.pc + 1) };
 
         self.registers.pc += 3;
 
@@ -1543,8 +1566,9 @@ impl Cpu {
 
     fn jp_nc_nn(&mut self) {
         let possible_value = {
-            let memory = self.memory.read();
-            memory.read_word(self.registers.read_word(&WordRegister::PC) + 1)
+            self.memory
+                .read()
+                .read_word(self.registers.read_word(&WordRegister::PC) + 1)
         };
 
         self.registers.pc += 3;
@@ -1563,8 +1587,7 @@ impl Cpu {
      * Jumps to the indicated address only if the flag Z is set. Otherwise, continues to the next instruction.
      */
     fn jp_z_nn(&mut self) {
-        let memory = self.memory.read();
-        let possible_value = memory.read_word(self.registers.pc + 1);
+        let possible_value = { self.memory.read().read_word(self.registers.pc + 1) };
 
         self.registers.pc += 3;
 
@@ -1582,8 +1605,7 @@ impl Cpu {
      * Jumps to the indicated address only if the flag Z is NOT set. Otherwise, continues to the next instruction.
      */
     fn jp_nz_nn(&mut self) {
-        let memory = self.memory.read();
-        let possible_value = memory.read_word(self.registers.pc + 1);
+        let possible_value = { self.memory.read().read_word(self.registers.pc + 1) };
 
         self.registers.pc += 3;
 
@@ -1606,8 +1628,7 @@ impl Cpu {
         let next_pc = self.registers.pc + 3;
         self.push_vv(next_pc);
 
-        let memory = self.memory.read();
-        self.registers.pc = memory.read_word(self.registers.pc + 1);
+        self.registers.pc = self.memory.read().read_word(self.registers.pc + 1);
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 24;
@@ -1627,8 +1648,7 @@ impl Cpu {
         let next_pc = self.registers.pc + 3;
         self.push_vv(next_pc);
 
-        let memory = self.memory.read();
-        self.registers.pc = memory.read_word(self.registers.pc + 1);
+        self.registers.pc = self.memory.read().read_word(self.registers.pc + 1);
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 24;
@@ -1648,8 +1668,7 @@ impl Cpu {
         let next_pc = self.registers.pc + 3;
         self.push_vv(next_pc);
 
-        let memory = self.memory.read();
-        self.registers.pc = memory.read_word(self.registers.pc + 1);
+        self.registers.pc = self.memory.read().read_word(self.registers.pc + 1);
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 24;
@@ -1669,8 +1688,7 @@ impl Cpu {
         let next_pc = self.registers.pc + 3;
         self.push_vv(next_pc);
 
-        let memory = self.memory.read();
-        self.registers.pc = memory.read_word(self.registers.pc + 1);
+        self.registers.pc = self.memory.read().read_word(self.registers.pc + 1);
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 24;
@@ -1690,8 +1708,7 @@ impl Cpu {
         let next_pc = self.registers.pc + 3;
         self.push_vv(next_pc);
 
-        let memory = self.memory.read();
-        self.registers.pc = memory.read_word(self.registers.pc + 1);
+        self.registers.pc = self.memory.read().read_word(self.registers.pc + 1);
 
         self.pc_to_increment = 0;
         self.last_instruction_ccycles = 24;
@@ -1828,25 +1845,28 @@ impl Cpu {
 
     fn rr_mhl(&mut self) {
         let address = self.registers.read_word(&WordRegister::HL);
-        let mut memory = self.memory.write();
 
-        let mut value = memory.read_byte(address);
+        {
+            let mut memory = self.memory.write();
 
-        let carry: bool = value & 0b1 == 1;
-        let msf = if self.registers.is_flag_c() {
-            0b10000000
-        } else {
-            0
-        };
+            let mut value = memory.read_byte(address);
 
-        value = msf | ((value >> 1) & 0b01111111);
+            let carry: bool = value & 0b1 == 1;
+            let msf = if self.registers.is_flag_c() {
+                0b10000000
+            } else {
+                0
+            };
 
-        self.registers.set_flag_z(value == 0);
-        self.registers.set_flag_c(carry);
-        self.registers.set_flag_h(false);
-        self.registers.set_flag_n(false);
+            value = msf | ((value >> 1) & 0b01111111);
 
-        memory.write_byte(address, value);
+            self.registers.set_flag_z(value == 0);
+            self.registers.set_flag_c(carry);
+            self.registers.set_flag_h(false);
+            self.registers.set_flag_n(false);
+
+            memory.write_byte(address, value);
+        }
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 16;
@@ -1870,15 +1890,19 @@ impl Cpu {
     }
 
     fn rl_mhl(&mut self) {
+        let mut value;
+        let new_carry;
         let address = self.registers.read_word(&WordRegister::HL);
-        let mut memory = self.memory.write();
 
-        let mut value = memory.read_byte(address);
-        let new_carry: bool = value & 0b10000000 == 0b10000000;
+        {
+            let mut memory = self.memory.write();
 
-        value = (value << 1) | (0x1 & (self.registers.is_flag_c() as Byte));
+            value = memory.read_byte(address);
+            new_carry = value & 0b10000000 == 0b10000000;
+            value = (value << 1) | (0x1 & (self.registers.is_flag_c() as Byte));
 
-        memory.write_byte(address, value);
+            memory.write_byte(address, value);
+        }
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_c(new_carry);
@@ -1926,21 +1950,26 @@ impl Cpu {
     }
 
     fn rlc_mrr(&mut self, register: WordRegister) {
-        let mut memory = self.memory.write();
-
         let address = self.registers.read_word(&register);
-        let mut value = memory.read_byte(address);
-        let new_carry: bool = value & 0b10000000 == 0b10000000;
+        let mut value;
+        let new_carry: bool;
 
-        value <<= 1;
-        value |= new_carry as Byte;
+        {
+            let mut memory = self.memory.write();
+
+            value = memory.read_byte(address);
+            new_carry = value & 0b10000000 == 0b10000000;
+
+            value <<= 1;
+            value |= new_carry as Byte;
+
+            memory.write_byte(address, value);
+        }
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_n(false);
         self.registers.set_flag_h(false);
         self.registers.set_flag_c(new_carry);
-
-        memory.write_byte(address, value);
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 16;
@@ -1985,10 +2014,7 @@ impl Cpu {
 
     fn rrc_mhl(&mut self) {
         let address = self.registers.read_word(&WordRegister::HL);
-        let mut value = {
-            let memory = self.memory.read();
-            memory.read_byte(address)
-        };
+        let mut value = { self.memory.read().read_byte(address) };
 
         let new_carry: bool = value & 0x1 == 0x1;
 
@@ -2001,8 +2027,7 @@ impl Cpu {
         self.registers.set_flag_n(false);
 
         {
-            let mut memory = self.memory.write();
-            memory.write_byte(address, value)
+            self.memory.write().write_byte(address, value)
         }
 
         self.pc_to_increment = 2;
@@ -2027,15 +2052,19 @@ impl Cpu {
     }
 
     fn srl_mhl(&mut self) {
-        let mut memory = self.memory.write();
         let address = self.registers.read_word(&WordRegister::HL);
-        let mut value = memory.read_byte(address);
+        let mut value;
+        let carry: bool;
 
-        let carry: bool = value & 0x1 == 1;
+        {
+            let mut memory = self.memory.write();
+            value = memory.read_byte(address);
 
-        value = (value >> 1) & 0b01111111;
+            carry = value & 0x1 == 1;
+            value = (value >> 1) & 0b01111111;
 
-        memory.write_byte(address, value);
+            memory.write_byte(address, value);
+        }
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_c(carry);
@@ -2065,15 +2094,19 @@ impl Cpu {
     }
 
     fn sla_mhl(&mut self) {
-        let mut memory = self.memory.write();
         let address = self.registers.read_word(&WordRegister::HL);
-        let mut value = memory.read_byte(address);
+        let mut value;
+        let carry: bool;
 
-        let carry: bool = value & 0b10000000 == 0b10000000;
+        {
+            let mut memory = self.memory.write();
+            value = memory.read_byte(address);
+            carry = value & 0b10000000 == 0b10000000;
 
-        value <<= 1;
+            value <<= 1;
 
-        memory.write_byte(address, value);
+            memory.write_byte(address, value);
+        }
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_n(false);
@@ -2104,17 +2137,22 @@ impl Cpu {
     }
 
     fn sra_mhl(&mut self) {
-        let mut memory = self.memory.write();
         let address = self.registers.read_word(&WordRegister::HL);
-        let mut value = memory.read_byte(address);
+        let mut value;
+        let carry;
 
-        let msb = value & 0b10000000;
-        let carry = value & 0x1 == 0x1;
+        {
+            let mut memory = self.memory.write();
+            value = memory.read_byte(address);
 
-        value >>= 1;
-        value |= msb;
+            let msb = value & 0b10000000;
+            carry = value & 0x1 == 0x1;
 
-        memory.write_byte(address, value);
+            value >>= 1;
+            value |= msb;
+
+            memory.write_byte(address, value);
+        }
 
         self.registers.set_flag_z(value == 0);
         self.registers.set_flag_n(false);
@@ -2135,13 +2173,16 @@ impl Cpu {
     }
 
     fn swap_mhl(&mut self) {
-        let mut memory = self.memory.write();
         let address = self.registers.read_word(&WordRegister::HL);
-        let mut value = memory.read_byte(address);
 
-        value = self.alu.swap_n(&mut self.registers, value);
+        {
+            let mut memory = self.memory.write();
+            let mut value = memory.read_byte(address);
 
-        memory.write_byte(address, value);
+            value = self.alu.swap_n(&mut self.registers, value);
+
+            memory.write_byte(address, value);
+        }
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 16;
@@ -2158,13 +2199,15 @@ impl Cpu {
     }
 
     fn res_v_mhl(&mut self, bit: u8) {
-        let mut memory = self.memory.write();
-
         let pos = self.registers.read_word(&WordRegister::HL);
 
-        let mut value = memory.read_byte(pos);
-        value &= !(0x1 << bit);
-        memory.write_byte(pos, value);
+        {
+            let mut memory = self.memory.write();
+
+            let mut value = memory.read_byte(pos);
+            value &= !(0x1 << bit);
+            memory.write_byte(pos, value);
+        }
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 16;
@@ -2181,11 +2224,13 @@ impl Cpu {
     }
 
     fn set_v_mhl(&mut self, bit: u8) {
-        let mut memory = self.memory.write();
+        {
+            let mut memory = self.memory.write();
 
-        let mut value = memory.read_byte(self.registers.read_word(&WordRegister::HL));
-        value |= 0x1 << bit;
-        memory.write_byte(self.registers.read_word(&WordRegister::HL), value);
+            let mut value = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+            value |= 0x1 << bit;
+            memory.write_byte(self.registers.read_word(&WordRegister::HL), value);
+        }
 
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 16;
@@ -2279,8 +2324,11 @@ impl Cpu {
     fn bit_v_mhl(&mut self, bit: u8) {
         let mask = 1u8 << bit;
 
-        let memory = self.memory.read();
-        let value = memory.read_byte(self.registers.read_word(&WordRegister::HL));
+        let value = {
+            self.memory
+                .read()
+                .read_byte(self.registers.read_word(&WordRegister::HL))
+        };
 
         let zero = value & mask != mask;
 
@@ -2412,8 +2460,7 @@ mod test {
 
     use crate::cpu::registers::{ByteRegister, WordRegister};
     use crate::cpu::Cpu;
-    use crate::gpu::color::Color;
-    use crate::memory::Memory;
+    use crate::Memory;
 
     #[test_case(0x0000, 0x0001)]
     #[test_case(0xFFFF, 0x0000)]

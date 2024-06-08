@@ -6,11 +6,12 @@ use crate::io::lcdc::Lcdc;
 use crate::io::ly::LY;
 use crate::io::nr52::NR52;
 use crate::io::sio_control::SioControl;
-use crate::io::stat::Stat;
+use crate::io::stat::{STATMode, Stat};
 use crate::io::tima::Tima;
 use crate::io::timer_control::TimerControl;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::address::Address;
+use crate::memory::audio_registers::AudioRegisters;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::memory::AudioRegWritten;
 use crate::{Byte, Word};
@@ -66,25 +67,25 @@ pub struct IORegisters {
     pub wave_pattern_ram: WavePatternRam,
     pub lcdc: Lcdc,
     pub stat: Stat,
-    scy: Byte,
-    scx: Byte,
+    pub scy: Byte,
+    pub scx: Byte,
     // FF44
     pub ly: LY,
     // FF45
-    pub(crate) lyc: Byte,
-    pub(crate) dma: Dma,
-    bgp: Byte,
-    obp1: Byte,
-    obp2: Byte,
+    pub lyc: Byte,
+    pub dma: Dma,
+    pub bgp: Byte,
+    pub obp1: Byte,
+    pub obp2: Byte,
     pub wy: Byte,
     pub wx: Byte,
 
     // --- OTHER - Out of scope of register
     // Audio
-    pub(crate) audio_1_reg_written: AudioRegWritten,
-    pub(crate) audio_2_reg_written: AudioRegWritten,
-    pub(crate) audio_3_reg_written: AudioRegWritten,
-    pub(crate) audio_4_reg_written: AudioRegWritten,
+    pub audio_1_reg_written: AudioRegWritten,
+    pub audio_2_reg_written: AudioRegWritten,
+    pub audio_3_reg_written: AudioRegWritten,
+    pub audio_4_reg_written: AudioRegWritten,
 }
 
 impl IORegisters {
@@ -112,6 +113,111 @@ impl IORegisters {
         }
 
         to_return
+    }
+
+    pub fn audio_reg_have_been_written(
+        &mut self,
+    ) -> (
+        AudioRegWritten,
+        AudioRegWritten,
+        AudioRegWritten,
+        AudioRegWritten,
+    ) {
+        let to_return = (
+            self.audio_1_reg_written.clone(),
+            self.audio_2_reg_written.clone(),
+            self.audio_3_reg_written.clone(),
+            self.audio_4_reg_written.clone(),
+        );
+
+        self.audio_1_reg_written = AudioRegWritten::default();
+        self.audio_2_reg_written = AudioRegWritten::default();
+        self.audio_3_reg_written = AudioRegWritten::default();
+        self.audio_4_reg_written = AudioRegWritten::default();
+
+        to_return
+    }
+
+    pub fn update_audio_1_frequency(&mut self, frequency: Word) {
+        self.nr13 = (frequency & 0xFF) as Byte;
+        self.nr14 = (self.nr14 & 0b11111000) | ((frequency >> 8) & 0b111) as Byte;
+    }
+
+    pub fn read_audio_registers(&self, channel: u8) -> AudioRegisters {
+        let mut sweep = None;
+        let start_address = match channel {
+            1 => {
+                sweep = Some(self.nr10);
+                Address::NR14_SOUND_1_FR_HI
+            }
+            2 => Address::NR24_SOUND_3_FR_HI,
+            3 => {
+                sweep = Some(self.nr30);
+                0xFF1E
+            }
+            4 => 0xFF23,
+            _ => panic!("Invalid channel provided"),
+        };
+
+        AudioRegisters::new(
+            self.read_byte(start_address),
+            self.read_byte(start_address - 1),
+            self.read_byte(start_address - 2),
+            self.read_byte(start_address - 3),
+            sweep,
+        )
+    }
+
+    pub fn set_stat_mode(&mut self, mode: STATMode) {
+        match mode {
+            STATMode::HBlank => {
+                if self.stat.mode_0 {
+                    self.interrupt_flag.set_lcd_stat(true);
+                }
+            }
+
+            STATMode::VBlank => {
+                if self.stat.mode_1 {
+                    self.interrupt_flag.set_lcd_stat(true);
+                }
+
+                self.interrupt_flag.set_vblank(true);
+            }
+            STATMode::SearchOamRam => {
+                if self.stat.mode_2 {
+                    self.interrupt_flag.set_lcd_stat(true);
+                }
+            }
+            _ => {}
+        }
+
+        self.stat.set_mode(mode);
+    }
+
+    fn determine_ly_interrupt(&mut self) {
+        let ly = self.ly.value;
+
+        let new_value = ly == self.lyc;
+
+        self.stat.coincidence_flag = new_value;
+
+        if self.stat.lyc_ly_coincidence && new_value {
+            self.interrupt_flag.set_lcd_stat(true);
+        }
+    }
+
+    pub fn ly_increment(&mut self) {
+        self.ly.increment();
+        self.determine_ly_interrupt();
+    }
+
+    pub fn ly_reset(&mut self) {
+        self.ly.reset();
+        self.determine_ly_interrupt();
+    }
+
+    pub fn ly_reset_wo_interrupt(&mut self) {
+        self.ly.reset();
     }
 }
 

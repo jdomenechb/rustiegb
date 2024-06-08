@@ -1,8 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::io::registers::IORegisters;
-use crate::io::stat::STATMode;
 use crate::memory::address::Address;
-use crate::memory::audio_registers::AudioRegisters;
 use crate::memory::bootstrap_rom::BootstrapRom;
 use crate::memory::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use crate::memory::internal_ram_memory_sector::InternalRamMemorySector;
@@ -187,18 +185,6 @@ impl Memory {
         }
     }
 
-    pub fn scx(&self) -> Byte {
-        self.read_byte(Address::SCX_SCROLL_X)
-    }
-
-    pub fn scy(&self) -> Byte {
-        self.read_byte(Address::SCY_SCROLL_Y)
-    }
-
-    pub fn bgp(&self) -> Byte {
-        self.read_byte(Address::BGP_BG_WIN_PALETTE)
-    }
-
     pub fn has_bootstrap_rom(&self) -> bool {
         self.bootstrap_rom.is_some()
     }
@@ -209,128 +195,6 @@ impl Memory {
 
     pub fn interrupt_enable(&self) -> &InterruptEnable {
         &self.interrupt_enable
-    }
-
-    pub fn oam_ram(&mut self) -> &mut OamMemorySector {
-        &mut self.oam_ram
-    }
-
-    pub fn set_stat_mode(&mut self, mode: STATMode) {
-        let mut io_registers = self.io_registers.write();
-        match mode {
-            STATMode::HBlank => {
-                if io_registers.stat.mode_0 {
-                    io_registers.interrupt_flag.set_lcd_stat(true);
-                }
-            }
-
-            STATMode::VBlank => {
-                if io_registers.stat.mode_1 {
-                    io_registers.interrupt_flag.set_lcd_stat(true);
-                }
-
-                io_registers.interrupt_flag.set_vblank(true);
-            }
-            STATMode::SearchOamRam => {
-                if io_registers.stat.mode_2 {
-                    io_registers.interrupt_flag.set_lcd_stat(true);
-                }
-            }
-            _ => {}
-        }
-
-        io_registers.stat.set_mode(mode);
-    }
-
-    pub fn ly_increment(&mut self) {
-        self.io_registers.write().ly.increment();
-        self.determine_ly_interrupt();
-    }
-
-    pub fn ly_reset(&mut self) {
-        self.io_registers.write().ly.reset();
-        self.determine_ly_interrupt();
-    }
-
-    pub fn ly_reset_wo_interrupt(&mut self) {
-        self.io_registers.write().ly.reset();
-    }
-
-    fn determine_ly_interrupt(&mut self) {
-        let mut io_registers = self.io_registers.write();
-
-        let ly = io_registers.ly.value;
-
-        let new_value = ly == io_registers.lyc;
-
-        io_registers.stat.coincidence_flag = new_value;
-
-        if io_registers.stat.lyc_ly_coincidence && new_value {
-            io_registers.interrupt_flag.set_lcd_stat(true);
-        }
-    }
-
-    pub fn audio_reg_have_been_written(
-        &mut self,
-    ) -> (
-        AudioRegWritten,
-        AudioRegWritten,
-        AudioRegWritten,
-        AudioRegWritten,
-    ) {
-        let mut io_registers = self.io_registers.write();
-
-        let to_return = (
-            io_registers.audio_1_reg_written.clone(),
-            io_registers.audio_2_reg_written.clone(),
-            io_registers.audio_3_reg_written.clone(),
-            io_registers.audio_4_reg_written.clone(),
-        );
-
-        io_registers.audio_1_reg_written = AudioRegWritten::default();
-        io_registers.audio_2_reg_written = AudioRegWritten::default();
-        io_registers.audio_3_reg_written = AudioRegWritten::default();
-        io_registers.audio_4_reg_written = AudioRegWritten::default();
-
-        to_return
-    }
-
-    pub fn read_audio_registers(&self, channel: u8) -> AudioRegisters {
-        let mut sweep = None;
-        let start_address = match channel {
-            1 => {
-                sweep = self.internally_read_byte(Address::NR10_SOUND_1_SWEEP);
-                Address::NR14_SOUND_1_FR_HI
-            }
-            2 => Address::NR24_SOUND_3_FR_HI,
-            3 => {
-                sweep = self.internally_read_byte(0xFF1A);
-                0xFF1E
-            }
-            4 => 0xFF23,
-            _ => panic!("Invalid channel provided"),
-        };
-
-        AudioRegisters::new(
-            self.internally_read_byte(start_address).unwrap(),
-            self.internally_read_byte(start_address - 1).unwrap(),
-            self.internally_read_byte(start_address - 2).unwrap(),
-            self.internally_read_byte(start_address - 3).unwrap(),
-            sweep,
-        )
-    }
-
-    pub fn set_audio_channel_inactive(&mut self, channel_n: Byte) {
-        self.io_registers
-            .write()
-            .nr52
-            .set_channel_inactive(channel_n);
-    }
-
-    pub fn update_audio_1_frequency(&mut self, frequency: Word) {
-        let mut io_registers = self.io_registers.write();
-        io_registers.nr13 = (frequency & 0xFF) as Byte;
-        io_registers.nr14 = (io_registers.nr14 & 0b11111000) | ((frequency >> 8) & 0b111) as Byte;
     }
 }
 

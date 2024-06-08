@@ -77,11 +77,11 @@ fn main() {
             io_registers_thread.clone(),
             configuration.bootstrap_path.is_some(),
         );
-        let mut gpu = Gpu::new(memory_thread.clone());
+        let mut gpu = Gpu::new(memory_thread.clone(), io_registers.clone());
 
         let audio_unit_output = CpalAudioUnitOutput::new();
 
-        let mut audio_unit = AudioUnit::new(audio_unit_output, memory_thread.clone());
+        let mut audio_unit = AudioUnit::new(audio_unit_output, io_registers_thread.clone());
 
         loop {
             if runtime_config_thread.read().has_been_reset() {

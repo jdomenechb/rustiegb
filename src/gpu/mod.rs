@@ -5,8 +5,8 @@ use image::{ImageBuffer, Rgba, RgbaImage};
 use parking_lot::RwLock;
 
 use crate::gpu::color::Color;
+use crate::io::registers::IORegisters;
 use crate::io::stat::STATMode;
-use crate::memory::address::Address;
 use crate::memory::oam_entry::OamEntry;
 use crate::memory::Memory;
 use crate::utils::math::word_to_two_bytes;
@@ -23,6 +23,7 @@ pub struct Gpu {
     sprites_to_be_drawn_without_priority: Vec<OamEntry>,
 
     memory: Arc<RwLock<Memory>>,
+    io_registers: Arc<RwLock<IORegisters>>,
 }
 
 impl Gpu {
@@ -34,12 +35,13 @@ impl Gpu {
     const BACKGROUND_MAP_TILE_SIZE_Y: u16 = 32;
     const PIXELS_PER_TILE: u16 = 8;
 
-    pub fn new(memory: Arc<RwLock<Memory>>) -> Gpu {
+    pub fn new(memory: Arc<RwLock<Memory>>, io_registers: Arc<RwLock<IORegisters>>) -> Gpu {
         Gpu {
             cycles_accumulated: 0,
             sprites_to_be_drawn_with_priority: Vec::with_capacity(10),
             sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
+            io_registers,
         }
     }
 
@@ -48,14 +50,15 @@ impl Gpu {
         let lcdc;
 
         {
-            let memory = self.memory.read();
-            mode = memory.io_registers.read().stat.mode();
-            lcdc = memory.io_registers.read().lcdc;
+            let io_registers = self.io_registers.read();
+            mode = io_registers.stat.mode();
+            lcdc = io_registers.lcdc;
         }
 
         if !lcdc.lcd_control_operation {
-            let mut memory = self.memory.write();
-            memory.ly_reset_wo_interrupt();
+            {
+                self.io_registers.write().ly_reset_wo_interrupt();
+            }
             self.cycles_accumulated = 0;
 
             return;
@@ -83,13 +86,13 @@ impl Gpu {
             self.cycles_accumulated = 0;
 
             {
-                let mut memory = self.memory.write();
-                memory.ly_increment();
+                let mut io_registers = self.io_registers.write();
+                io_registers.ly_increment();
 
-                if memory.io_registers.read().ly.has_reached_end_of_screen() {
-                    memory.set_stat_mode(STATMode::VBlank);
+                if io_registers.ly.has_reached_end_of_screen() {
+                    io_registers.set_stat_mode(STATMode::VBlank);
                 } else {
-                    memory.set_stat_mode(STATMode::SearchOamRam);
+                    io_registers.set_stat_mode(STATMode::SearchOamRam);
                 }
             }
         }
@@ -100,13 +103,13 @@ impl Gpu {
             self.cycles_accumulated = 0;
 
             {
-                let mut memory = self.memory.write();
-                memory.ly_increment();
+                let mut io_registers = self.io_registers.write();
+                io_registers.ly_increment();
 
-                if memory.io_registers.read().ly.has_reached_end_of_vblank() {
+                if io_registers.ly.has_reached_end_of_vblank() {
                     // Enter Searching OAM-RAM mode
-                    memory.set_stat_mode(STATMode::SearchOamRam);
-                    memory.ly_reset();
+                    io_registers.set_stat_mode(STATMode::SearchOamRam);
+                    io_registers.ly_reset();
                 }
             }
         }
@@ -120,23 +123,31 @@ impl Gpu {
         // Enter transferring data to LCD Driver mode
         self.cycles_accumulated = 0;
 
-        let mut memory = self.memory.write();
-        memory.set_stat_mode(STATMode::LCDTransfer);
-
         self.sprites_to_be_drawn_with_priority.clear();
         self.sprites_to_be_drawn_without_priority.clear();
 
-        let obj_sprite_display = memory.io_registers.read().lcdc.obj_sprite_display;
-        let obj_sprite_size = memory.io_registers.read().lcdc.obj_sprite_size;
+        let obj_sprite_display;
+        let obj_sprite_size;
+        let ly;
+
+        {
+            let mut io_registers = self.io_registers.write();
+            io_registers.set_stat_mode(STATMode::LCDTransfer);
+
+            obj_sprite_display = io_registers.lcdc.obj_sprite_display;
+            obj_sprite_size = io_registers.lcdc.obj_sprite_size;
+            ly = io_registers.ly.value;
+        }
 
         if !obj_sprite_display {
             return;
         }
 
-        let ly: u8 = memory.io_registers.read().ly.value;
         let sprite_size = if obj_sprite_size { 16 } else { 8 };
 
-        for oam_entry in memory.oam_ram() {
+        let oam_ram = self.memory.read().oam_ram.clone();
+
+        for oam_entry in oam_ram {
             if oam_entry.x != 0 && ly + 16 >= oam_entry.y && ly + 16 < oam_entry.y + sprite_size {
                 if oam_entry.priority() {
                     self.sprites_to_be_drawn_with_priority.push(oam_entry);
@@ -160,8 +171,7 @@ impl Gpu {
         self.cycles_accumulated = 0;
 
         {
-            let mut memory = self.memory.write();
-            memory.set_stat_mode(STATMode::HBlank);
+            self.io_registers.write().set_stat_mode(STATMode::HBlank);
         }
 
         let lcdc;
@@ -174,20 +184,18 @@ impl Gpu {
         let sprite_size;
 
         {
-            let memory = self.memory.read();
+            let io_registers = self.io_registers.read();
 
-            // Draw pixel line
-            lcdc = memory.io_registers.read().lcdc;
-            scx = memory.scx();
-            scy = memory.scy();
-            bgp = memory.bgp();
+            lcdc = io_registers.lcdc;
+            scx = io_registers.scx;
+            scy = io_registers.scy;
+            bgp = io_registers.bgp;
 
-            screen_y = memory.io_registers.read().ly.value as u16;
+            screen_y = io_registers.ly.value as u16;
+            sprite_palette0 = io_registers.obp1;
+            sprite_palette1 = io_registers.obp2;
 
-            sprite_palette0 = memory.read_byte(Address::OBP1_OBJ_PALETTE);
-            sprite_palette1 = memory.read_byte(Address::OBP2_OBJ_PALETTE);
-
-            sprite_size = if memory.io_registers.read().lcdc.obj_sprite_size {
+            sprite_size = if io_registers.lcdc.obj_sprite_size {
                 16i16
             } else {
                 8i16
@@ -261,9 +269,9 @@ impl Gpu {
                 let wx;
 
                 {
-                    let memory = self.memory.read();
-                    wy = memory.io_registers.read().wy;
-                    wx = memory.io_registers.read().wx;
+                    let io_registers = self.io_registers.read();
+                    wy = io_registers.wy;
+                    wx = io_registers.wx;
                 }
 
                 // Window
