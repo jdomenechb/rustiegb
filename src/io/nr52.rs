@@ -2,7 +2,7 @@ use crate::Byte;
 
 #[derive(Clone)]
 pub struct NR52 {
-    value: Byte,
+    pub value: Byte,
 }
 
 impl NR52 {
@@ -19,20 +19,8 @@ impl NR52 {
     }
 }
 
-impl From<Byte> for NR52 {
-    fn from(value: Byte) -> Self {
-        Self { value }
-    }
-}
-
-impl From<&NR52> for Byte {
-    fn from(original: &NR52) -> Self {
-        original.value
-    }
-}
-
 impl Default for NR52 {
     fn default() -> Self {
-        Self::from(0xf1)
+        Self { value: 0xf1 }
     }
 }

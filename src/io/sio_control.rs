@@ -1,37 +1,49 @@
 use crate::Byte;
 
 #[derive(Clone)]
+#[readonly::make]
 pub struct SioControl {
-    value: Byte,
+    pub value: Byte,
 }
 
-impl From<Byte> for SioControl {
-    fn from(value: Byte) -> Self {
-        Self {
-            value: value | 0b1111110,
-        }
-    }
-}
+const MASK: u8 = 0b01111110;
 
-impl From<&SioControl> for Byte {
-    fn from(original: &SioControl) -> Self {
-        original.value
+impl SioControl {
+    pub(crate) fn update(&mut self, value: Byte) {
+        self.value = value | MASK
     }
 }
 
 impl Default for SioControl {
     fn default() -> Self {
-        Self::from(0)
+        Self { value: MASK }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::io::sio_control::SioControl;
-    use crate::Byte;
+    use super::*;
 
     #[test]
-    fn test_ok() {
-        assert_eq!(Byte::from(&SioControl::from(0x00)), 0b1111110);
+    fn it_initializes_with_the_expected_value() {
+        let sio_control = SioControl::default();
+
+        assert_eq!(sio_control.value, MASK);
+    }
+
+    #[test]
+    fn it_sets_all_to_1() {
+        let mut sio_control = SioControl::default();
+
+        sio_control.update(0x1);
+        assert_eq!(sio_control.value, 0b01111111);
+    }
+
+    #[test]
+    fn it_sets_all_to_1_but_the_end() {
+        let mut sio_control = SioControl::default();
+
+        sio_control.update(0x0);
+        assert_eq!(sio_control.value, 0b01111110);
     }
 }

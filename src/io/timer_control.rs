@@ -8,6 +8,11 @@ pub struct TimerControl {
 }
 
 impl TimerControl {
+    pub fn update(&mut self, value: Byte) {
+        self.started = value & 0b100 == 0b100;
+        self.input_clock_select = value & 0b11;
+    }
+
     pub fn get_divider(&self) -> u32 {
         match self.input_clock_select {
             0 => 1024,
@@ -15,15 +20,6 @@ impl TimerControl {
             2 => 64,
             3 => 256,
             _ => panic!("Invalid input clock select"),
-        }
-    }
-}
-
-impl From<Byte> for TimerControl {
-    fn from(value: u8) -> Self {
-        Self {
-            started: value & 0b100 == 0b100,
-            input_clock_select: value & 0b11,
         }
     }
 }

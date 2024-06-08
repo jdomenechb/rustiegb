@@ -281,7 +281,7 @@ impl ReadMemory for IORegisters {
         match position {
             Address::P1_JOYPAD => self.p1.to_byte(),
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data,
-            Address::SC_SIO_CONTROL => (&self.sio_control).into(),
+            Address::SC_SIO_CONTROL => self.sio_control.value,
             Address::UNUSED_FF03 => 0xFF,
             Address::DIV_DIVIDER_REGISTER => self.div.value,
             Address::TIMA_TIMER_COUNTER => self.tima.value,
@@ -310,7 +310,7 @@ impl ReadMemory for IORegisters {
             0xFF23 => self.nr44,
             0xFF24 => self.nr50,
             0xFF25 => self.nr51,
-            Address::NR52_SOUND => (&self.nr52).into(),
+            Address::NR52_SOUND => self.nr52.value,
             0xFF30..=0xFF3F => self.wave_pattern_ram.read_byte(position - 0xFF30),
             Address::LCDC => (&self.lcdc).into(),
             Address::STAT => (&self.stat).into(),
@@ -318,7 +318,7 @@ impl ReadMemory for IORegisters {
             Address::SCX_SCROLL_X => self.scx,
             0xFF44 => self.ly.value,
             0xFF45 => self.lyc,
-            Address::DMA => (&self.dma).into(),
+            Address::DMA => self.dma.value,
             Address::BGP_BG_WIN_PALETTE => self.bgp,
             Address::OBP1_OBJ_PALETTE => self.obp1,
             Address::OBP2_OBJ_PALETTE => self.obp2,
@@ -334,18 +334,18 @@ impl WriteMemory for IORegisters {
         match position {
             Address::P1_JOYPAD => self.p1.parse_byte(value),
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data = value,
-            Address::SC_SIO_CONTROL => self.sio_control = value.into(),
+            Address::SC_SIO_CONTROL => self.sio_control.update(value),
             Address::UNUSED_FF03 => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
             Address::DIV_DIVIDER_REGISTER => self.div.reset_value(),
             Address::TIMA_TIMER_COUNTER => self.tima.value = value,
             Address::TMA_TIMER_MODULO => self.tma = value,
-            Address::TAC_TIMER_CONTROL => self.timer_control = value.into(),
+            Address::TAC_TIMER_CONTROL => self.timer_control.update(value),
             0xFF08..=0xFF0E => {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
-            Address::IF_INTERRUPT_FLAG => self.interrupt_flag = value.into(),
+            Address::IF_INTERRUPT_FLAG => self.interrupt_flag.update(value),
             Address::NR10_SOUND_1_SWEEP => {
                 if self.nr52.is_on() {
                     self.nr10 = value;
@@ -502,7 +502,7 @@ impl WriteMemory for IORegisters {
                 }
             }
             Address::NR52_SOUND => {
-                self.nr52 = (value & 0b10000000).into();
+                self.nr52.value = value & 0b10000000;
 
                 if self.nr52.is_on() {
                     self.nr10 = 0;
@@ -536,13 +536,13 @@ impl WriteMemory for IORegisters {
                 self.wave_pattern_ram.write_byte(position - 0xFF30, value);
                 self.audio_3_reg_written.wave_pattern = true;
             }
-            Address::LCDC => self.lcdc = value.into(),
-            Address::STAT => self.stat = value.into(),
+            Address::LCDC => self.lcdc.update(value),
+            Address::STAT => self.stat.update(value),
             Address::SCY_SCROLL_Y => self.scy = value,
             Address::SCX_SCROLL_X => self.scx = value,
             0xFF44 => self.ly.value = value,
             0xFF45 => self.lyc = value,
-            Address::DMA => self.dma = value.into(),
+            Address::DMA => self.dma.update(value),
             Address::BGP_BG_WIN_PALETTE => self.bgp = value,
             Address::OBP1_OBJ_PALETTE => self.obp1 = value,
             Address::OBP2_OBJ_PALETTE => self.obp2 = value,

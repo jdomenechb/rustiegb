@@ -49,25 +49,21 @@ impl Stat {
     pub fn set_mode(&mut self, mode: STATMode) {
         self.mode = mode
     }
-}
 
-impl From<Byte> for Stat {
-    fn from(value: Byte) -> Self {
-        Self {
-            lyc_ly_coincidence: value & 0b1000000 == 0b1000000,
-            mode_2: value & 0b100000 == 0b100000,
-            mode_1: value & 0b10000 == 0b10000,
-            mode_0: value & 0b1000 == 0b1000,
-            coincidence_flag: value & 0b100 == 0b100,
+    pub fn update(&mut self, value: Byte) {
+        self.lyc_ly_coincidence = value & 0b1000000 == 0b1000000;
+        self.mode_2 = value & 0b100000 == 0b100000;
+        self.mode_1 = value & 0b10000 == 0b10000;
+        self.mode_0 = value & 0b1000 == 0b1000;
+        self.coincidence_flag = value & 0b100 == 0b100;
 
-            mode: match value & 0b11 {
-                0b00 => STATMode::HBlank,
-                0b01 => STATMode::VBlank,
-                0b10 => STATMode::SearchOamRam,
-                0b11 => STATMode::LCDTransfer,
-                _ => panic!("Unrecognized STAT mode"),
-            },
-        }
+        self.mode = match value & 0b11 {
+            0b00 => STATMode::HBlank,
+            0b01 => STATMode::VBlank,
+            0b10 => STATMode::SearchOamRam,
+            0b11 => STATMode::LCDTransfer,
+            _ => panic!("Unrecognized STAT mode"),
+        };
     }
 }
 
@@ -90,8 +86,10 @@ mod tests {
 
     #[test]
     fn test_ok() {
+        let mut item = Stat::default();
+
         for number in 0..=0b1111111 {
-            let item = Stat::from(number);
+            item.update(number);
 
             assert_eq!(Byte::from(&item), number | 0b10000000);
         }

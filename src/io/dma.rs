@@ -1,8 +1,9 @@
 use crate::{Byte, Word};
 
 #[derive(Default, Clone)]
+#[readonly::make]
 pub struct Dma {
-    value: Byte,
+    pub(crate) value: Byte,
     remaining_cycles: Byte,
 }
 
@@ -20,20 +21,10 @@ impl Dma {
 
         false
     }
-}
 
-impl From<Byte> for Dma {
-    fn from(value: Byte) -> Self {
-        Self {
-            value,
-            remaining_cycles: 160,
-        }
-    }
-}
-
-impl From<&Dma> for Byte {
-    fn from(original: &Dma) -> Self {
-        original.value
+    pub fn update(&mut self, value: Byte) {
+        self.value = value;
+        self.remaining_cycles = 160;
     }
 }
 

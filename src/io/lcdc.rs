@@ -1,7 +1,6 @@
 use crate::Byte;
 
 #[derive(Clone, Copy)]
-#[readonly::make]
 pub struct Lcdc {
     // 0 - Stop completely (no picture on screen)
     // 1 - operation
@@ -36,18 +35,16 @@ pub struct Lcdc {
     pub bg_display: bool,
 }
 
-impl From<Byte> for Lcdc {
-    fn from(value: Byte) -> Self {
-        Self {
-            lcd_control_operation: value & 0b10000000 == 0b10000000,
-            window_tile_map_display_select: value & 0b01000000 == 0b01000000,
-            window_display: value & 0b00100000 == 0b00100000,
-            bg_and_window_tile_data_select: value & 0b10000 == 0b10000,
-            bg_tile_map_display_select: value & 0b1000 == 0b1000,
-            obj_sprite_size: value & 0b100 == 0b100,
-            obj_sprite_display: value & 0b10 == 0b10,
-            bg_display: value & 0b1 == 0b1,
-        }
+impl Lcdc {
+    pub fn update(&mut self, value: Byte) {
+        self.lcd_control_operation = value & 0b10000000 == 0b10000000;
+        self.window_tile_map_display_select = value & 0b01000000 == 0b01000000;
+        self.window_display = value & 0b00100000 == 0b00100000;
+        self.bg_and_window_tile_data_select = value & 0b10000 == 0b10000;
+        self.bg_tile_map_display_select = value & 0b1000 == 0b1000;
+        self.obj_sprite_size = value & 0b100 == 0b100;
+        self.obj_sprite_display = value & 0b10 == 0b10;
+        self.bg_display = value & 0b1 == 0b1;
     }
 }
 
@@ -66,6 +63,19 @@ impl From<&Lcdc> for Byte {
 
 impl Default for Lcdc {
     fn default() -> Self {
-        Lcdc::from(0x91)
+        let mut lcdc = Self {
+            lcd_control_operation: false,
+            window_tile_map_display_select: false,
+            window_display: false,
+            bg_and_window_tile_data_select: false,
+            bg_tile_map_display_select: false,
+            obj_sprite_size: false,
+            obj_sprite_display: false,
+            bg_display: false,
+        };
+
+        lcdc.update(0x91);
+
+        lcdc
     }
 }

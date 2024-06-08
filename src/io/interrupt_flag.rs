@@ -21,6 +21,14 @@ impl InterruptFlag {
         }
     }
 
+    pub fn update(&mut self, value: Byte) {
+        self.p10_13_transition = value & 0b10000 == 0b10000;
+        self.serial_io_transfer_complete = value & 0b1000 == 0b1000;
+        self.timer_overflow = value & 0b100 == 0b100;
+        self.lcd_stat = value & 0b10 == 0b10;
+        self.vblank = value & 0b1 == 0b1;
+    }
+
     pub fn set_vblank(&mut self, value: bool) {
         self.vblank = value;
     }
@@ -35,18 +43,6 @@ impl InterruptFlag {
 
     pub fn set_timer_overflow(&mut self, value: bool) {
         self.timer_overflow = value;
-    }
-}
-
-impl From<Byte> for InterruptFlag {
-    fn from(value: Byte) -> Self {
-        Self {
-            p10_13_transition: value & 0b10000 == 0b10000,
-            serial_io_transfer_complete: value & 0b1000 == 0b1000,
-            timer_overflow: value & 0b100 == 0b100,
-            lcd_stat: value & 0b10 == 0b10,
-            vblank: value & 0b1 == 0b1,
-        }
     }
 }
 
@@ -69,7 +65,8 @@ mod tests {
     #[test]
     fn test_ok() {
         for number in 0..=0b11111 {
-            let item = InterruptFlag::from(number);
+            let mut item = InterruptFlag::new();
+            item.update(number);
 
             assert_eq!(Byte::from(&item), number | 0b11100000);
         }
