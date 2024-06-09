@@ -287,7 +287,6 @@ impl ReadMemory for IORegisters {
             Address::P1_JOYPAD => self.p1.to_byte(),
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data,
             Address::SC_SIO_CONTROL => self.sio_control.value,
-            Address::UNUSED_FF03 => 0xFF,
             Address::DIV_DIVIDER_REGISTER => self.div.value,
             Address::TIMA_TIMER_COUNTER => self.tima.value,
             Address::TMA_TIMER_MODULO => self.tma,
@@ -299,7 +298,6 @@ impl ReadMemory for IORegisters {
             Address::NR13_SOUND_1_FR_LO => self.nr13.read(),
             Address::NR14_SOUND_1_FR_HI => self.nr14.read(),
 
-            Address::NR20_SOUND_2_UNUSED => 0xFF,
             Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => self.nr21.read(),
             Address::NR22_SOUND_2_ENVELOPE => self.nr22.read(),
             Address::NR23_SOUND_2_FR_LO => self.nr23.read(),
@@ -335,10 +333,10 @@ impl ReadMemory for IORegisters {
             Address::WX_WINDOW_X_POSITION => self.wx,
             Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.value,
 
-            Address::UNUSED_FF27..=Address::UNUSED_FF2F => 0xFF,
-            0xFF08..=0xFF0E => 0xFF,
-
-            _ => panic!("Read address {:X} not supported for IORegisters", position),
+            _ => {
+                println!("Read address {:X} not supported for IORegisters", position);
+                0xFF
+            }
         }
     }
 }

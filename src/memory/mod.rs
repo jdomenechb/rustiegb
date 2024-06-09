@@ -57,36 +57,24 @@ impl Memory {
     }
 
     pub fn read_byte(&self, position: Word) -> Byte {
-        let byte = self.internally_read_byte(position).unwrap_or(0xFF);
-
-        match position {
-            Address::NR52_SOUND => byte | 0b1110000,
-            Address::UNUSED_FF27..=Address::UNUSED_FF2F => 0xFF,
-            _ => byte,
-        }
-    }
-
-    pub fn internally_read_byte(&self, position: Word) -> Option<Byte> {
         // Bootstrap rom
         if self.bootstrap_rom.is_some() && position < Address::CARTRIDGE_START {
-            return Some(self.bootstrap_rom.as_ref().unwrap().read_byte(position));
+            return self.bootstrap_rom.as_ref().unwrap().read_byte(position);
         }
 
         match position {
-            0..=0x7FFF => Some(self.cartridge.read_byte(position)),
-            0x8000..=0x9FFF => Some(self.video_ram.read_byte(position - 0x8000)),
-            0xA000..=0xBFFF => Some(self.cartridge.read_byte(position)),
-            0xC000..=0xDFFF => Some(self.internal_ram_8k.read_byte(position - 0xC000)),
-            0xE000..=0xFDFF => Some(self.internal_ram_8k.read_byte(position - 0xE000)),
-            0xFE00..=0xFE9F => Some(self.oam_ram.read_byte(position - 0xFE00)),
-            Address::UNUSED_FF27..=Address::UNUSED_FF2F => None,
+            0..=0x7FFF => self.cartridge.read_byte(position),
+            0x8000..=0x9FFF => self.video_ram.read_byte(position - 0x8000),
+            0xA000..=0xBFFF => self.cartridge.read_byte(position),
+            0xC000..=0xDFFF => self.internal_ram_8k.read_byte(position - 0xC000),
+            0xE000..=0xFDFF => self.internal_ram_8k.read_byte(position - 0xE000),
+            0xFE00..=0xFE9F => self.oam_ram.read_byte(position - 0xFE00),
             Address::IO_REGISTERS_START..=Address::IO_REGISTERS_END => {
-                Some(self.io_registers.read().read_byte(position))
+                self.io_registers.read().read_byte(position)
             }
-            0xFF4D => Some(0xFF),
-            0xFF80..=0xFFFE => Some(self.internal_ram.read_byte(position - 0xFF80)),
-            Address::IE_INTERRUPT_ENABLE => Some(self.io_registers.read().read_byte(position)),
-            _ => None,
+            0xFF80..=0xFFFE => self.internal_ram.read_byte(position - 0xFF80),
+            Address::IE_INTERRUPT_ENABLE => self.io_registers.read().read_byte(position),
+            _ => 0xFF,
         }
     }
 
@@ -106,17 +94,14 @@ impl Memory {
             0xC000..=0xDFFF => self.internal_ram_8k.write_byte(position - 0xC000, value),
             0xE000..=0xFDFF => self.internal_ram_8k.write_byte(position - 0xE000, value),
             0xFE00..=0xFE9F => self.oam_ram.write_byte(position - 0xFE00, value),
-            0xFEA0..=0xFEFF => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
-            }
             Address::IO_REGISTERS_START..=Address::IO_REGISTERS_END => {
                 self.io_registers.write().write_byte(position, value)
             }
-            0xFF4C..=0xFF7F => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
-            }
             0xFF80..=0xFFFE => self.internal_ram.write_byte(position - 0xFF80, value),
             Address::IE_INTERRUPT_ENABLE => self.io_registers.write().write_byte(position, value),
+            _ => {
+                println!("Attempt to write at an unused RAM position {:X}", position)
+            }
         };
     }
 
@@ -168,7 +153,6 @@ mod tests {
             memory.write_byte(address, 0);
 
             assert_eq!(memory.read_byte(address), 0xFF);
-            assert_eq!(memory.internally_read_byte(address), Some(0xFF));
         }
     }
 }
