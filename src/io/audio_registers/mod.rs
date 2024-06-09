@@ -1,7 +1,5 @@
 use crate::Byte;
 
-pub mod nr10;
-pub mod nr14;
 pub mod nr52;
 pub mod nrxx;
 

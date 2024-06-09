@@ -26,11 +26,27 @@ impl Address {
     pub const NR12_SOUND_1_ENVELOPE: Word = 0xFF12;
     pub const NR13_SOUND_1_FR_LO: Word = 0xFF13;
     pub const NR14_SOUND_1_FR_HI: Word = 0xFF14;
+
     pub const NR20_SOUND_2_UNUSED: Word = 0xFF15;
     pub const NR21_SOUND_2_WAVE_PATTERN_DUTY: Word = 0xFF16;
     pub const NR22_SOUND_2_ENVELOPE: Word = 0xFF17;
     pub const NR23_SOUND_2_FR_LO: Word = 0xFF18;
-    pub const NR24_SOUND_3_FR_HI: Word = 0xFF19;
+    pub const NR24_SOUND_2_FR_HI: Word = 0xFF19;
+
+    pub const NR30_SOUND_3_ON_OFF: Word = 0xFF1A;
+    pub const NR31_SOUND_3_LENGTH: Word = 0xFF1B;
+    pub const NR32_SOUND_3_OUTPUT_LEVEL: Word = 0xFF1C;
+    pub const NR33_SOUND_3_FR_LO: Word = 0xFF1D;
+    pub const NR34_SOUND_3_FR_HI: Word = 0xFF1E;
+
+    pub const NR40_SOUND_4_UNUSED: Word = 0xFF1F;
+    pub const NR41_SOUND_4_LENGTH: Word = 0xFF20;
+    pub const NR42_SOUND_4_ENVELOPE: Word = 0xFF21;
+    pub const NR43_SOUND_4_FR_RANDOMNESS: Word = 0xFF22;
+    pub const NR44_SOUND_4_CONTROL: Word = 0xFF23;
+
+    pub const NR50: Word = 0xFF24;
+    pub const NR51: Word = 0xFF25;
     pub const NR52_SOUND: Word = 0xFF26;
 
     pub const UNUSED_FF27: Word = 0xFF27;
