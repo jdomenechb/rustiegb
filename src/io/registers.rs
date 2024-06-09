@@ -291,7 +291,6 @@ impl ReadMemory for IORegisters {
             Address::DIV_DIVIDER_REGISTER => self.div.value,
             Address::TIMA_TIMER_COUNTER => self.tima.value,
             Address::TMA_TIMER_MODULO => self.tma,
-            0xFF08..=0xFF0E => 0xFF,
             Address::IF_INTERRUPT_FLAG => (&self.interrupt_flag).into(),
 
             Address::NR10_SOUND_1_SWEEP => self.nr10.read(),
@@ -335,7 +334,11 @@ impl ReadMemory for IORegisters {
             Address::WY_WINDOW_Y_POSITION => self.wy,
             Address::WX_WINDOW_X_POSITION => self.wx,
             Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.value,
-            _ => panic!("Read address not supported for IORegisters"),
+
+            Address::UNUSED_FF27..=Address::UNUSED_FF2F => 0xFF,
+            0xFF08..=0xFF0E => 0xFF,
+
+            _ => panic!("Read address {:X} not supported for IORegisters", position),
         }
     }
 }
@@ -533,9 +536,6 @@ impl WriteMemory for IORegisters {
                     self.nr51 = 0;
                 }
             }
-            0xFF27..=0xFF2F => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
-            }
             0xFF30..=0xFF3F => {
                 self.wave_pattern_ram.write_byte(position - 0xFF30, value);
                 self.audio_3_reg_written.wave_pattern = true;
@@ -559,7 +559,148 @@ impl WriteMemory for IORegisters {
             Address::NR40_SOUND_4_UNUSED => {
                 // Ignored, not used
             }
+            Address::UNUSED_FF27..=Address::UNUSED_FF2F => {
+                println!("Attempt to write at an unused RAM position {:X}", position)
+            }
             _ => panic!("Write address not supported for IORegisters"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn check_basic_audio_registers_are_reset(io_registers: &mut IORegisters) {
+        let items = vec![
+            // NR1X
+            (Address::NR10_SOUND_1_SWEEP, 0x80),
+            (Address::NR11_SOUND_1_WAVE_PATTERN_DUTY, 0x3F),
+            (Address::NR12_SOUND_1_ENVELOPE, 0x00),
+            (Address::NR13_SOUND_1_FR_LO, 0xFF),
+            (Address::NR14_SOUND_1_FR_HI, 0xBF),
+            // NR2X
+            (Address::NR20_SOUND_2_UNUSED, 0xFF),
+            (Address::NR21_SOUND_2_WAVE_PATTERN_DUTY, 0x3F),
+            (Address::NR22_SOUND_2_ENVELOPE, 0x00),
+            (Address::NR23_SOUND_2_FR_LO, 0xFF),
+            (Address::NR24_SOUND_2_FR_HI, 0xBF),
+            // NR3X
+            (Address::NR30_SOUND_3_ON_OFF, 0x7F),
+            (Address::NR31_SOUND_3_LENGTH, 0xFF),
+            (Address::NR32_SOUND_3_OUTPUT_LEVEL, 0x9F),
+            (Address::NR33_SOUND_3_FR_LO, 0xFF),
+            (Address::NR34_SOUND_3_FR_HI, 0xBF),
+            // NR4X
+            (Address::NR40_SOUND_4_UNUSED, 0xFF),
+            (Address::NR41_SOUND_4_LENGTH, 0xFF),
+            (Address::NR42_SOUND_4_ENVELOPE, 0x00),
+            (Address::NR43_SOUND_4_FR_RANDOMNESS, 0x00),
+            (Address::NR44_SOUND_4_CONTROL, 0xBF),
+            // NR5X
+            (Address::NR50, 0x00),
+            (Address::NR51, 0x00),
+            // NR52 Skipped as it is special
+        ];
+
+        for item in items {
+            assert_eq!(
+                io_registers.read_byte(item.0),
+                item.1,
+                "Wrong data when writing register {:X}",
+                item.0
+            );
+        }
+    }
+
+    #[test]
+    fn test_correct_data_when_writing_audio_registers() {
+        let mut io_registers = IORegisters::default();
+
+        for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
+            io_registers.write_byte(position, 0xFF);
+            io_registers.write_byte(position, 0);
+        }
+
+        check_basic_audio_registers_are_reset(&mut io_registers);
+
+        // NR52
+        let position = Address::NR52_SOUND;
+
+        io_registers.write_byte(position, 0xFF);
+        io_registers.write_byte(position, 0);
+
+        assert_eq!(
+            io_registers.read_byte(position),
+            0x70,
+            "Wrong data when writing register {:X}",
+            position
+        );
+
+        io_registers.write_byte(position, 0xFF);
+
+        assert_eq!(
+            io_registers.read_byte(position),
+            0xF0,
+            "Wrong data when writing register {:X}",
+            position
+        );
+
+        // Unused registers
+        for position in Address::UNUSED_FF27..=Address::UNUSED_FF2F {
+            io_registers.write_byte(position, 0xFF);
+            io_registers.write_byte(position, 0);
+
+            assert_eq!(
+                io_registers.read_byte(position),
+                0xFF,
+                "Wrong data when writing register {:X}",
+                position
+            );
+        }
+
+        // WAVE
+        for position in 0xFF30..0xFF40 {
+            io_registers.write_byte(position, 0xFF);
+            io_registers.write_byte(position, 0);
+
+            assert_eq!(
+                io_registers.read_byte(position),
+                0,
+                "Wrong data when writing register {:X}",
+                position
+            );
+        }
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_all_audio_registers_are_reset() {
+        let mut io_registers = IORegisters::default();
+
+        for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
+            io_registers.write_byte(position, 0xFF);
+        }
+
+        io_registers.write_byte(Address::NR52_SOUND, 0);
+        io_registers.write_byte(Address::NR52_SOUND, 0b10000000);
+
+        check_basic_audio_registers_are_reset(&mut io_registers);
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_audio_registers_ignore_writes() {
+        let mut io_registers = IORegisters::default();
+
+        for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
+            io_registers.write_byte(position, 0x00);
+        }
+
+        io_registers.write_byte(Address::NR52_SOUND, 0);
+
+        for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
+            io_registers.write_byte(position, 0xFF);
+        }
+
+        check_basic_audio_registers_are_reset(&mut io_registers);
     }
 }
