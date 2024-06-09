@@ -45,6 +45,8 @@ impl Address {
     pub const NR43_SOUND_4_FR_RANDOMNESS: Word = 0xFF22;
     pub const NR44_SOUND_4_CONTROL: Word = 0xFF23;
 
+    pub const NR50: Word = 0xFF24;
+    pub const NR51: Word = 0xFF25;
     pub const NR52_SOUND: Word = 0xFF26;
 
     pub const UNUSED_FF27: Word = 0xFF27;

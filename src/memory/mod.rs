@@ -183,8 +183,8 @@ mod tests {
             (Address::NR43_SOUND_4_FR_RANDOMNESS, 0x00),
             (Address::NR44_SOUND_4_CONTROL, 0xBF),
             // NR5X
-            (0xFF24, 0x00),
-            (0xFF25, 0x00),
+            (Address::NR50, 0x00),
+            (Address::NR51, 0x00),
             // NR52 Skipped as it is special
         ];
 
@@ -202,7 +202,7 @@ mod tests {
     fn test_correct_data_when_writing_audio_registers() {
         let mut memory = Memory::default();
 
-        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
             memory.write_byte(position, 0xFF);
             memory.write_byte(position, 0);
         }
@@ -232,7 +232,7 @@ mod tests {
         );
 
         // Unused registers
-        for position in 0xFF27..=0xFF2F {
+        for position in Address::UNUSED_FF27..=Address::UNUSED_FF2F {
             memory.write_byte(position, 0xFF);
             memory.write_byte(position, 0);
 
@@ -262,7 +262,7 @@ mod tests {
     fn test_when_sound_is_turned_off_all_audio_registers_are_reset() {
         let mut memory = Memory::default();
 
-        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
             memory.write_byte(position, 0xFF);
         }
 
@@ -276,13 +276,13 @@ mod tests {
     fn test_when_sound_is_turned_off_audio_registers_ignore_writes() {
         let mut memory = Memory::default();
 
-        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
             memory.write_byte(position, 0x00);
         }
 
         memory.write_byte(Address::NR52_SOUND, 0);
 
-        for position in Address::NR10_SOUND_1_SWEEP..=0xFF25 {
+        for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
             memory.write_byte(position, 0xFF);
         }
 

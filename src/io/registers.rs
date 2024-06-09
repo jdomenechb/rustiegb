@@ -50,9 +50,7 @@ pub struct IORegisters {
     nr43: NRxx,
     nr44: NRxx,
 
-    // FF24
     nr50: Byte,
-    // FF25
     nr51: Byte,
     pub nr52: NR52,
     // Wave pattern ram (FF30 - FF3F)
@@ -320,8 +318,8 @@ impl ReadMemory for IORegisters {
             Address::NR43_SOUND_4_FR_RANDOMNESS => self.nr43.read(),
             Address::NR44_SOUND_4_CONTROL => self.nr44.read(),
 
-            0xFF24 => self.nr50,
-            0xFF25 => self.nr51,
+            Address::NR50 => self.nr50,
+            Address::NR51 => self.nr51,
             Address::NR52_SOUND => self.nr52.value,
             0xFF30..=0xFF3F => self.wave_pattern_ram.read_byte(position - 0xFF30),
             Address::LCDC => (&self.lcdc).into(),
@@ -494,12 +492,12 @@ impl WriteMemory for IORegisters {
 
                 self.nr44.update(value);
             }
-            0xFF24 => {
+            Address::NR50 => {
                 if self.nr52.is_on() {
                     self.nr50 = value;
                 }
             }
-            0xFF25 => {
+            Address::NR51 => {
                 if self.nr52.is_on() {
                     self.nr51 = value;
                 }
