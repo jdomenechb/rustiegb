@@ -60,17 +60,15 @@ impl Memory {
         let byte = self.internally_read_byte(position).unwrap_or(0xFF);
 
         match position {
-            0xFF1F..=0xFF20 => 0xFF,
-            0xFF23 => byte | 0b10111111, // 0xBF
             Address::NR52_SOUND => byte | 0b1110000,
-            0xFF27..=0xFF2F => 0xFF,
+            Address::UNUSED_FF27..=Address::UNUSED_FF2F => 0xFF,
             _ => byte,
         }
     }
 
     pub fn internally_read_byte(&self, position: Word) -> Option<Byte> {
         // Bootstrap rom
-        if self.bootstrap_rom.is_some() && position < 0x100 {
+        if self.bootstrap_rom.is_some() && position < Address::CARTRIDGE_START {
             return Some(self.bootstrap_rom.as_ref().unwrap().read_byte(position));
         }
 
@@ -179,11 +177,11 @@ mod tests {
             (Address::NR33_SOUND_3_FR_LO, 0xFF),
             (Address::NR34_SOUND_3_FR_HI, 0xBF),
             // NR4X
-            (0xFF1F, 0xFF),
-            (0xFF20, 0xFF),
-            (0xFF21, 0x00),
-            (0xFF22, 0x00),
-            (0xFF23, 0xBF),
+            (Address::NR40_SOUND_4_UNUSED, 0xFF),
+            (Address::NR41_SOUND_4_LENGTH, 0xFF),
+            (Address::NR42_SOUND_4_ENVELOPE, 0x00),
+            (Address::NR43_SOUND_4_FR_RANDOMNESS, 0x00),
+            (Address::NR44_SOUND_4_CONTROL, 0xBF),
             // NR5X
             (0xFF24, 0x00),
             (0xFF25, 0x00),

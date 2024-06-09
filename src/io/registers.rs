@@ -45,16 +45,11 @@ pub struct IORegisters {
     nr33: NRxx,
     nr34: NRxx,
 
-    // FF1F
-    nr40: Byte,
-    // FF20
-    nr41: Byte,
-    // FF21
-    nr42: Byte,
-    // FF22
-    nr43: Byte,
-    // FF23
-    nr44: Byte,
+    nr41: NRxx,
+    nr42: NRxx,
+    nr43: NRxx,
+    nr44: NRxx,
+
     // FF24
     nr50: Byte,
     // FF25
@@ -165,7 +160,13 @@ impl IORegisters {
                 self.nr31.value,
                 Some(self.nr30.value),
             ),
-            4 => AudioRegisters::new(self.nr44, self.nr43, self.nr42, self.nr41, None),
+            4 => AudioRegisters::new(
+                self.nr44.value,
+                self.nr43.value,
+                self.nr42.value,
+                self.nr41.value,
+                None,
+            ),
             _ => panic!("Invalid channel provided"),
         }
     }
@@ -252,11 +253,10 @@ impl Default for IORegisters {
             nr33: NRxx::new_with_read_ored_bits(0xFF, 0xFF),
             nr34: NRxx::new_with(0xBF, 0b1100_0111, 0xBF),
 
-            nr40: 0xFF,
-            nr41: 0xFF,
-            nr42: 0x00,
-            nr43: 0x00,
-            nr44: 0xBF,
+            nr41: NRxx::new_with(0xFF, 0b0011_1111, 0xFF),
+            nr42: NRxx::new(0x00),
+            nr43: NRxx::new(0x00),
+            nr44: NRxx::new_with(0xBF, 0b1100_0000, 0xBF),
 
             nr50: 0x77,
             nr51: 0xf3,
@@ -314,11 +314,12 @@ impl ReadMemory for IORegisters {
             Address::NR33_SOUND_3_FR_LO => self.nr33.read(),
             Address::NR34_SOUND_3_FR_HI => self.nr34.read(),
 
-            0xFF1F => self.nr40,
-            0xFF20 => self.nr41,
-            0xFF21 => self.nr42,
-            0xFF22 => self.nr43,
-            0xFF23 => self.nr44,
+            Address::NR40_SOUND_4_UNUSED => 0xFF,
+            Address::NR41_SOUND_4_LENGTH => self.nr41.read(),
+            Address::NR42_SOUND_4_ENVELOPE => self.nr42.read(),
+            Address::NR43_SOUND_4_FR_RANDOMNESS => self.nr43.read(),
+            Address::NR44_SOUND_4_CONTROL => self.nr44.read(),
+
             0xFF24 => self.nr50,
             0xFF25 => self.nr51,
             Address::NR52_SOUND => self.nr52.value,
@@ -395,9 +396,6 @@ impl WriteMemory for IORegisters {
 
                 self.nr14.update(value);
             }
-            Address::NR20_SOUND_2_UNUSED => {
-                // Ignored, not used
-            }
             Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => {
                 if self.nr52.is_on() {
                     self.nr21.update(value);
@@ -465,30 +463,25 @@ impl WriteMemory for IORegisters {
 
                 self.nr34.update(value);
             }
-            0xFF1F => {
+            Address::NR41_SOUND_4_LENGTH => {
                 if self.nr52.is_on() {
-                    self.nr40 = value;
-                }
-            }
-            0xFF20 => {
-                if self.nr52.is_on() {
-                    self.nr41 = value;
+                    self.nr41.update(value);
                     self.audio_4_reg_written.length = true;
                 }
             }
-            0xFF21 => {
+            Address::NR42_SOUND_4_ENVELOPE => {
                 if self.nr52.is_on() {
-                    self.nr42 = value;
+                    self.nr42.update(value);
                     self.audio_4_reg_written.envelope_or_wave_out_lvl = true;
                 }
             }
-            0xFF22 => {
+            Address::NR43_SOUND_4_FR_RANDOMNESS => {
                 if self.nr52.is_on() {
-                    self.nr43 = value;
+                    self.nr43.update(value);
                     self.audio_4_reg_written.frequency_or_poly_counter = true;
                 }
             }
-            0xFF23 => {
+            Address::NR44_SOUND_4_CONTROL => {
                 if !self.nr52.is_on() {
                     return;
                 }
@@ -499,7 +492,7 @@ impl WriteMemory for IORegisters {
                     self.nr52.set_channel_active(4);
                 }
 
-                self.nr44 = value;
+                self.nr44.update(value);
             }
             0xFF24 => {
                 if self.nr52.is_on() {
@@ -532,14 +525,12 @@ impl WriteMemory for IORegisters {
                 self.nr33.reset();
                 self.nr34.reset();
 
-                self.nr42 = 0;
-                self.nr43 = 0;
+                self.nr41.reset();
+                self.nr42.reset();
+                self.nr43.reset();
+                self.nr44.reset();
 
                 if self.nr52.is_on() {
-                    self.nr40 = 0;
-                    self.nr41 = 0;
-
-                    self.nr44 = 0;
                     self.nr50 = 0;
                     self.nr51 = 0;
                 }
@@ -564,6 +555,12 @@ impl WriteMemory for IORegisters {
             Address::WY_WINDOW_Y_POSITION => self.wy = value,
             Address::WX_WINDOW_X_POSITION => self.wx = value,
             Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.update(value),
+            Address::NR20_SOUND_2_UNUSED => {
+                // Ignored, not used
+            }
+            Address::NR40_SOUND_4_UNUSED => {
+                // Ignored, not used
+            }
             _ => panic!("Write address not supported for IORegisters"),
         }
     }

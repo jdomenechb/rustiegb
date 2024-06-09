@@ -39,7 +39,7 @@ impl Address {
     pub const NR33_SOUND_3_FR_LO: Word = 0xFF1D;
     pub const NR34_SOUND_3_FR_HI: Word = 0xFF1E;
 
-    pub const NR40_SOUND_4_ON_OFF: Word = 0xFF1F;
+    pub const NR40_SOUND_4_UNUSED: Word = 0xFF1F;
     pub const NR41_SOUND_4_LENGTH: Word = 0xFF20;
     pub const NR42_SOUND_4_ENVELOPE: Word = 0xFF21;
     pub const NR43_SOUND_4_FR_RANDOMNESS: Word = 0xFF22;
