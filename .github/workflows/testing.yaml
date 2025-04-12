@@ -1,11 +1,15 @@
 on:
   push:
     paths-ignore:
-      - '.github/**'
+      - '.github/dependabot.yml'
       - '.gitignore'
       - 'README.md'
 
-name: Test
+name: Testing
+
+concurrency:
+  group: ci-testing-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
