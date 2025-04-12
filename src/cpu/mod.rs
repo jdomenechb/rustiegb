@@ -2458,9 +2458,9 @@ mod test {
 
     use parking_lot::RwLock;
 
-    use crate::cpu::registers::{ByteRegister, WordRegister};
-    use crate::cpu::Cpu;
     use crate::Memory;
+    use crate::cpu::Cpu;
+    use crate::cpu::registers::{ByteRegister, WordRegister};
 
     #[test_case(0x0000, 0x0001)]
     #[test_case(0xFFFF, 0x0000)]

@@ -102,8 +102,7 @@ impl ReadMemory for Cartridge {
 
                 panic!(
                     "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    address,
-                    self.header.cartridge_type
+                    address, self.header.cartridge_type
                 );
             }
             CartridgeType::Mbc3(_, _, _) => {
@@ -119,8 +118,7 @@ impl ReadMemory for Cartridge {
 
                 panic!(
                     "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    address,
-                    self.header.cartridge_type
+                    address, self.header.cartridge_type
                 );
             }
             CartridgeType::Mbc5(_, _, _) => {
@@ -136,15 +134,13 @@ impl ReadMemory for Cartridge {
 
                 panic!(
                     "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    address,
-                    self.header.cartridge_type
+                    address, self.header.cartridge_type
                 );
             }
             _ => {
                 panic!(
                     "Reading address {:X} from ROM space for cartridge type {:?} is not implemented",
-                    address,
-                    self.header.cartridge_type
+                    address, self.header.cartridge_type
                 );
             }
         }
@@ -232,7 +228,10 @@ impl WriteMemory for Cartridge {
                         return;
                     }
 
-                    panic!("Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented", value, position, self.header.cartridge_type);
+                    panic!(
+                        "Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented",
+                        value, position, self.header.cartridge_type
+                    );
                 }
 
                 if (0x6000..0x8000).contains(&position) {
@@ -240,7 +239,10 @@ impl WriteMemory for Cartridge {
                         return;
                     }
 
-                    panic!("Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented", value, position, self.header.cartridge_type);
+                    panic!(
+                        "Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented",
+                        value, position, self.header.cartridge_type
+                    );
                 }
 
                 if (0xA000..0xC000).contains(&position) {
@@ -294,12 +296,18 @@ impl WriteMemory for Cartridge {
                     return;
                 }
 
-                panic!("Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented", value, position, self.header.cartridge_type);
+                panic!(
+                    "Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented",
+                    value, position, self.header.cartridge_type
+                );
             }
             _ => {}
         }
 
-        panic!("Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented", value, position, self.header.cartridge_type);
+        panic!(
+            "Writing value {:X} to address {:X} into ROM space for cartridge type {:?} is not implemented",
+            value, position, self.header.cartridge_type
+        );
     }
 }
 

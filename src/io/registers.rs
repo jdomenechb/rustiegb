@@ -1,8 +1,8 @@
 use crate::bus::address::Address;
-use crate::io::audio_registers::nr52::NR52;
-use crate::io::audio_registers::nrxx::NRxx;
 use crate::io::audio_registers::AudioRegWritten;
 use crate::io::audio_registers::AudioRegisters;
+use crate::io::audio_registers::nr52::NR52;
+use crate::io::audio_registers::nrxx::NRxx;
 use crate::io::div::Div;
 use crate::io::dma::Dma;
 use crate::io::interrupt_enable::InterruptEnable;

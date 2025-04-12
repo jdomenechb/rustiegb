@@ -1,6 +1,6 @@
+use crate::Byte;
 use crate::audio::registers::channel_stoppable::ChannelStopabble;
 use crate::audio::volume_envelope::VolumeEnvelopeDescription;
-use crate::Byte;
 
 pub trait EnvelopeUpdatable: ChannelStopabble {
     fn set_envelope(&mut self, envelope: VolumeEnvelopeDescription);

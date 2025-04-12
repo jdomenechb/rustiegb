@@ -35,8 +35,8 @@ impl ReadMemory for BootstrapRom {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert_fs::fixture::FileWriteBin;
     use assert_fs::NamedTempFile;
+    use assert_fs::fixture::FileWriteBin;
 
     #[test]
     fn it_creates_new_from_path() {

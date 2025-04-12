@@ -1,7 +1,7 @@
+use crate::Byte;
 use crate::cartridge::cartridge_type::CartridgeType;
 use crate::cartridge::ram_size::RamSize;
 use crate::cartridge::rom_size::RomSize;
-use crate::Byte;
 
 #[readonly::make]
 #[derive(Debug)]

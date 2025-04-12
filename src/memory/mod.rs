@@ -5,7 +5,7 @@ use crate::memory::bootstrap_rom::BootstrapRom;
 use crate::memory::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use crate::memory::internal_ram_memory_sector::InternalRamMemorySector;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
-use crate::memory::oam_memory_sector::{OamMemorySector, OAM_MEMORY_SECTOR_SIZE};
+use crate::memory::oam_memory_sector::{OAM_MEMORY_SECTOR_SIZE, OamMemorySector};
 use crate::memory::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use crate::utils::math::{two_bytes_to_word, word_to_two_bytes};
 use crate::{Byte, SignedByte, Word};
