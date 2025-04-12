@@ -2,7 +2,7 @@
 name = "rustiegb"
 version = "0.2.0"
 authors = ["Jordi Domènech <jdomenechbborges@gmail.com>"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 piston_window = "0"
