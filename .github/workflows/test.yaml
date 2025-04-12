@@ -1,10 +1,10 @@
 on: [push]
 
-name: Main
+name: Test
 
 jobs:
   check:
-    name: Check
+    name: Cargo Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
