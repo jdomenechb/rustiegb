@@ -6,6 +6,13 @@ This project's original intention was to learn Rust by coding something cool and
 this emulator only features the basics to emulate GB and focus in learning to work with Rust rather than new
 functionalities, speed or improvements.
 
+## Dev environment set up
+### Dependencies
+
+```
+sudo apt-get update && sudo apt-get install -y libasound2-dev
+```
+
 ## Blargg test status
 
 ### CPU
