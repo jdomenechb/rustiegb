@@ -25,6 +25,9 @@ pub struct Cpu {
     halted: bool,
 
     last_instruction: String,
+
+    // --- DEBUG
+    debug_pc_watchpoint: Vec<Word>,
 }
 
 impl Cpu {
@@ -47,6 +50,7 @@ impl Cpu {
             ime: false,
             halted: false,
             last_instruction: String::new(),
+            debug_pc_watchpoint: vec![],
         }
     }
 
@@ -72,6 +76,12 @@ impl Cpu {
 
             if self.registers.pc == Address::CARTRIDGE_START && memory_has_bootstrap_rom {
                 self.memory.write().erase_bootstrap_rom();
+            }
+
+            // For debug purposes
+            let mut _debug = 0;
+            if self.debug_pc_watchpoint.contains(&self.registers.pc) {
+                _debug = self.registers.pc;
             }
 
             match instruction {
@@ -2458,9 +2468,9 @@ mod test {
 
     use parking_lot::RwLock;
 
-    use crate::Memory;
-    use crate::cpu::Cpu;
     use crate::cpu::registers::{ByteRegister, WordRegister};
+    use crate::cpu::Cpu;
+    use crate::Memory;
 
     #[test_case(0x0000, 0x0001)]
     #[test_case(0xFFFF, 0x0000)]

@@ -1,8 +1,8 @@
 use crate::bus::address::Address;
-use crate::io::audio_registers::AudioRegWritten;
-use crate::io::audio_registers::AudioRegisters;
 use crate::io::audio_registers::nr52::NR52;
 use crate::io::audio_registers::nrxx::NRxx;
+use crate::io::audio_registers::AudioRegWritten;
+use crate::io::audio_registers::AudioRegisters;
 use crate::io::div::Div;
 use crate::io::dma::Dma;
 use crate::io::interrupt_enable::InterruptEnable;
@@ -78,6 +78,10 @@ pub struct IORegisters {
     pub audio_2_reg_written: AudioRegWritten,
     pub audio_3_reg_written: AudioRegWritten,
     pub audio_4_reg_written: AudioRegWritten,
+
+    // --- DEBUG
+    debug_read_watchpoint: Vec<Word>,
+    debug_write_watchpoint: Vec<Word>,
 }
 
 impl IORegisters {
@@ -277,12 +281,21 @@ impl Default for IORegisters {
             audio_2_reg_written: AudioRegWritten::default(),
             audio_3_reg_written: AudioRegWritten::default(),
             audio_4_reg_written: AudioRegWritten::default(),
+
+            debug_read_watchpoint: vec![],
+            debug_write_watchpoint: vec![],
         }
     }
 }
 
 impl ReadMemory for IORegisters {
     fn read_byte(&self, position: Word) -> Byte {
+        // For debug purposes
+        let mut _debug = 0;
+        if self.debug_read_watchpoint.contains(&position) {
+            _debug = position;
+        }
+
         match position {
             Address::P1_JOYPAD => self.p1.to_byte(),
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data,
@@ -318,7 +331,9 @@ impl ReadMemory for IORegisters {
             Address::NR50 => self.nr50,
             Address::NR51 => self.nr51,
             Address::NR52_SOUND => self.nr52.value,
-            Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => self.wave_pattern_ram.read_byte(position - Address::WAVE_PATTERN_START),
+            Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => self
+                .wave_pattern_ram
+                .read_byte(position - Address::WAVE_PATTERN_START),
             Address::LCDC => (&self.lcdc).into(),
             Address::STAT => (&self.stat).into(),
             Address::SCY_SCROLL_Y => self.scy,
@@ -343,6 +358,12 @@ impl ReadMemory for IORegisters {
 
 impl WriteMemory for IORegisters {
     fn write_byte(&mut self, position: Word, value: Byte) {
+        // For debug purposes
+        let mut _debug = 0;
+        if self.debug_write_watchpoint.contains(&position) {
+            _debug = position;
+        }
+
         match position {
             Address::P1_JOYPAD => self.p1.parse_byte(value),
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data = value,

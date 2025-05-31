@@ -38,8 +38,8 @@ impl NR52 {
 impl Default for NR52 {
     fn default() -> Self {
         Self {
-            value: 0b11110001 // 0xF1 
-         }
+            value: 0b11110001, // 0xF1
+        }
     }
 }
 
