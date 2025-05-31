@@ -51,6 +51,9 @@ impl Address {
 
     pub const UNUSED_FF27: Word = 0xFF27;
     pub const UNUSED_FF2F: Word = 0xFF2F;
+    
+    pub const WAVE_PATTERN_START: Word = 0xFF30;
+    pub const WAVE_PATTERN_END: Word = 0xFF3F;
 
     pub const LCDC: Word = 0xFF40;
     pub const STAT: Word = 0xFF41;

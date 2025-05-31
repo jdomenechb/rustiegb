@@ -318,7 +318,7 @@ impl ReadMemory for IORegisters {
             Address::NR50 => self.nr50,
             Address::NR51 => self.nr51,
             Address::NR52_SOUND => self.nr52.value,
-            0xFF30..=0xFF3F => self.wave_pattern_ram.read_byte(position - 0xFF30),
+            Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => self.wave_pattern_ram.read_byte(position - Address::WAVE_PATTERN_START),
             Address::LCDC => (&self.lcdc).into(),
             Address::STAT => (&self.stat).into(),
             Address::SCY_SCROLL_Y => self.scy,
@@ -679,4 +679,28 @@ mod tests {
 
         check_basic_audio_registers_are_reset(&mut io_registers);
     }
+
+    #[test]
+    fn test_when_sound_is_on_wave_pattern_register_is_writable() {
+        let mut io_registers = IORegisters::default();
+
+        for position in Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END {
+            io_registers.write_byte(position, 0xFF);
+            assert_eq!(0xFF, io_registers.read_byte(position));
+        }
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_wave_pattern_register_is_writable() {
+        let mut io_registers = IORegisters::default();
+
+        io_registers.write_byte(Address::NR52_SOUND, 0);
+
+        for position in Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END {
+            io_registers.write_byte(position, 0xFF);
+            assert_eq!(0xFF, io_registers.read_byte(position));
+        }
+    }
+
+    // TODO: Implement DIV-APU
 }
