@@ -1,50 +1,71 @@
 use crate::{Byte, Word};
 
+pub struct NRxxProperties {
+    /// Enable the bits the register uses, so the unused can always be set to 1
+    used_bits: Byte,
+    /// Enable the bits that are write-only, so they can be turned to 1 when reading the register
+    only_writable_bits: Byte,
+    /// Enable the bits that need to be set to 0 on reset
+    force_reset_on_bits: Byte,
+}
+
+impl NRxxProperties {
+    const DEFAULT_USED_BITS: Byte = 0xFF;
+    const DEFAULT_ONLY_WRITABLE_BITS: Byte = 0x00;
+    const DEFAULT_FORCE_RESET_ON_BITS: Byte = 0x00;
+
+    pub fn with_used_bits(&mut self, bits: Byte) -> &mut Self {
+        self.used_bits = bits;
+        self
+    }
+
+    pub fn with_only_writable_bits(&mut self, bits: Byte) -> &mut Self {
+        self.only_writable_bits = bits;
+        self
+    }
+
+    pub fn with_force_reset_on_bits(&mut self, bits: Byte) -> &mut Self {
+        self.force_reset_on_bits = bits;
+        self
+    }
+}
+
+impl Default for NRxxProperties {
+    fn default() -> Self {
+        Self {
+            used_bits: Self::DEFAULT_USED_BITS,
+            only_writable_bits: Self::DEFAULT_ONLY_WRITABLE_BITS,
+            force_reset_on_bits: Self::DEFAULT_FORCE_RESET_ON_BITS,
+        }
+    }
+}
+
 #[readonly::make]
 pub struct NRxx {
     pub value: Byte,
     used_bits: Byte,
-    read_ored_bits: Byte,
+    only_writable_bits: Byte,
+    force_reset_on_bits: Byte,
 }
 
 impl NRxx {
-    const DEFAULT_USED_BITS: Byte = 0b1111_1111;
-    const DEFAULT_READ_ORED_BITS: Byte = 0x00;
-
     pub fn new(default: Byte) -> Self {
-        Self {
-            value: default,
-            used_bits: Self::DEFAULT_USED_BITS,
-            read_ored_bits: Self::DEFAULT_READ_ORED_BITS,
-        }
+        let properties = NRxxProperties::default();
+
+        Self::new_from_properties(default, &properties)
     }
 
-    pub fn new_with_used_bits(default: Byte, used_bits: Byte) -> Self {
+    pub fn new_from_properties(default: Byte, properties: &NRxxProperties) -> Self {
         Self {
             value: default,
-            used_bits,
-            read_ored_bits: Self::DEFAULT_READ_ORED_BITS,
-        }
-    }
-
-    pub fn new_with_read_ored_bits(default: Byte, read_ored_bits: Byte) -> Self {
-        Self {
-            value: default,
-            used_bits: Self::DEFAULT_USED_BITS,
-            read_ored_bits,
-        }
-    }
-
-    pub fn new_with(default: Byte, used_bits: Byte, read_ored_bits: Byte) -> Self {
-        Self {
-            value: default,
-            used_bits,
-            read_ored_bits,
+            used_bits: properties.used_bits,
+            only_writable_bits: properties.only_writable_bits,
+            force_reset_on_bits: properties.force_reset_on_bits,
         }
     }
 
     pub fn read(&self) -> Byte {
-        self.value | self.read_ored_bits
+        self.value | self.only_writable_bits
     }
 
     pub fn reset(&mut self) {

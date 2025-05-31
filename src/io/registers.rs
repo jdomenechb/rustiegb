@@ -3,7 +3,7 @@ use crate::debug::{
     DebugReason, Debuggable, OutputDebug, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS,
 };
 use crate::io::audio_registers::nr52::NR52;
-use crate::io::audio_registers::nrxx::NRxx;
+use crate::io::audio_registers::nrxx::{NRxx, NRxxProperties};
 use crate::io::audio_registers::AudioRegWritten;
 use crate::io::audio_registers::AudioRegisters;
 use crate::io::div::Div;
@@ -252,27 +252,79 @@ impl Default for IORegisters {
             timer_control: TimerControl::default(),
             interrupt_flag: InterruptFlag::new(),
 
-            nr10: NRxx::new_with_used_bits(0x80, 0b0111_1111),
-            nr11: NRxx::new_with_read_ored_bits(0xBF, 0x3F),
+            nr10: NRxx::new_from_properties(
+                0x80,
+                NRxxProperties::default().with_used_bits(0b0111_1111),
+            ),
+            nr11: NRxx::new_from_properties(
+                0xBF,
+                NRxxProperties::default().with_only_writable_bits(0b0011_1111),
+            ),
             nr12: NRxx::new(0xF3),
-            nr13: NRxx::new_with_read_ored_bits(0xFF, 0xFF),
-            nr14: NRxx::new_with(0xBF, 0b1100_0111, 0xBF),
+            nr13: NRxx::new_from_properties(
+                0xFF,
+                NRxxProperties::default().with_only_writable_bits(0xFF),
+            ),
+            nr14: NRxx::new_from_properties(
+                0xBF,
+                NRxxProperties::default()
+                    .with_used_bits(0b1100_0111)
+                    .with_only_writable_bits(0b1011_1111),
+            ),
 
-            nr21: NRxx::new_with_read_ored_bits(0x3F, 0x3F),
+            nr21: NRxx::new_from_properties(
+                0x3F,
+                NRxxProperties::default().with_only_writable_bits(0x3F),
+            ),
             nr22: NRxx::new(0x00),
-            nr23: NRxx::new_with_read_ored_bits(0xFF, 0xFF),
-            nr24: NRxx::new_with(0xBF, 0b1100_0111, 0xBF),
+            nr23: NRxx::new_from_properties(
+                0xFF,
+                NRxxProperties::default().with_only_writable_bits(0xFF),
+            ),
+            nr24: NRxx::new_from_properties(
+                0xBF,
+                NRxxProperties::default()
+                    .with_used_bits(0b1100_0111)
+                    .with_only_writable_bits(0xBF),
+            ),
 
-            nr30: NRxx::new_with_used_bits(0x7F, 0b1000_0000),
-            nr31: NRxx::new_with_read_ored_bits(0xFF, 0xFF),
-            nr32: NRxx::new_with_used_bits(0x9F, 0b0110_0000),
-            nr33: NRxx::new_with_read_ored_bits(0xFF, 0xFF),
-            nr34: NRxx::new_with(0xBF, 0b1100_0111, 0xBF),
+            nr30: NRxx::new_from_properties(
+                0x7F,
+                NRxxProperties::default().with_used_bits(0b1000_0000),
+            ),
+            nr31: NRxx::new_from_properties(
+                0xFF,
+                NRxxProperties::default().with_only_writable_bits(0xFF),
+            ),
+            nr32: NRxx::new_from_properties(
+                0x9F,
+                NRxxProperties::default().with_used_bits(0b0110_0000),
+            ),
+            nr33: NRxx::new_from_properties(
+                0xFF,
+                NRxxProperties::default().with_only_writable_bits(0xFF),
+            ),
+            nr34: NRxx::new_from_properties(
+                0xBF,
+                NRxxProperties::default()
+                    .with_used_bits(0b1100_0111)
+                    .with_only_writable_bits(0xBF),
+            ),
 
-            nr41: NRxx::new_with(0xFF, 0b0011_1111, 0xFF),
+            nr41: NRxx::new_from_properties(
+                0xFF,
+                NRxxProperties::default()
+                    .with_used_bits(0b0011_1111)
+                    .with_only_writable_bits(0xFF),
+            ),
             nr42: NRxx::new(0x00),
             nr43: NRxx::new(0x00),
-            nr44: NRxx::new_with(0xBF, 0b1100_0000, 0xBF),
+            nr44: NRxx::new_from_properties(
+                0xBF,
+                NRxxProperties::default()
+                    .with_used_bits(0b1100_0000)
+                    .with_only_writable_bits(0xBF),
+            ),
 
             nr50: 0x77,
             nr51: 0xf3,
