@@ -1,5 +1,16 @@
 use crate::Byte;
 
+/// Audio master control
+/// ```
+/// 7 - RW - Audio on/off
+/// 6 - N/A
+/// 5 - N/A
+/// 4 - N/A
+/// 3 - RO - CH4 on?
+/// 2 - RO - CH3 on?
+/// 1 - RO - CH2 on?
+/// 0 - RO - CH1 on?
+/// ```
 #[derive(Clone)]
 #[readonly::make]
 pub struct NR52 {
@@ -11,11 +22,11 @@ impl NR52 {
         self.value & 0b10000000 == 0b10000000
     }
 
-    pub fn set_channel_active(&mut self, channel: u8) {
+    pub fn set_ro_channel_flag_active(&mut self, channel: u8) {
         self.value |= 0b1 << (channel - 1);
     }
 
-    pub fn set_channel_inactive(&mut self, channel: u8) {
+    pub fn set_ro_channel_flag_inactive(&mut self, channel: u8) {
         self.value &= !(0b1 << (channel - 1));
     }
 
@@ -26,6 +37,27 @@ impl NR52 {
 
 impl Default for NR52 {
     fn default() -> Self {
-        Self { value: 0xf1 }
+        Self {
+            value: 0b11110001 // 0xF1 
+         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_can_update_only_the_write_flags() {
+        let mut fixture = NR52::default();
+
+        fixture.update(0xFF);
+        assert_eq!(fixture.value, 0b11110000);
+
+        fixture.update(0x00);
+        assert_eq!(fixture.value, 0b01110000);
+
+        fixture.update(0xFF);
+        assert_eq!(fixture.value, 0b11110000);
     }
 }

@@ -390,7 +390,7 @@ impl WriteMemory for IORegisters {
                 self.audio_1_reg_written.control = true;
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_channel_active(1);
+                    self.nr52.set_ro_channel_flag_active(1);
                 }
 
                 self.nr14.update(value);
@@ -421,7 +421,7 @@ impl WriteMemory for IORegisters {
                 self.audio_2_reg_written.control = true;
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_channel_active(2);
+                    self.nr52.set_ro_channel_flag_active(2);
                 }
 
                 self.nr24.update(value);
@@ -457,7 +457,7 @@ impl WriteMemory for IORegisters {
                 self.audio_3_reg_written.control = true;
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_channel_active(3);
+                    self.nr52.set_ro_channel_flag_active(3);
                 }
 
                 self.nr34.update(value);
@@ -488,7 +488,7 @@ impl WriteMemory for IORegisters {
                 self.audio_4_reg_written.control = true;
 
                 if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_channel_active(4);
+                    self.nr52.set_ro_channel_flag_active(4);
                 }
 
                 self.nr44.update(value);
@@ -621,28 +621,6 @@ mod tests {
         }
 
         check_basic_audio_registers_are_reset(&mut io_registers);
-
-        // NR52
-        let position = Address::NR52_SOUND;
-
-        io_registers.write_byte(position, 0xFF);
-        io_registers.write_byte(position, 0);
-
-        assert_eq!(
-            io_registers.read_byte(position),
-            0x70,
-            "Wrong data when writing register {:X}",
-            position
-        );
-
-        io_registers.write_byte(position, 0xFF);
-
-        assert_eq!(
-            io_registers.read_byte(position),
-            0xF0,
-            "Wrong data when writing register {:X}",
-            position
-        );
 
         // Unused registers
         for position in Address::UNUSED_FF27..=Address::UNUSED_FF2F {

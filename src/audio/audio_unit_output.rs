@@ -285,24 +285,24 @@ impl CpalAudioUnitOutput {
         let mut io_registers = io_registers.write();
 
         if self.pulse_description_1.read().stop {
-            io_registers.nr52.set_channel_inactive(1);
+            io_registers.nr52.set_ro_channel_flag_inactive(1);
         }
 
         {
             if self.pulse_description_2.read().stop {
-                io_registers.nr52.set_channel_inactive(2);
+                io_registers.nr52.set_ro_channel_flag_inactive(2);
             }
         }
 
         {
             if self.wave_description.read().stop {
-                io_registers.nr52.set_channel_inactive(3);
+                io_registers.nr52.set_ro_channel_flag_inactive(3);
             }
         }
 
         {
             if self.noise_description.read().stop {
-                io_registers.nr52.set_channel_inactive(4);
+                io_registers.nr52.set_ro_channel_flag_inactive(4);
             }
         }
     }
