@@ -19,6 +19,7 @@ use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 
+#[derive(Debug)]
 pub struct IORegisters {
     pub p1: Joypad,
     serial_transfer_data: Byte,

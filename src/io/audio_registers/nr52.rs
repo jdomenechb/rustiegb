@@ -11,7 +11,7 @@ use crate::Byte;
 /// 1 - RO - CH2 on?
 /// 0 - RO - CH1 on?
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[readonly::make]
 pub struct NR52 {
     pub value: Byte,
@@ -45,8 +45,6 @@ impl Default for NR52 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn it_can_update_only_the_write_flags() {
         let mut fixture = NR52::default();

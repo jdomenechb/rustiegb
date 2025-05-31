@@ -1,6 +1,6 @@
 use crate::{Byte, Word};
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 #[readonly::make]
 pub struct Dma {
     pub(crate) value: Byte,

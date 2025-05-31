@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct LY {
     pub value: Byte,
 }

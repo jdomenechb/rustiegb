@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 #[readonly::make]
 pub struct Div {
     pub value: Byte,
@@ -25,8 +25,6 @@ impl Div {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn it_does_not_increase_in_its_maximum_value() {
         let mut div = Div::default();

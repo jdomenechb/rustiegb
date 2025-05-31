@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 #[readonly::make]
 pub struct InterruptFlag {
     pub p10_13_transition: bool,
@@ -59,8 +59,8 @@ impl From<&InterruptFlag> for Byte {
 
 #[cfg(test)]
 mod tests {
-    use crate::Byte;
     use crate::io::interrupt_flag::InterruptFlag;
+    use crate::Byte;
 
     #[test]
     fn test_ok() {

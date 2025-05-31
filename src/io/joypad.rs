@@ -1,6 +1,6 @@
-use crate::Byte;
 use crate::configuration::RuntimeConfig;
 use crate::io::registers::IORegisters;
+use crate::Byte;
 use parking_lot::RwLock;
 use piston_window::Key;
 use std::sync::Arc;
@@ -96,7 +96,7 @@ impl JoypadHandler {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Joypad {
     // P14 - P10
     pub right: bool,

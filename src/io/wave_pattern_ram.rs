@@ -1,6 +1,7 @@
 use crate::memory::memory_sector::{MemorySector, ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 
+#[derive(Debug)]
 pub struct WavePatternRam {
     pub data: MemorySector,
 }
