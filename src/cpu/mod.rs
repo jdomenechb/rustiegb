@@ -5,6 +5,7 @@ use parking_lot::RwLock;
 use crate::bus::address::Address;
 use crate::cpu::alu::Alu;
 use crate::cpu::registers::{ByteRegister, CpuRegisters, WordRegister};
+use crate::debug::CPU_PC_WATCHPOINTS;
 use crate::io::registers::IORegisters;
 use crate::memory::Memory;
 use crate::{Byte, Word};
@@ -25,9 +26,6 @@ pub struct Cpu {
     halted: bool,
 
     last_instruction: String,
-
-    // --- DEBUG
-    debug_pc_watchpoint: Vec<Word>,
 }
 
 impl Cpu {
@@ -50,7 +48,6 @@ impl Cpu {
             ime: false,
             halted: false,
             last_instruction: String::new(),
-            debug_pc_watchpoint: vec![],
         }
     }
 
@@ -80,7 +77,7 @@ impl Cpu {
 
             // For debug purposes
             let mut _debug = 0;
-            if self.debug_pc_watchpoint.contains(&self.registers.pc) {
+            if CPU_PC_WATCHPOINTS.contains(&self.registers.pc) {
                 _debug = self.registers.pc;
             }
 

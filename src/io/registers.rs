@@ -1,4 +1,5 @@
 use crate::bus::address::Address;
+use crate::debug::{IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS};
 use crate::io::audio_registers::nr52::NR52;
 use crate::io::audio_registers::nrxx::NRxx;
 use crate::io::audio_registers::AudioRegWritten;
@@ -78,10 +79,6 @@ pub struct IORegisters {
     pub audio_2_reg_written: AudioRegWritten,
     pub audio_3_reg_written: AudioRegWritten,
     pub audio_4_reg_written: AudioRegWritten,
-
-    // --- DEBUG
-    debug_read_watchpoint: Vec<Word>,
-    debug_write_watchpoint: Vec<Word>,
 }
 
 impl IORegisters {
@@ -281,9 +278,6 @@ impl Default for IORegisters {
             audio_2_reg_written: AudioRegWritten::default(),
             audio_3_reg_written: AudioRegWritten::default(),
             audio_4_reg_written: AudioRegWritten::default(),
-
-            debug_read_watchpoint: vec![],
-            debug_write_watchpoint: vec![],
         }
     }
 }
@@ -292,7 +286,7 @@ impl ReadMemory for IORegisters {
     fn read_byte(&self, position: Word) -> Byte {
         // For debug purposes
         let mut _debug = 0;
-        if self.debug_read_watchpoint.contains(&position) {
+        if IO_READ_WATCHPOINTS.contains(&position) {
             _debug = position;
         }
 
@@ -360,7 +354,7 @@ impl WriteMemory for IORegisters {
     fn write_byte(&mut self, position: Word, value: Byte) {
         // For debug purposes
         let mut _debug = 0;
-        if self.debug_write_watchpoint.contains(&position) {
+        if IO_WRITE_WATCHPOINTS.contains(&position) {
             _debug = position;
         }
 
