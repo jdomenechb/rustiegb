@@ -1,5 +1,7 @@
 use crate::bus::address::Address;
-use crate::debug::{IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS};
+use crate::debug::{
+    DebugReason, Debuggable, OutputDebug, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS,
+};
 use crate::io::audio_registers::nr52::NR52;
 use crate::io::audio_registers::nrxx::NRxx;
 use crate::io::audio_registers::AudioRegWritten;
@@ -18,6 +20,7 @@ use crate::io::timer_control::TimerControl;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
+use prettytable::table;
 
 pub struct IORegisters {
     pub p1: Joypad,
@@ -223,6 +226,20 @@ impl IORegisters {
     }
 }
 
+impl Debuggable for IORegisters {
+    fn output_debug(&self) {
+        println!("IORegisters");
+        let table = table!(
+            ["NR14", format!("{:X}", self.nr14.value)],
+            ["NR52", format!("{:X}", self.nr52.value)]
+        );
+
+        table.printstd();
+
+        println!();
+    }
+}
+
 impl Default for IORegisters {
     fn default() -> Self {
         Self {
@@ -284,13 +301,14 @@ impl Default for IORegisters {
 
 impl ReadMemory for IORegisters {
     fn read_byte(&self, position: Word) -> Byte {
-        // For debug purposes
-        let mut _debug = 0;
-        if IO_READ_WATCHPOINTS.contains(&position) {
-            _debug = position;
+        let debug_watchpoint = IO_READ_WATCHPOINTS.contains(&position);
+
+        if debug_watchpoint {
+            OutputDebug::print_reason_with_before(DebugReason::IORead(position));
+            self.output_debug();
         }
 
-        match position {
+        let result = match position {
             Address::P1_JOYPAD => self.p1.to_byte(),
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data,
             Address::SC_SIO_CONTROL => self.sio_control.value,
@@ -346,16 +364,24 @@ impl ReadMemory for IORegisters {
                 println!("Read address {:X} not supported for IORegisters", position);
                 0xFF
             }
+        };
+
+        if debug_watchpoint {
+            OutputDebug::print_after();
+            self.output_debug();
         }
+
+        result
     }
 }
 
 impl WriteMemory for IORegisters {
     fn write_byte(&mut self, position: Word, value: Byte) {
-        // For debug purposes
-        let mut _debug = 0;
-        if IO_WRITE_WATCHPOINTS.contains(&position) {
-            _debug = position;
+        let debug_watchpoint = IO_WRITE_WATCHPOINTS.contains(&position);
+
+        if debug_watchpoint {
+            OutputDebug::print_reason_with_before(DebugReason::IOWrite(position));
+            self.output_debug();
         }
 
         match position {
@@ -576,6 +602,11 @@ impl WriteMemory for IORegisters {
                 println!("Attempt to write at an unused RAM position {:X}", position)
             }
             _ => panic!("Write address not supported for IORegisters"),
+        }
+
+        if debug_watchpoint {
+            OutputDebug::print_after();
+            self.output_debug();
         }
     }
 }

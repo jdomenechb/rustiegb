@@ -5,7 +5,7 @@ use parking_lot::RwLock;
 use crate::bus::address::Address;
 use crate::cpu::alu::Alu;
 use crate::cpu::registers::{ByteRegister, CpuRegisters, WordRegister};
-use crate::debug::CPU_PC_WATCHPOINTS;
+use crate::debug::{DebugReason, Debuggable, OutputDebug, CPU_PC_WATCHPOINTS};
 use crate::io::registers::IORegisters;
 use crate::memory::Memory;
 use crate::{Byte, Word};
@@ -75,10 +75,11 @@ impl Cpu {
                 self.memory.write().erase_bootstrap_rom();
             }
 
-            // For debug purposes
-            let mut _debug = 0;
-            if CPU_PC_WATCHPOINTS.contains(&self.registers.pc) {
-                _debug = self.registers.pc;
+            let debug_watchpoint = CPU_PC_WATCHPOINTS.contains(&self.registers.pc);
+
+            if debug_watchpoint {
+                OutputDebug::print_reason_with_before(DebugReason::PC(self.registers.pc));
+                self.io_registers.read().output_debug();
             }
 
             match instruction {
@@ -368,6 +369,11 @@ impl Cpu {
                 "Instruction does not increment PC: {:X}",
                 instruction
             );
+
+            if debug_watchpoint {
+                OutputDebug::print_after();
+                self.io_registers.read().output_debug();
+            }
         } else {
             self.last_instruction_ccycles = 4;
             self.pc_to_increment = 0;
