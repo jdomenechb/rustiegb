@@ -1,7 +1,7 @@
-use crate::utils::math::set_bit;
 use crate::Byte;
+use crate::utils::math::set_bit;
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 #[readonly::make]
 pub struct InterruptEnable {
     rest: u8,
@@ -55,8 +55,8 @@ impl From<&InterruptEnable> for Byte {
 
 #[cfg(test)]
 mod tests {
-    use crate::io::interrupt_enable::InterruptEnable;
     use crate::Byte;
+    use crate::io::interrupt_enable::InterruptEnable;
     use test_case::test_case;
 
     #[test]

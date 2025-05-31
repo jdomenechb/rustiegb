@@ -1,7 +1,7 @@
 use crate::Byte;
 
 #[readonly::make]
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct TimerControl {
     pub started: bool,
     input_clock_select: u8,

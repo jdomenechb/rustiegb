@@ -30,7 +30,7 @@ impl AudioRegisters {
     }
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct AudioRegWritten {
     pub control: bool,
     pub length: bool,

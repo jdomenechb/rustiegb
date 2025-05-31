@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 #[readonly::make]
 pub struct SioControl {
     pub value: Byte,

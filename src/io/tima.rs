@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct Tima {
     pub value: Byte,
     remaining_timer_cycles: u32,

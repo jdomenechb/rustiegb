@@ -1,6 +1,6 @@
 use crate::Byte;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum STATMode {
     HBlank,
     VBlank,
@@ -14,7 +14,7 @@ impl Default for STATMode {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct Stat {
     pub lyc_ly_coincidence: bool,
     pub mode_2: bool,
@@ -81,8 +81,8 @@ impl From<&Stat> for Byte {
 
 #[cfg(test)]
 mod tests {
-    use crate::io::stat::Stat;
     use crate::Byte;
+    use crate::io::stat::Stat;
 
     #[test]
     fn test_ok() {

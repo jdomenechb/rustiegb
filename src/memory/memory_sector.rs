@@ -9,7 +9,7 @@ pub trait WriteMemory {
 }
 
 #[readonly::make]
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct MemorySector {
     pub data: Vec<Byte>,
 }

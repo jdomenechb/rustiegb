@@ -1,7 +1,6 @@
 use crate::{Byte, Word};
 
 #[readonly::make]
-#[derive(Debug)]
 pub struct NRxx {
     pub value: Byte,
     used_bits: Byte,
