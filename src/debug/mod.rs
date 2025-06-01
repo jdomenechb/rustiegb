@@ -61,8 +61,11 @@ impl OutputDebug {
         for (register_or_address_name, situation_values) in &self.values {
             let mut row = row![register_or_address_name];
 
-            for (_, situation_value) in situation_values {
-                row.add_cell(cell!(situation_value))
+            for situation in &self.situations {
+                let value = situation_values
+                    .get(situation)
+                    .map_or("".to_string(), |x| x.to_string());
+                row.add_cell(cell!(value))
             }
 
             table.add_row(row);
