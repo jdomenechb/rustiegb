@@ -439,7 +439,7 @@ impl WriteMemory for IORegisters {
         let debug_watchpoint = IO_WRITE_WATCHPOINTS.contains(&position);
 
         if debug_watchpoint {
-            OutputDebug::print_reason_with_before(DebugReason::IOWrite(position));
+            OutputDebug::print_reason_with_before(DebugReason::IOWrite(position, value));
             self.output_debug();
         }
 

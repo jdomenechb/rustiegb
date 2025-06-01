@@ -1,5 +1,5 @@
 use crate::bus::address::Address;
-use crate::Word;
+use crate::{Byte, Word};
 use std::fmt::{Display, Formatter};
 
 // CPU
@@ -43,7 +43,7 @@ impl OutputDebug {
 
 pub enum DebugReason {
     IORead(Word),
-    IOWrite(Word),
+    IOWrite(Word, Byte),
     PC(Word),
 }
 
@@ -51,7 +51,7 @@ impl Display for DebugReason {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let text = match self {
             DebugReason::IORead(addr) => format!("I/O Read {:X}", addr),
-            DebugReason::IOWrite(addr) => format!("I/O Write {:X}", addr),
+            DebugReason::IOWrite(addr, value) => format!("I/O Write {:X} value {:X}", addr, value),
             DebugReason::PC(addr) => format!("PC {:X}", addr),
         };
 
