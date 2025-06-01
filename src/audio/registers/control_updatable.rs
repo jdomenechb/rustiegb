@@ -10,6 +10,6 @@ pub trait ControlUpdatable {
     }
 
     fn calculate_use_length_from_register(register: Byte) -> bool {
-        register & 0b1000000 == 0b1000000
+        register & 0b0100_0000 == 0b0100_0000
     }
 }
