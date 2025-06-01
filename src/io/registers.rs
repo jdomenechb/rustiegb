@@ -224,12 +224,25 @@ impl IORegisters {
     pub fn ly_reset_wo_interrupt(&mut self) {
         self.ly.reset();
     }
+
+    fn should_channel_be_turned_on(&self, channel: u8) -> bool {
+        let (nrx4, nrx2) = match channel {
+            1 => (self.nr14.value, self.nr12.value),
+            2 => (self.nr24.value, self.nr22.value),
+            3 => (self.nr34.value, self.nr32.value),
+            4 => (self.nr44.value, self.nr42.value),
+            _ => panic!("Invalid channel given"),
+        };
+
+        (nrx4 & 0b1000_0000) == 0b1000_0000 && (nrx2 & 0b1111_1000) != 0b0000_0000
+    }
 }
 
 impl Debuggable for IORegisters {
     fn output_debug(&self) {
         println!("IORegisters");
         let table = table!(
+            ["NR12", format!("{:X}", self.nr12.value)],
             ["NR14", format!("{:X}", self.nr14.value)],
             ["NR24", format!("{:X}", self.nr24.value)],
             ["NR34", format!("{:X}", self.nr34.value)],
@@ -489,11 +502,11 @@ impl WriteMemory for IORegisters {
 
                 self.audio_1_reg_written.control = true;
 
-                if value & 0b10000000 == 0b10000000 {
+                self.nr14.update(value);
+
+                if self.should_channel_be_turned_on(1) {
                     self.nr52.set_ro_channel_flag_active(1);
                 }
-
-                self.nr14.update(value);
             }
             Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => {
                 if self.nr52.is_on() {
