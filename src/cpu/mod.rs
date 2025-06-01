@@ -75,11 +75,11 @@ impl Cpu {
                 self.memory.write().erase_bootstrap_rom();
             }
 
+            let mut output_debug = OutputDebug::new_with_reason(DebugReason::PC(self.registers.pc));
             let debug_watchpoint = CPU_PC_WATCHPOINTS.contains(&self.registers.pc);
 
             if debug_watchpoint {
-                OutputDebug::print_reason_with_before(DebugReason::PC(self.registers.pc));
-                self.io_registers.read().output_debug();
+                output_debug.push_situation("Before", self.io_registers.read().get_debug_values());
             }
 
             match instruction {
@@ -371,8 +371,8 @@ impl Cpu {
             );
 
             if debug_watchpoint {
-                OutputDebug::print_after();
-                self.io_registers.read().output_debug();
+                output_debug.push_situation("After", self.io_registers.read().get_debug_values());
+                output_debug.print();
             }
         } else {
             self.last_instruction_ccycles = 4;

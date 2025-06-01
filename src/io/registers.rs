@@ -20,7 +20,7 @@ use crate::io::timer_control::TimerControl;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
-use prettytable::table;
+use std::collections::BTreeMap;
 
 pub struct IORegisters {
     pub p1: Joypad,
@@ -239,20 +239,15 @@ impl IORegisters {
 }
 
 impl Debuggable for IORegisters {
-    fn output_debug(&self) {
-        println!("IORegisters");
-        let table = table!(
-            ["NR12", format!("{:X}", self.nr12.value)],
-            ["NR14", format!("{:X}", self.nr14.value)],
-            ["NR24", format!("{:X}", self.nr24.value)],
-            ["NR34", format!("{:X}", self.nr34.value)],
-            ["NR44", format!("{:X}", self.nr44.value)],
-            ["NR52", format!("{:X}", self.nr52.value)]
-        );
-
-        table.printstd();
-
-        println!();
+    fn get_debug_values(&self) -> BTreeMap<&str, String> {
+        BTreeMap::from([
+            ("NR12", format!("{:X}", self.nr12.value)),
+            ("NR14", format!("{:X}", self.nr14.value)),
+            ("NR24", format!("{:X}", self.nr24.value)),
+            ("NR34", format!("{:X}", self.nr34.value)),
+            ("NR44", format!("{:X}", self.nr44.value)),
+            ("NR52", format!("{:X}", self.nr52.value)),
+        ])
     }
 }
 
@@ -373,11 +368,12 @@ impl Default for IORegisters {
 
 impl ReadMemory for IORegisters {
     fn read_byte(&self, position: Word) -> Byte {
+        let mut output_debug = OutputDebug::new_with_reason(DebugReason::IORead(position));
         let debug_watchpoint = IO_READ_WATCHPOINTS.contains(&position);
 
         if debug_watchpoint {
-            OutputDebug::print_reason_with_before(DebugReason::IORead(position));
-            self.output_debug();
+            output_debug.push_situation("Content", self.get_debug_values());
+            output_debug.print();
         }
 
         let result = match position {
@@ -438,22 +434,17 @@ impl ReadMemory for IORegisters {
             }
         };
 
-        if debug_watchpoint {
-            OutputDebug::print_after();
-            self.output_debug();
-        }
-
         result
     }
 }
 
 impl WriteMemory for IORegisters {
     fn write_byte(&mut self, position: Word, value: Byte) {
+        let mut output_debug = OutputDebug::new_with_reason(DebugReason::IOWrite(position, value));
         let debug_watchpoint = IO_WRITE_WATCHPOINTS.contains(&position);
 
         if debug_watchpoint {
-            OutputDebug::print_reason_with_before(DebugReason::IOWrite(position, value));
-            self.output_debug();
+            output_debug.push_situation("Before", self.get_debug_values());
         }
 
         match position {
@@ -682,8 +673,8 @@ impl WriteMemory for IORegisters {
         }
 
         if debug_watchpoint {
-            OutputDebug::print_after();
-            self.output_debug();
+            output_debug.push_situation("After", self.get_debug_values());
+            output_debug.print()
         }
     }
 }

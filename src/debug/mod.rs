@@ -1,5 +1,7 @@
 use crate::bus::address::Address;
 use crate::{Byte, Word};
+use prettytable::{cell, row, Table};
+use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 
 // CPU
@@ -10,34 +12,64 @@ pub const IO_READ_WATCHPOINTS: [Word; 0] = [];
 pub const IO_WRITE_WATCHPOINTS: [Word; 0] = [];
 
 pub trait Debuggable {
-    fn output_debug(&self);
+    fn get_debug_values(&self) -> BTreeMap<&str, String>;
 }
 
-pub struct OutputDebug {}
+pub struct OutputDebug {
+    debug_reason: DebugReason,
+    situations: Vec<String>,
+    values: BTreeMap<String, BTreeMap<String, String>>,
+}
 
 impl OutputDebug {
-    pub fn print_reason(debug_reason: DebugReason) {
+    pub fn new_with_reason(debug_reason: DebugReason) -> Self {
+        Self {
+            debug_reason,
+            situations: vec![],
+            values: BTreeMap::new(),
+        }
+    }
+
+    pub fn push_situation(&mut self, situation: &str, values: BTreeMap<&str, String>) {
+        self.situations.push(situation.to_string());
+
+        for (item_header, value) in values {
+            self.values
+                .entry(item_header.to_string())
+                .and_modify(|item| {
+                    item.insert(situation.to_string(), value.clone());
+                })
+                .or_insert(BTreeMap::from([(situation.to_string(), value)]));
+        }
+    }
+
+    pub fn print(&self) {
         println!(
             "#### {} ########################################################################\n",
-            debug_reason
-        )
-    }
-
-    pub fn print_before() {
-        println!(
-            "---- BEFORE ---------------------------------------------------------------------",
+            self.debug_reason
         );
-    }
 
-    pub fn print_reason_with_before(debug_reason: DebugReason) {
-        Self::print_reason(debug_reason);
-        Self::print_before();
-    }
+        let mut table = Table::new();
+        let mut headers_row = row!["Register / Address"];
 
-    pub fn print_after() {
-        println!(
-            "---- AFTER ----------------------------------------------------------------------",
-        );
+        for situation in &self.situations {
+            headers_row.add_cell(cell!(situation))
+        }
+
+        table.add_row(headers_row);
+
+        for (register_or_address_name, situation_values) in &self.values {
+            let mut row = row![register_or_address_name];
+
+            for (_, situation_value) in situation_values {
+                row.add_cell(cell!(situation_value))
+            }
+
+            table.add_row(row);
+        }
+
+        table.printstd();
+        println!();
     }
 }
 
