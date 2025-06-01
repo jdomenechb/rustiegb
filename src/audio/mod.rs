@@ -9,6 +9,7 @@ use crate::{Byte, CpalAudioUnitOutput};
 use crate::io::audio_registers::AudioRegWritten;
 use crate::memory::memory_sector::MemorySector;
 
+pub mod apu;
 pub mod audio_unit_output;
 mod noise;
 pub mod pulse;
@@ -46,9 +47,9 @@ impl AudioUnit {
 
         {
             let mut io_registers = self.io_registers.write();
-            nr52_is_on = io_registers.nr52.is_on();
+            nr52_is_on = io_registers.apu.nr52.is_on();
 
-            audio_triggers = io_registers.audio_reg_have_been_written();
+            audio_triggers = io_registers.apu.audio_reg_have_been_written();
         }
 
         // NR52 controls the general output
@@ -112,7 +113,7 @@ impl AudioUnit {
     fn update_pulse(&mut self, channel_n: u8, changes: &AudioRegWritten) {
         let audio_registers = {
             let io_registers = self.io_registers.read();
-            io_registers.read_audio_registers(channel_n)
+            io_registers.apu.read_audio_registers(channel_n)
         };
 
         if changes.length {
@@ -151,7 +152,7 @@ impl AudioUnit {
 
         {
             let io_registers = self.io_registers.read();
-            audio_registers = io_registers.read_audio_registers(3);
+            audio_registers = io_registers.apu.read_audio_registers(3);
         }
 
         if changes.sweep_or_wave_onoff {
@@ -194,7 +195,7 @@ impl AudioUnit {
     fn update_noise(&mut self, changes: &AudioRegWritten) {
         let audio_registers = {
             let io_registers = self.io_registers.read();
-            io_registers.read_audio_registers(4)
+            io_registers.apu.read_audio_registers(4)
         };
 
         if changes.length {

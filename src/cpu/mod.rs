@@ -5,7 +5,7 @@ use parking_lot::RwLock;
 use crate::bus::address::Address;
 use crate::cpu::alu::Alu;
 use crate::cpu::registers::{ByteRegister, CpuRegisters, WordRegister};
-use crate::debug::{DebugReason, Debuggable, OutputDebug, CPU_PC_WATCHPOINTS};
+use crate::debug::{CPU_PC_WATCHPOINTS, DebugReason, Debuggable, OutputDebug};
 use crate::io::registers::IORegisters;
 use crate::memory::Memory;
 use crate::{Byte, Word};
@@ -2471,9 +2471,9 @@ mod test {
 
     use parking_lot::RwLock;
 
-    use crate::cpu::registers::{ByteRegister, WordRegister};
-    use crate::cpu::Cpu;
     use crate::Memory;
+    use crate::cpu::Cpu;
+    use crate::cpu::registers::{ByteRegister, WordRegister};
 
     #[test_case(0x0000, 0x0001)]
     #[test_case(0xFFFF, 0x0000)]

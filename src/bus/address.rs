@@ -21,6 +21,9 @@ impl Address {
     pub const TAC_TIMER_CONTROL: Word = 0xFF07;
     pub const IF_INTERRUPT_FLAG: Word = 0xFF0F;
 
+    pub const APU_START: Word = 0xFF10;
+    pub const APU_END: Word = 0xFF26;
+
     pub const NR10_SOUND_1_SWEEP: Word = 0xFF10;
     pub const NR11_SOUND_1_WAVE_PATTERN_DUTY: Word = 0xFF11;
     pub const NR12_SOUND_1_ENVELOPE: Word = 0xFF12;

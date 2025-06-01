@@ -77,7 +77,10 @@ impl Sweep {
                         pulse_description.frequency = new_frequency;
 
                         {
-                            io_registers.write().update_audio_1_frequency(new_frequency);
+                            io_registers
+                                .write()
+                                .apu
+                                .update_audio_1_frequency(new_frequency);
                         }
 
                         self.calculate_new_frequency(pulse_description);
