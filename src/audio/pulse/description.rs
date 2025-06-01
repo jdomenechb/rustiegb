@@ -1,5 +1,5 @@
-use crate::audio::pulse::PulseWavePatternDuty;
 use crate::audio::pulse::sweep::Sweep;
+use crate::audio::pulse::PulseWavePatternDuty;
 use crate::audio::registers::{
     ChannelStopabble, ControlRegisterUpdatable, ControlUpdatable, EnvelopeRegisterUpdatable,
     EnvelopeUpdatable, FrequencyRegisterUpdatable, FrequencyUpdatable, LengthRegisterUpdatable,
@@ -144,6 +144,7 @@ impl ControlRegisterUpdatable for PulseDescription {
                 }
 
                 self.set_remaining_steps(length);
+                self.stop = false;
             }
         }
 

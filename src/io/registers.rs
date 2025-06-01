@@ -36,7 +36,7 @@ pub struct IORegisters {
     nr11: NRxx,
     nr12: NRxx,
     nr13: NRxx,
-    nr14: NRxx,
+    pub nr14: NRxx,
 
     nr21: NRxx,
     nr22: NRxx,
@@ -606,32 +606,37 @@ impl WriteMemory for IORegisters {
             Address::NR52_SOUND => {
                 self.nr52.update(value);
 
-                self.nr10.reset();
-                self.nr11.reset();
-                self.nr12.reset();
-                self.nr13.reset();
-                self.nr14.reset();
-
-                // NR20 is not used
-                self.nr21.reset();
-                self.nr22.reset();
-                self.nr23.reset();
-                self.nr24.reset();
-
-                self.nr30.reset();
-                self.nr31.reset();
-                self.nr32.reset();
-                self.nr33.reset();
-                self.nr34.reset();
-
-                self.nr41.reset();
-                self.nr42.reset();
-                self.nr43.reset();
-                self.nr44.reset();
-
                 if self.nr52.is_on() {
                     self.nr50 = 0;
                     self.nr51 = 0;
+                } else {
+                    self.nr10.reset();
+                    self.nr11.reset();
+                    self.nr12.reset();
+                    self.nr13.reset();
+                    self.nr14.reset();
+
+                    // NR20 is not used
+                    self.nr21.reset();
+                    self.nr22.reset();
+                    self.nr23.reset();
+                    self.nr24.reset();
+
+                    self.nr30.reset();
+                    self.nr31.reset();
+                    self.nr32.reset();
+                    self.nr33.reset();
+                    self.nr34.reset();
+
+                    self.nr41.reset();
+                    self.nr42.reset();
+                    self.nr43.reset();
+                    self.nr44.reset();
+
+                    self.nr52.set_ro_channel_flag_inactive(1);
+                    self.nr52.set_ro_channel_flag_inactive(2);
+                    self.nr52.set_ro_channel_flag_inactive(3);
+                    self.nr52.set_ro_channel_flag_inactive(4);
                 }
             }
             0xFF30..=0xFF3F => {

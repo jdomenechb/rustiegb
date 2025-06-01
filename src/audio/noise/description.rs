@@ -147,6 +147,7 @@ impl ControlRegisterUpdatable for NoiseDescription {
                 }
 
                 self.set_remaining_steps(length);
+                self.stop = false;
             }
         }
 

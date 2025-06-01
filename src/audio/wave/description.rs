@@ -124,6 +124,7 @@ impl ControlRegisterUpdatable for WaveDescription {
                 }
 
                 self.set_remaining_steps(length);
+                self.stop = false;
             }
         }
 

@@ -31,7 +31,7 @@ impl NR52 {
     }
 
     pub fn update(&mut self, value: Byte) {
-        self.value = (value & 0b10000000) | 0b01110000
+        self.value = (self.value & 0b0000_1111) | (value & 0b1000_0000) | 0b0111_0000
     }
 }
 
@@ -52,12 +52,12 @@ mod tests {
         let mut fixture = NR52::default();
 
         fixture.update(0xFF);
-        assert_eq!(fixture.value, 0b11110000);
+        assert_eq!(fixture.value, 0b11110001);
 
         fixture.update(0x00);
-        assert_eq!(fixture.value, 0b01110000);
+        assert_eq!(fixture.value, 0b01110001);
 
         fixture.update(0xFF);
-        assert_eq!(fixture.value, 0b11110000);
+        assert_eq!(fixture.value, 0b11110001);
     }
 }
