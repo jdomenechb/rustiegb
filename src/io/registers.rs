@@ -231,6 +231,9 @@ impl Debuggable for IORegisters {
         println!("IORegisters");
         let table = table!(
             ["NR14", format!("{:X}", self.nr14.value)],
+            ["NR24", format!("{:X}", self.nr24.value)],
+            ["NR34", format!("{:X}", self.nr34.value)],
+            ["NR44", format!("{:X}", self.nr44.value)],
             ["NR52", format!("{:X}", self.nr52.value)]
         );
 
@@ -269,7 +272,8 @@ impl Default for IORegisters {
                 0xBF,
                 NRxxProperties::default()
                     .with_used_bits(0b1100_0111)
-                    .with_only_writable_bits(0b1011_1111),
+                    .with_only_writable_bits(0b1011_1111)
+                    .with_avoid_reset_on_bits(0b1000_0000),
             ),
 
             nr21: NRxx::new_from_properties(
@@ -285,7 +289,8 @@ impl Default for IORegisters {
                 0xBF,
                 NRxxProperties::default()
                     .with_used_bits(0b1100_0111)
-                    .with_only_writable_bits(0xBF),
+                    .with_only_writable_bits(0xBF)
+                    .with_avoid_reset_on_bits(0b1000_0000),
             ),
 
             nr30: NRxx::new_from_properties(
@@ -308,7 +313,8 @@ impl Default for IORegisters {
                 0xBF,
                 NRxxProperties::default()
                     .with_used_bits(0b1100_0111)
-                    .with_only_writable_bits(0xBF),
+                    .with_only_writable_bits(0xBF)
+                    .with_avoid_reset_on_bits(0b1000_0000),
             ),
 
             nr41: NRxx::new_from_properties(
@@ -323,7 +329,8 @@ impl Default for IORegisters {
                 0xBF,
                 NRxxProperties::default()
                     .with_used_bits(0b1100_0000)
-                    .with_only_writable_bits(0xBF),
+                    .with_only_writable_bits(0b1000_0000)
+                    .with_avoid_reset_on_bits(0b1000_0000),
             ),
 
             nr50: 0x77,

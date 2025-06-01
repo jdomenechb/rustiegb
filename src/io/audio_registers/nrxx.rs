@@ -6,13 +6,13 @@ pub struct NRxxProperties {
     /// Enable the bits that are write-only, so they can be turned to 1 when reading the register
     only_writable_bits: Byte,
     /// Enable the bits that need to be set to 0 on reset
-    force_reset_on_bits: Byte,
+    avoid_reset_on_bits: Byte,
 }
 
 impl NRxxProperties {
     const DEFAULT_USED_BITS: Byte = 0xFF;
     const DEFAULT_ONLY_WRITABLE_BITS: Byte = 0x00;
-    const DEFAULT_FORCE_RESET_ON_BITS: Byte = 0x00;
+    const DEFAULT_AVOID_RESET_ON_BITS: Byte = 0x00;
 
     pub fn with_used_bits(&mut self, bits: Byte) -> &mut Self {
         self.used_bits = bits;
@@ -24,8 +24,8 @@ impl NRxxProperties {
         self
     }
 
-    pub fn with_force_reset_on_bits(&mut self, bits: Byte) -> &mut Self {
-        self.force_reset_on_bits = bits;
+    pub fn with_avoid_reset_on_bits(&mut self, bits: Byte) -> &mut Self {
+        self.avoid_reset_on_bits = bits;
         self
     }
 }
@@ -35,7 +35,7 @@ impl Default for NRxxProperties {
         Self {
             used_bits: Self::DEFAULT_USED_BITS,
             only_writable_bits: Self::DEFAULT_ONLY_WRITABLE_BITS,
-            force_reset_on_bits: Self::DEFAULT_FORCE_RESET_ON_BITS,
+            avoid_reset_on_bits: Self::DEFAULT_AVOID_RESET_ON_BITS,
         }
     }
 }
@@ -45,7 +45,7 @@ pub struct NRxx {
     pub value: Byte,
     used_bits: Byte,
     only_writable_bits: Byte,
-    force_reset_on_bits: Byte,
+    avoid_reset_on_bits: Byte,
 }
 
 impl NRxx {
@@ -60,7 +60,7 @@ impl NRxx {
             value: default,
             used_bits: properties.used_bits,
             only_writable_bits: properties.only_writable_bits,
-            force_reset_on_bits: properties.force_reset_on_bits,
+            avoid_reset_on_bits: properties.avoid_reset_on_bits,
         }
     }
 
@@ -69,7 +69,7 @@ impl NRxx {
     }
 
     pub fn reset(&mut self) {
-        self.value = !self.used_bits;
+        self.value = (self.value & self.avoid_reset_on_bits) | !self.used_bits;
     }
 
     pub fn update(&mut self, value: Byte) {
