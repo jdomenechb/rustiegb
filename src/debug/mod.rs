@@ -95,11 +95,11 @@ pub enum DebugReason {
 impl Display for DebugReason {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let text = match self {
-            DebugReason::IORead(addr) => format!("I/O Read {:X}", addr),
-            DebugReason::IOWrite(addr, value) => format!("I/O Write {:X} value {:X}", addr, value),
-            DebugReason::PC(addr) => format!("PC {:X}", addr),
+            DebugReason::IORead(addr) => format!("I/O Read {addr:X}",),
+            DebugReason::IOWrite(addr, value) => format!("I/O Write {addr:X} value {value:X}"),
+            DebugReason::PC(addr) => format!("PC {addr:X}"),
         };
 
-        write!(f, "{}", text)
+        write!(f, "{text}")
     }
 }

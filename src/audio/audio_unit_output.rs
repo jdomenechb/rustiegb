@@ -99,7 +99,7 @@ impl CpalAudioUnitOutput {
         let sample_rate = config.sample_rate.0 as f32;
         let channels = config.channels as usize;
 
-        let err_fn = |err| eprintln!("An error occurred on stream: {}", err);
+        let err_fn = |err| eprintln!("An error occurred on stream: {err}");
 
         let description1 = self.pulse_description_1.clone();
         let description2 = self.pulse_description_2.clone();

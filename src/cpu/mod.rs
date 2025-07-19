@@ -360,14 +360,13 @@ impl Cpu {
                 0xFE => self.cp_n(),
                 0xFF => self.rst_v_w_out(0x38),
                 _ => {
-                    panic!("Instruction not implemented: {:X}", instruction);
+                    panic!("Instruction not implemented: {instruction:X}");
                 }
             }
 
             debug_assert!(
                 self.pc_to_increment >= 0,
-                "Instruction does not increment PC: {:X}",
-                instruction
+                "Instruction does not increment PC: {instruction:X}",
             );
 
             if debug_watchpoint {
@@ -1172,7 +1171,7 @@ impl Cpu {
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 8;
 
-        self.last_instruction = format!("CP {:X}", n);
+        self.last_instruction = format!("CP {n:X}");
     }
 
     fn cp_mhl(&mut self) {
@@ -1262,7 +1261,7 @@ impl Cpu {
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 12;
 
-        self.last_instruction = format!("LDH ($FF{:X}, A)", to_sum)
+        self.last_instruction = format!("LDH ($FF{to_sum:X}, A)")
     }
 
     /**
@@ -1311,7 +1310,7 @@ impl Cpu {
         self.pc_to_increment = 2;
         self.last_instruction_ccycles = 12;
 
-        self.last_instruction = format!("LDH (A, $FF{:X})", to_sum)
+        self.last_instruction = format!("LDH (A, $FF{to_sum:X})")
     }
 
     /**

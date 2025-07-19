@@ -209,7 +209,7 @@ impl ReadMemory for IORegisters {
             Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.value,
 
             _ => {
-                println!("Read address {:X} not supported for IORegisters", position);
+                println!("Read address {position:X} not supported for IORegisters");
                 0xFF
             }
         }
@@ -230,14 +230,14 @@ impl WriteMemory for IORegisters {
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data = value,
             Address::SC_SIO_CONTROL => self.sio_control.update(value),
             Address::UNUSED_FF03 => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
+                println!("Attempt to write at an unused RAM position {position:X}",)
             }
             Address::DIV_DIVIDER_REGISTER => self.div.reset_value(),
             Address::TIMA_TIMER_COUNTER => self.tima.value = value,
             Address::TMA_TIMER_MODULO => self.tma = value,
             Address::TAC_TIMER_CONTROL => self.timer_control.update(value),
             0xFF08..=0xFF0E => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
+                println!("Attempt to write at an unused RAM position {position:X}",)
             }
             Address::IF_INTERRUPT_FLAG => self.interrupt_flag.update(value),
             Address::APU_START..=Address::APU_END => self.apu.write_byte(position, value),
@@ -259,7 +259,7 @@ impl WriteMemory for IORegisters {
             Address::WX_WINDOW_X_POSITION => self.wx = value,
             Address::IE_INTERRUPT_ENABLE => self.interrupt_enable.update(value),
             Address::UNUSED_FF27..=Address::UNUSED_FF2F => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
+                println!("Attempt to write at an unused RAM position {position:X}")
             }
             _ => panic!("Write address not supported for IORegisters"),
         }

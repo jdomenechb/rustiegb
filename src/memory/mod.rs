@@ -100,7 +100,7 @@ impl Memory {
             0xFF80..=0xFFFE => self.internal_ram.write_byte(position - 0xFF80, value),
             Address::IE_INTERRUPT_ENABLE => self.io_registers.write().write_byte(position, value),
             _ => {
-                println!("Attempt to write at an unused RAM position {:X}", position)
+                println!("Attempt to write at an unused RAM position {position:X}")
             }
         };
     }

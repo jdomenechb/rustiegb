@@ -151,10 +151,7 @@ impl WriteMemory for Cartridge {
     fn write_byte(&mut self, position: u16, value: u8) {
         match self.header.cartridge_type {
             CartridgeType::Rom(false, false) => {
-                println!(
-                    "Attempt to write at Memory {:X}. ROM is not writable!!!",
-                    position
-                );
+                println!("Attempt to write at Memory {position:X}. ROM is not writable!!!",);
 
                 return;
             }

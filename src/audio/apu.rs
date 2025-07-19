@@ -245,7 +245,7 @@ impl ReadMemory for Apu {
             Address::NR52_SOUND => self.nr52.value,
 
             _ => {
-                println!("Read address {:X} not supported for APU", position);
+                println!("Read address {position:X} not supported for APU");
                 0xFF
             }
         }
@@ -442,7 +442,7 @@ impl WriteMemory for Apu {
             Address::NR40_SOUND_4_UNUSED => {
                 // Ignored, not used
             }
-            _ => panic!("Write address {:X} not supported for APU", position),
+            _ => panic!("Write address {position:X} not supported for APU"),
         }
     }
 }
