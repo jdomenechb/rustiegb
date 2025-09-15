@@ -118,9 +118,7 @@ impl Memory {
             io_registers.step(last_instruction_cycles)
         };
 
-        if dma_init_address.is_some() {
-            let dma_init_address = dma_init_address.unwrap();
-
+        if let Some(dma_init_address) = dma_init_address {
             for i in 0..OAM_MEMORY_SECTOR_SIZE {
                 self.oam_ram
                     .write_byte(i, self.read_byte(dma_init_address + i));
