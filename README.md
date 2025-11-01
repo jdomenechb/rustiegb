@@ -10,7 +10,7 @@ functionalities, speed or improvements.
 ### Dependencies
 
 ```
-sudo apt-get update && sudo apt-get install -y libasound2-dev
+sudo apt update && sudo apt install -y libasound2-dev pkg-config
 ```
 
 ## Blargg test status
