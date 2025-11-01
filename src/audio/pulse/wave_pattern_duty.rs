@@ -1,10 +1,11 @@
 use crate::Byte;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub enum PulseWavePatternDuty {
     Percent125,
     Percent25,
+    #[default]
     Percent50,
     Percent75,
 }
@@ -17,12 +18,6 @@ impl PulseWavePatternDuty {
             Self::Percent50 => 0.50,
             Self::Percent75 => 0.75,
         }
-    }
-}
-
-impl Default for PulseWavePatternDuty {
-    fn default() -> Self {
-        Self::Percent50
     }
 }
 

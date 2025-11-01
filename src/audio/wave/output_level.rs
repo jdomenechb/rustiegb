@@ -1,8 +1,9 @@
 use crate::Byte;
 
-#[derive(Eq, PartialEq, Clone, Copy)]
+#[derive(Eq, PartialEq, Clone, Copy, Default)]
 pub enum WaveOutputLevel {
     Mute,
+    #[default]
     Vol100Percent,
     Vol50Percent,
     Vol25Percent,

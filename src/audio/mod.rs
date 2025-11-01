@@ -96,7 +96,7 @@ impl AudioUnit {
             self.cycle_count -= CYCLES_1_512_SEC;
             self.frame_step = (self.frame_step + 1) % 8;
 
-            if self.frame_step % 2 == 0 {
+            if self.frame_step.is_multiple_of(2) {
                 self.auo.step_256();
             }
 

@@ -165,7 +165,7 @@ impl WriteMemory for Cartridge {
                 if (0x2000..0x4000).contains(&position) {
                     let new_value = value as u16 & 0b11111;
 
-                    self.selected_rom_bank = if new_value % 0x20 == 0 {
+                    self.selected_rom_bank = if new_value.is_multiple_of(0x20) {
                         new_value + 1
                     } else {
                         new_value

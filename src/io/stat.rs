@@ -1,17 +1,12 @@
 use crate::Byte;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum STATMode {
+    #[default]
     HBlank,
     VBlank,
     SearchOamRam,
     LCDTransfer,
-}
-
-impl Default for STATMode {
-    fn default() -> Self {
-        Self::HBlank
-    }
 }
 
 #[derive(Default)]
