@@ -9,12 +9,6 @@ pub enum WaveOutputLevel {
     Vol25Percent,
 }
 
-impl Default for WaveOutputLevel {
-    fn default() -> Self {
-        Self::Vol100Percent
-    }
-}
-
 impl From<WaveOutputLevel> for f32 {
     fn from(wol: WaveOutputLevel) -> Self {
         match wol {
