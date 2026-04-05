@@ -58,8 +58,10 @@ impl Memory {
 
     pub fn read_byte(&self, position: Word) -> Byte {
         // Bootstrap rom
-        if self.bootstrap_rom.is_some() && position < Address::CARTRIDGE_START {
-            return self.bootstrap_rom.as_ref().unwrap().read_byte(position);
+        if position < Address::CARTRIDGE_START
+            && let Some(bootstrap_rom) = &self.bootstrap_rom
+        {
+            return bootstrap_rom.read_byte(position);
         }
 
         match position {
