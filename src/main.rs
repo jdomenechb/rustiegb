@@ -84,16 +84,18 @@ fn main() {
 
         let mut audio_unit = AudioUnit::new(audio_unit_output, io_registers_thread.clone());
 
-        loop {
-            if runtime_config_thread.read().has_been_reset() {
-                let mut rcw = runtime_config_thread.write();
-
-                cpu.reset();
-                rcw.reset_available_ccycles();
-                rcw.set_reset(false);
-            }
-
+        'main_loop: loop {
             while runtime_config_thread.read().cpu_has_available_ccycles() {
+                if runtime_config_thread.read().has_been_reset() {
+                    let mut rcw = runtime_config_thread.write();
+
+                    cpu.reset();
+                    rcw.reset_available_ccycles();
+                    rcw.set_reset(false);
+
+                    continue 'main_loop;
+                }
+
                 let last_instruction_cycles = cpu.step(runtime_config_thread.read().is_debug());
 
                 {
