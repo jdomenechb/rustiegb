@@ -96,7 +96,7 @@ impl CpalAudioUnitOutput {
         let config = &StreamConfig::from(self.config.clone());
 
         let device = &self.device;
-        let sample_rate = config.sample_rate.0 as f32;
+        let sample_rate = config.sample_rate as f32;
         let channels = config.channels as usize;
 
         let err_fn = |err| eprintln!("An error occurred on stream: {err}");
