@@ -1,8 +1,8 @@
-use crate::audio::registers::{
+use crate::audiold::registers::{
     ChannelStopabble, ControlRegisterUpdatable, ControlUpdatable, FrequencyRegisterUpdatable,
     FrequencyUpdatable, LengthRegisterUpdatable, LengthUpdatable,
 };
-use crate::audio::wave::WaveOutputLevel;
+use crate::audiold::wave::WaveOutputLevel;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, Word};
 

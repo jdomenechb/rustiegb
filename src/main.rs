@@ -2,7 +2,7 @@ extern crate anyhow;
 extern crate cpal;
 extern crate image;
 extern crate piston_window;
-mod audio;
+mod audiold;
 mod bus;
 mod cartridge;
 mod configuration;
@@ -13,8 +13,8 @@ mod io;
 mod memory;
 mod utils;
 
-use crate::audio::AudioUnit;
-use crate::audio::audio_unit_output::CpalAudioUnitOutput;
+use crate::audiold::audio_unit_output::CpalAudioUnitOutput;
+use crate::audiold::AudioUnit;
 use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
@@ -27,7 +27,7 @@ use io::joypad::JoypadHandler;
 use memory::Memory;
 use parking_lot::RwLock;
 use piston_window::*;
-use std::sync::{Arc, mpsc};
+use std::sync::{mpsc, Arc};
 
 const APP_NAME: &str = "RustieGB";
 const WINDOW_SIZE_MULTIPLIER: u32 = 4;

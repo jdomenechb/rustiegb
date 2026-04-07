@@ -4,14 +4,14 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, FromSample, Stream, StreamConfig, SupportedStreamConfig};
 use parking_lot::RwLock;
 
-use crate::audio::noise::NoiseDescription;
-use crate::audio::pulse::PulseDescription;
-use crate::audio::registers::{
+use crate::audiold::noise::NoiseDescription;
+use crate::audiold::pulse::PulseDescription;
+use crate::audiold::registers::{
     ControlRegisterUpdatable, EnvelopeRegisterUpdatable, FrequencyRegisterUpdatable,
     LengthRegisterUpdatable,
 };
-use crate::audio::wave::WaveDescription;
-use crate::audio::wave::WaveOutputLevel;
+use crate::audiold::wave::WaveDescription;
+use crate::audiold::wave::WaveOutputLevel;
 use crate::io::registers::IORegisters;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::ReadMemory;

@@ -1,7 +1,7 @@
-use crate::audio::apu::Apu;
+use crate::audiold::apu::Apu;
 use crate::bus::address::Address;
 use crate::debug::{
-    DebugReason, Debuggable, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS, OutputDebug,
+    DebugReason, Debuggable, OutputDebug, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS,
 };
 use crate::io::div::Div;
 use crate::io::dma::Dma;

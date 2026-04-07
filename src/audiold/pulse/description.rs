@@ -1,11 +1,11 @@
-use crate::audio::pulse::PulseWavePatternDuty;
-use crate::audio::pulse::sweep::Sweep;
-use crate::audio::registers::{
+use crate::audiold::pulse::sweep::Sweep;
+use crate::audiold::pulse::PulseWavePatternDuty;
+use crate::audiold::registers::{
     ChannelStopabble, ControlRegisterUpdatable, ControlUpdatable, EnvelopeRegisterUpdatable,
     EnvelopeUpdatable, FrequencyRegisterUpdatable, FrequencyUpdatable, LengthRegisterUpdatable,
     LengthUpdatable,
 };
-use crate::audio::volume_envelope::VolumeEnvelopeDescription;
+use crate::audiold::volume_envelope::VolumeEnvelopeDescription;
 use crate::io::registers::IORegisters;
 use crate::{Byte, Word};
 use parking_lot::RwLock;

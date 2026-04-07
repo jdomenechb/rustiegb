@@ -1,8 +1,8 @@
-use crate::audio::registers::{
+use crate::audiold::registers::{
     ChannelStopabble, ControlRegisterUpdatable, ControlUpdatable, EnvelopeRegisterUpdatable,
     EnvelopeUpdatable, LengthRegisterUpdatable, LengthUpdatable,
 };
-use crate::audio::volume_envelope::VolumeEnvelopeDescription;
+use crate::audiold::volume_envelope::VolumeEnvelopeDescription;
 use crate::{Byte, Word};
 
 #[derive(Default)]

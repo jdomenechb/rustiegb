@@ -1,5 +1,5 @@
-use crate::audio::pulse::description::PulseDescription;
-use crate::audio::registers::{ChannelStopabble, FrequencyUpdatable};
+use crate::audiold::pulse::description::PulseDescription;
+use crate::audiold::registers::{ChannelStopabble, FrequencyUpdatable};
 use crate::io::registers::IORegisters;
 use crate::{Byte, Word};
 use direction::SweepDirection;
