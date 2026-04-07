@@ -6,7 +6,7 @@ use crate::io::registers::IORegisters;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::{Byte, CpalAudioUnitOutput};
 
-use crate::io::audio_registers::AudioRegWritten;
+use crate::io::audio_registers_old::AudioRegWritten;
 use crate::memory::memory_sector::MemorySector;
 
 pub mod apu;

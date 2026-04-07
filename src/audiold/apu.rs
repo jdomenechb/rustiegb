@@ -1,8 +1,8 @@
 use crate::bus::address::Address;
 use crate::debug::Debuggable;
-use crate::io::audio_registers::nr52::NR52;
-use crate::io::audio_registers::nrxx::{NRxx, NRxxProperties};
-use crate::io::audio_registers::{AudioRegWritten, AudioRegisters};
+use crate::io::audio_registers_old::nr52::NR52;
+use crate::io::audio_registers_old::nrxx::{NRxx, NRxxProperties};
+use crate::io::audio_registers_old::{AudioRegWritten, AudioRegisters};
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 use std::collections::BTreeMap;

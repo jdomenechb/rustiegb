@@ -2,6 +2,8 @@ extern crate anyhow;
 extern crate cpal;
 extern crate image;
 extern crate piston_window;
+
+mod audio;
 mod audiold;
 mod bus;
 mod cartridge;
