@@ -1,25 +1,28 @@
-use crate::Byte;
+use crate::{Byte, Word};
 
 #[derive(Default)]
 #[readonly::make]
 pub struct Div {
-    pub value: Byte,
+    value: Word,
     remaining_div_cycles: u16,
 }
 
 impl Div {
-    const STEP_CYCLES: u16 = 0x100;
     pub fn step(&mut self, last_instruction_cycles: u8) {
-        self.remaining_div_cycles += last_instruction_cycles as u16;
-
-        self.value = self
-            .value
-            .wrapping_add((self.remaining_div_cycles / Self::STEP_CYCLES) as u8);
-        self.remaining_div_cycles %= Self::STEP_CYCLES
+        self.value = self.value.wrapping_add(last_instruction_cycles as u16);
     }
 
-    pub fn reset_value(&mut self) {
-        self.value = 0;
+    fn reset_value(&mut self) {
+        // FIXME: Possibly it needs to be reset to 0
+        self.value = self.value & 0x00FF;
+    }
+
+    pub fn write(&mut self) {
+        self.reset_value()
+    }
+
+    pub fn read(&self) -> Byte {
+        (self.value >> 8) as Byte
     }
 }
 
@@ -32,7 +35,7 @@ mod tests {
         let mut div = Div::default();
         div.step(0xFF);
 
-        assert_eq!(div.value, 0);
+        assert_eq!(div.read(), 0);
     }
     #[test]
     fn it_increases_with_maximum_value_plus_1() {
@@ -40,7 +43,7 @@ mod tests {
         div.step(0xFF);
         div.step(0x01);
 
-        assert_eq!(div.value, 1);
+        assert_eq!(div.read(), 1);
     }
 
     #[test]
@@ -50,7 +53,7 @@ mod tests {
         div.step(0xFF);
         div.step(0xFF);
 
-        assert_eq!(div.value, 2);
+        assert_eq!(div.read(), 2);
     }
 
     #[test]
@@ -60,7 +63,7 @@ mod tests {
         div.step(0x01);
         div.reset_value();
 
-        assert_eq!(div.value, 0);
+        assert_eq!(div.read(), 0);
     }
 
     #[test]
@@ -71,6 +74,6 @@ mod tests {
         div.reset_value();
         div.step(0xFF);
 
-        assert_eq!(div.value, 1);
+        assert_eq!(div.read(), 1);
     }
 }

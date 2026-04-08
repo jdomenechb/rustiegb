@@ -1,7 +1,7 @@
 use crate::audio::apu::APU;
 use crate::bus::address::Address;
 use crate::debug::{
-    DebugReason, Debuggable, OutputDebug, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS,
+    DebugReason, Debuggable, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS, OutputDebug,
 };
 use crate::io::div::Div;
 use crate::io::dma::Dma;
@@ -185,7 +185,7 @@ impl ReadMemory for IORegisters {
             Address::P1_JOYPAD => self.p1.to_byte(),
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data,
             Address::SC_SIO_CONTROL => self.sio_control.value,
-            Address::DIV_DIVIDER_REGISTER => self.div.value,
+            Address::DIV_DIVIDER_REGISTER => self.div.read(),
             Address::TIMA_TIMER_COUNTER => self.tima.value,
             Address::TMA_TIMER_MODULO => self.tma,
             Address::IF_INTERRUPT_FLAG => (&self.interrupt_flag).into(),
@@ -232,7 +232,7 @@ impl WriteMemory for IORegisters {
             Address::UNUSED_FF03 => {
                 println!("Attempt to write at an unused RAM position {position:X}",)
             }
-            Address::DIV_DIVIDER_REGISTER => self.div.reset_value(),
+            Address::DIV_DIVIDER_REGISTER => self.div.write(),
             Address::TIMA_TIMER_COUNTER => self.tima.value = value,
             Address::TMA_TIMER_MODULO => self.tma = value,
             Address::TAC_TIMER_CONTROL => self.timer_control.update(value),
