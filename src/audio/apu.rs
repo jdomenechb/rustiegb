@@ -10,11 +10,13 @@ use crate::audio::registers::nrx1::NRX1;
 use crate::audio::registers::nrx2::NRX2;
 use crate::audio::registers::nrx3::NRX3;
 use crate::audio::registers::nrx4::NRX4;
-use crate::audio::registers::{AudioRegister, TriggerableAudioRegister};
+use crate::audio::registers::{AudioRegister, DacAudioRegister, TriggerableAudioRegister};
 use crate::bus::address::Address;
+use crate::debug::Debuggable;
 use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
+use std::collections::BTreeMap;
 
 pub struct APU {
     nr10: NR10,
@@ -50,7 +52,7 @@ impl APU {
     pub fn step(&self, last_instruction_cycles: u8) {}
 
     fn write_nr52(&mut self, value: Byte) {
-        if NR52::is_going_to_be_triggered_off_by(value) {
+        if NR52::is_going_to_be_turned_off_by(value) {
             self.clear_audio_registers();
         }
 
@@ -81,12 +83,28 @@ impl APU {
         // NR52 is special, it is not cleared when writing 0 to it
     }
 
+    fn write_nr12(&mut self, value: Byte) {
+        if self.nr12.is_going_to_turn_dac_off(&value) {
+            self.nr52.set_ro_channel_flag_inactive(1);
+        }
+
+        self.nr12.set_value(value);
+    }
+
     fn write_nr14(&mut self, value: Byte) {
         if self.nr14.is_going_to_be_triggered_on_by(&value) {
             self.nr52.set_ro_channel_flag_active(1);
         }
 
         self.nr14.set_value(value);
+    }
+
+    fn write_nr22(&mut self, value: Byte) {
+        if self.nr22.is_going_to_turn_dac_off(&value) {
+            self.nr52.set_ro_channel_flag_inactive(2);
+        }
+
+        self.nr22.set_value(value);
     }
 
     fn write_nr24(&mut self, value: Byte) {
@@ -97,12 +115,28 @@ impl APU {
         self.nr24.set_value(value);
     }
 
+    fn write_nr30(&mut self, value: Byte) {
+        if self.nr30.is_going_to_turn_dac_off(&value) {
+            self.nr52.set_ro_channel_flag_inactive(3);
+        }
+
+        self.nr30.set_value(value);
+    }
+
     fn write_nr34(&mut self, value: Byte) {
         if self.nr34.is_going_to_be_triggered_on_by(&value) {
             self.nr52.set_ro_channel_flag_active(3);
         }
 
         self.nr34.set_value(value);
+    }
+
+    fn write_nr42(&mut self, value: Byte) {
+        if self.nr42.is_going_to_turn_dac_off(&value) {
+            self.nr52.set_ro_channel_flag_inactive(4);
+        }
+
+        self.nr42.set_value(value);
     }
 
     fn write_nr44(&mut self, value: Byte) {
@@ -208,7 +242,7 @@ impl WriteMemory for APU {
         match position {
             Address::NR10_SOUND_1_SWEEP => self.nr10.write(value),
             Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => self.nr11.write(value),
-            Address::NR12_SOUND_1_ENVELOPE => self.nr12.write(value),
+            Address::NR12_SOUND_1_ENVELOPE => self.write_nr12(value),
             Address::NR13_SOUND_1_FR_LO => self.nr13.write(value),
             Address::NR14_SOUND_1_FR_HI => self.write_nr14(value),
 
@@ -216,11 +250,11 @@ impl WriteMemory for APU {
                 // Ignored, not used
             }
             Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => self.nr21.write(value),
-            Address::NR22_SOUND_2_ENVELOPE => self.nr22.write(value),
+            Address::NR22_SOUND_2_ENVELOPE => self.write_nr22(value),
             Address::NR23_SOUND_2_FR_LO => self.nr23.write(value),
             Address::NR24_SOUND_2_FR_HI => self.write_nr24(value),
 
-            Address::NR30_SOUND_3_ON_OFF => self.nr30.write(value),
+            Address::NR30_SOUND_3_ON_OFF => self.write_nr30(value),
             Address::NR31_SOUND_3_LENGTH => self.nr31.write(value),
             Address::NR32_SOUND_3_OUTPUT_LEVEL => self.nr32.write(value),
             Address::NR33_SOUND_3_FR_LO => self.nr33.write(value),
@@ -230,7 +264,7 @@ impl WriteMemory for APU {
                 // Ignored, not used
             }
             Address::NR41_SOUND_4_LENGTH => self.nr41.write(value),
-            Address::NR42_SOUND_4_ENVELOPE => self.nr42.write(value),
+            Address::NR42_SOUND_4_ENVELOPE => self.write_nr42(value),
             Address::NR43_SOUND_4_FR_RANDOMNESS => self.nr43.write(value),
             Address::NR44_SOUND_4_CONTROL => self.write_nr44(value),
 
@@ -239,6 +273,20 @@ impl WriteMemory for APU {
 
             _ => panic!("Write address {position:X} not supported for APU"),
         }
+    }
+}
+
+impl Debuggable for APU {
+    fn get_debug_values(&self) -> BTreeMap<&str, String> {
+        BTreeMap::from([
+            // ("NR12", format!("{:X}", self.nr12.value())),
+            // ("NR13", format!("{:X}", self.nr13.value())),
+            ("NR14", format!("{:X}", self.nr14.value())),
+            ("NR24", format!("{:X}", self.nr24.value())),
+            ("NR34", format!("{:X}", self.nr34.value())),
+            ("NR44", format!("{:X}", self.nr44.value())),
+            ("NR52", format!("{:X}", self.nr52.value())),
+        ])
     }
 }
 
@@ -366,18 +414,49 @@ mod tests {
         let mut apu = APU::default();
 
         for channel in 1..=4 {
-            let address = match channel {
-                1 => Address::NR14_SOUND_1_FR_HI,
-                2 => Address::NR24_SOUND_2_FR_HI,
-                3 => Address::NR34_SOUND_3_FR_HI,
-                4 => Address::NR44_SOUND_4_CONTROL,
-                _ => unreachable!(),
-            };
+            let address = get_trigger_address(channel);
 
             apu.write_byte(address, 0b1000_0000);
 
             let flag = (apu.read_byte(Address::NR52_SOUND) >> (channel - 1) & 0b1) == 1;
-            assert!(flag, "Channel {} should be triggered", channel);
+            assert!(flag, "Channel {} should be active", channel);
+        }
+    }
+
+    #[test]
+    fn test_when_dac_is_turned_off_channel_flag_is_set_off() {
+        let mut apu = APU::default();
+
+        for channel in 1..=4 {
+            let trigger_address = get_trigger_address(channel);
+            apu.write_byte(trigger_address, 0b1000_0000);
+
+            let dac_address = get_dac_address(channel);
+
+            apu.write_byte(dac_address, 0);
+
+            let flag = (apu.read_byte(Address::NR52_SOUND) >> (channel - 1) & 0b1) == 0;
+            assert!(flag, "Channel {} should not be active", channel);
+        }
+    }
+
+    fn get_trigger_address(channel: u8) -> Word {
+        match channel {
+            1 => Address::NR14_SOUND_1_FR_HI,
+            2 => Address::NR24_SOUND_2_FR_HI,
+            3 => Address::NR34_SOUND_3_FR_HI,
+            4 => Address::NR44_SOUND_4_CONTROL,
+            _ => unreachable!(),
+        }
+    }
+
+    fn get_dac_address(channel: u8) -> Word {
+        match channel {
+            1 => Address::NR12_SOUND_1_ENVELOPE,
+            2 => Address::NR22_SOUND_2_ENVELOPE,
+            3 => Address::NR30_SOUND_3_ON_OFF,
+            4 => Address::NR42_SOUND_4_ENVELOPE,
+            _ => unreachable!(),
         }
     }
 

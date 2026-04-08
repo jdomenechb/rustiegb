@@ -1,4 +1,4 @@
-use crate::audio::registers::AudioRegister;
+use crate::audio::registers::{AudioRegister, DacAudioRegister};
 use crate::Byte;
 
 /// DAC enable
@@ -32,6 +32,12 @@ impl AudioRegister for NR30 {
 impl Default for NR30 {
     fn default() -> Self {
         Self { value: 0x7F }
+    }
+}
+
+impl DacAudioRegister for NR30 {
+    fn is_going_to_turn_dac_off(&self, potential_value: &Byte) -> bool {
+        potential_value & 0b10000000 == 0b00000000
     }
 }
 

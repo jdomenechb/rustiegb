@@ -1,5 +1,6 @@
+use crate::bus::address::Address;
 use crate::{Byte, Word};
-use prettytable::{Table, cell, row};
+use prettytable::{cell, row, Table};
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 
@@ -12,13 +13,12 @@ pub const CPU_PC_WATCHPOINTS: [Word; 1] = [
 
 // I/O
 pub const IO_READ_WATCHPOINTS: [Word; 0] = [];
-pub const IO_WRITE_WATCHPOINTS: [Word; 0] = [
-    // Address::NR52_SOUND,
-    // Address::NR14_SOUND_1_FR_HI,
-    // Address::NR10_SOUND_1_SWEEP,
-    //Address::NR24_SOUND_2_FR_HI,
-    //Address::NR34_SOUND_3_FR_HI,
-    //Address::NR44_SOUND_4_CONTROL,
+pub const IO_WRITE_WATCHPOINTS: [Word; 5] = [
+    Address::NR52_SOUND,
+    Address::NR14_SOUND_1_FR_HI,
+    Address::NR24_SOUND_2_FR_HI,
+    Address::NR34_SOUND_3_FR_HI,
+    Address::NR44_SOUND_4_CONTROL,
 ];
 
 pub trait Debuggable {

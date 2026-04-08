@@ -1,4 +1,4 @@
-use crate::audio::registers::AudioRegister;
+use crate::audio::registers::{AudioRegister, DacAudioRegister};
 use crate::Byte;
 
 /// Volume & envelope
@@ -40,6 +40,12 @@ impl AudioRegister for NRX2 {
 
     fn value(&self) -> Byte {
         self.value
+    }
+}
+
+impl DacAudioRegister for NRX2 {
+    fn is_going_to_turn_dac_off(&self, potential_value: &Byte) -> bool {
+        potential_value & 0b1111_1000 == 0
     }
 }
 

@@ -18,7 +18,7 @@ pub struct NR52 {
 }
 
 impl NR52 {
-    pub fn is_going_to_be_triggered_off_by(potential_value: Byte) -> bool {
+    pub fn is_going_to_be_turned_off_by(potential_value: Byte) -> bool {
         potential_value & 0b10000000 == 0b10000000
     }
 
@@ -63,14 +63,15 @@ mod tests {
     #[test]
     fn it_can_update_only_the_write_flags() {
         let mut fixture = NR52::default();
+        fixture.set_ro_channel_flag_inactive(1);
 
         fixture.write(0xFF);
-        assert_eq!(fixture.read(), 0b11110001);
+        assert_eq!(fixture.read(), 0b11110000);
 
         fixture.write(0x00);
-        assert_eq!(fixture.read(), 0b01110001);
+        assert_eq!(fixture.read(), 0b01110000);
 
         fixture.write(0xFF);
-        assert_eq!(fixture.read(), 0b11110001);
+        assert_eq!(fixture.read(), 0b11110000);
     }
 }

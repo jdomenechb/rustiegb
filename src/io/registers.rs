@@ -135,8 +135,7 @@ impl IORegisters {
 
 impl Debuggable for IORegisters {
     fn get_debug_values(&self) -> BTreeMap<&str, String> {
-        // TODO
-        BTreeMap::new()
+        self.apu.get_debug_values()
     }
 }
 

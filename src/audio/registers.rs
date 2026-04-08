@@ -39,3 +39,7 @@ pub trait TriggerableAudioRegister: AudioRegister {
         potential_value & 0b10000000 == 0b10000000
     }
 }
+
+pub trait DacAudioRegister: AudioRegister {
+    fn is_going_to_turn_dac_off(&self, potential_value: &Byte) -> bool;
+}
