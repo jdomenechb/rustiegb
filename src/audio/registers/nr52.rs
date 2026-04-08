@@ -40,7 +40,11 @@ impl AudioRegister for NR52 {
     const WRITE_MASK: Byte = 0;
 
     fn set_value(&mut self, value: Byte) {
-        self.value = (self.value & 0b0000_1111) | (value & 0b1000_0000) | 0b0111_0000
+        self.value = (self.value & 0b0000_1111) | (value & 0b1000_0000) | 0b0111_0000;
+
+        if !self.is_on() {
+            self.value &= 0b0111_0000;
+        }
     }
 
     fn value(&self) -> Byte {
@@ -73,5 +77,20 @@ mod tests {
 
         fixture.write(0xFF);
         assert_eq!(fixture.read(), 0b11110000);
+    }
+
+    #[test]
+    fn it_reports_all_channels_as_inactive_if_turned_off() {
+        let mut fixture = NR52::default();
+        fixture.set_ro_channel_flag_active(1);
+        fixture.set_ro_channel_flag_active(2);
+        fixture.set_ro_channel_flag_active(3);
+        fixture.set_ro_channel_flag_active(4);
+
+        fixture.write(0xFF);
+        assert_eq!(fixture.read(), 0xFF);
+
+        fixture.write(0x00);
+        assert_eq!(fixture.read(), 0b01110000);
     }
 }

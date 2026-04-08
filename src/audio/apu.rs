@@ -80,7 +80,6 @@ impl APU {
         self.nr44.clear();
         self.nr50 = 0;
         self.nr51 = 0;
-        // NR52 is special, it is not cleared when writing 0 to it
     }
 
     fn write_nr12(&mut self, value: Byte) {
@@ -279,8 +278,10 @@ impl WriteMemory for APU {
 impl Debuggable for APU {
     fn get_debug_values(&self) -> BTreeMap<&str, String> {
         BTreeMap::from([
-            // ("NR12", format!("{:X}", self.nr12.value())),
-            // ("NR13", format!("{:X}", self.nr13.value())),
+            ("NR12", format!("{:X}", self.nr12.value())),
+            ("NR22", format!("{:X}", self.nr22.value())),
+            ("NR30", format!("{:X}", self.nr30.value())),
+            ("NR42", format!("{:X}", self.nr42.value())),
             ("NR14", format!("{:X}", self.nr14.value())),
             ("NR24", format!("{:X}", self.nr24.value())),
             ("NR34", format!("{:X}", self.nr34.value())),

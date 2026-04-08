@@ -1,24 +1,27 @@
-use crate::bus::address::Address;
 use crate::{Byte, Word};
 use prettytable::{cell, row, Table};
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 
 // CPU
-pub const CPU_PC_WATCHPOINTS: [Word; 1] = [
+pub const CPU_PC_WATCHPOINTS: [Word; 0] = [
     //0xC162, // Power down for a moment, wreg NR52,$00
     //0xC1AD, // Test 2,"Powering off should clear NR12" - wreg NR14,$80
-    0xC1E2, // Test 3,"Powering off should clear NR13" - wreg NR10,$11
+    //0xC1E2, // Test 3,"Powering off should clear NR13" - wreg NR10,$11
 ];
 
 // I/O
 pub const IO_READ_WATCHPOINTS: [Word; 0] = [];
-pub const IO_WRITE_WATCHPOINTS: [Word; 5] = [
-    Address::NR52_SOUND,
-    Address::NR14_SOUND_1_FR_HI,
-    Address::NR24_SOUND_2_FR_HI,
-    Address::NR34_SOUND_3_FR_HI,
-    Address::NR44_SOUND_4_CONTROL,
+pub const IO_WRITE_WATCHPOINTS: [Word; 0] = [
+    // Address::NR52_SOUND,
+    // Address::NR14_SOUND_1_FR_HI,
+    // Address::NR24_SOUND_2_FR_HI,
+    // Address::NR34_SOUND_3_FR_HI,
+    // Address::NR44_SOUND_4_CONTROL,
+    // Address::NR12_SOUND_1_ENVELOPE,
+    // Address::NR22_SOUND_2_ENVELOPE,
+    // Address::NR30_SOUND_3_ON_OFF,
+    // Address::NR44_SOUND_4_CONTROL,
 ];
 
 pub trait Debuggable {
