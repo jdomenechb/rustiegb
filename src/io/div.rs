@@ -14,7 +14,7 @@ impl Div {
 
     fn reset_value(&mut self) {
         // FIXME: Possibly it needs to be reset to 0
-        self.value = self.value & 0x00FF;
+        self.value &= 0x00FF;
     }
 
     pub fn write(&mut self) {

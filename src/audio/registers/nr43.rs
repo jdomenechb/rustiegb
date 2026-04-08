@@ -1,5 +1,5 @@
-use crate::Byte;
 use crate::audio::registers::AudioRegister;
+use crate::Byte;
 
 /// Sweep
 /// ```
@@ -12,6 +12,7 @@ use crate::audio::registers::AudioRegister;
 /// 1 - RW - Clock divider
 /// 0 - RW - Clock divider
 /// ```
+#[derive(Default)]
 pub struct NR43 {
     value: Byte,
 }
@@ -26,12 +27,6 @@ impl AudioRegister for NR43 {
 
     fn value(&self) -> Byte {
         self.value
-    }
-}
-
-impl Default for NR43 {
-    fn default() -> Self {
-        Self { value: 0x00 }
     }
 }
 

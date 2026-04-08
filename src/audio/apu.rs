@@ -18,7 +18,7 @@ use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 use std::collections::BTreeMap;
 
-pub struct APU {
+pub struct Apu {
     nr10: NR10,
     nr11: NRX1,
     nr12: NRX2,
@@ -48,7 +48,7 @@ pub struct APU {
     wave_pattern_ram: WavePatternRam,
 }
 
-impl APU {
+impl Apu {
     pub fn step(&self, last_instruction_cycles: u8) {}
 
     fn write_nr52(&mut self, value: Byte) {
@@ -147,7 +147,7 @@ impl APU {
     }
 }
 
-impl Default for APU {
+impl Default for Apu {
     fn default() -> Self {
         Self {
             nr10: NR10::default(),
@@ -176,10 +176,8 @@ impl Default for APU {
     }
 }
 
-impl ReadMemory for APU {
+impl ReadMemory for Apu {
     fn read_byte(&self, position: Word) -> Byte {
-        let is_audio_on = self.nr52.is_on();
-
         match position {
             Address::NR10_SOUND_1_SWEEP => self.nr10.read(),
             Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => self.nr11.read(),
@@ -220,7 +218,7 @@ impl ReadMemory for APU {
     }
 }
 
-impl WriteMemory for APU {
+impl WriteMemory for Apu {
     fn write_byte(&mut self, position: Word, value: Byte) {
         if position == Address::NR52_SOUND {
             self.write_nr52(value);
@@ -275,7 +273,7 @@ impl WriteMemory for APU {
     }
 }
 
-impl Debuggable for APU {
+impl Debuggable for Apu {
     fn get_debug_values(&self) -> BTreeMap<&str, String> {
         BTreeMap::from([
             ("NR12", format!("{:X}", self.nr12.value())),
@@ -295,7 +293,7 @@ impl Debuggable for APU {
 mod tests {
     use super::*;
 
-    fn check_basic_audio_registers_are_reset(apu: &mut APU) {
+    fn check_basic_audio_registers_are_reset(apu: &mut Apu) {
         let items = vec![
             // NR1X
             (Address::NR10_SOUND_1_SWEEP, 0x80),
@@ -339,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_correct_data_when_writing_audio_registers() {
-        let mut apu = APU::default();
+        let mut apu = Apu::default();
 
         for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
             apu.write_byte(position, 0xFF);
@@ -351,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_when_sound_is_turned_off_all_audio_registers_are_reset() {
-        let mut apu = APU::default();
+        let mut apu = Apu::default();
 
         for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
             apu.write_byte(position, 0xFF);
@@ -365,7 +363,7 @@ mod tests {
 
     #[test]
     fn test_when_sound_is_turned_off_audio_registers_ignore_writes() {
-        let mut apu = APU::default();
+        let mut apu = Apu::default();
 
         for position in Address::NR10_SOUND_1_SWEEP..=Address::NR51 {
             apu.write_byte(position, 0x00);
@@ -382,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_when_sound_is_turned_off_wave_pattern_register_is_writable() {
-        let mut apu = APU::default();
+        let mut apu = Apu::default();
 
         apu.write_byte(Address::NR52_SOUND, 0);
 
@@ -394,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_correct_data_when_writing_wave_registers() {
-        let mut apu = APU::default();
+        let mut apu = Apu::default();
 
         // WAVE
         for position in Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END {
@@ -412,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_when_channel_is_triggered_nr52_channel_flag_is_set() {
-        let mut apu = APU::default();
+        let mut apu = Apu::default();
 
         for channel in 1..=4 {
             let address = get_trigger_address(channel);
@@ -426,7 +424,7 @@ mod tests {
 
     #[test]
     fn test_when_dac_is_turned_off_channel_flag_is_set_off() {
-        let mut apu = APU::default();
+        let mut apu = Apu::default();
 
         for channel in 1..=4 {
             let trigger_address = get_trigger_address(channel);

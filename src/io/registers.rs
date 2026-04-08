@@ -1,7 +1,7 @@
-use crate::audio::apu::APU;
+use crate::audio::apu::Apu;
 use crate::bus::address::Address;
 use crate::debug::{
-    DebugReason, Debuggable, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS, OutputDebug,
+    DebugReason, Debuggable, OutputDebug, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS,
 };
 use crate::io::div::Div;
 use crate::io::dma::Dma;
@@ -14,7 +14,6 @@ use crate::io::sio_control::SioControl;
 use crate::io::stat::{STATMode, Stat};
 use crate::io::tima::Tima;
 use crate::io::timer_control::TimerControl;
-use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 use std::collections::BTreeMap;
@@ -29,10 +28,8 @@ pub struct IORegisters {
     pub timer_control: TimerControl,
     pub interrupt_flag: InterruptFlag,
 
-    pub apu: APU,
+    pub apu: Apu,
 
-    // Wave pattern ram (FF30 - FF3F)
-    pub wave_pattern_ram: WavePatternRam,
     pub lcdc: Lcdc,
     pub stat: Stat,
     pub scy: Byte,
@@ -151,9 +148,8 @@ impl Default for IORegisters {
             timer_control: TimerControl::default(),
             interrupt_flag: InterruptFlag::new(),
 
-            apu: APU::default(),
+            apu: Apu::default(),
 
-            wave_pattern_ram: WavePatternRam::default(),
             lcdc: Lcdc::default(),
             stat: Stat::default(),
             scy: 0x00,
