@@ -33,3 +33,9 @@ pub trait AudioRegister {
         self.set_value(0x0);
     }
 }
+
+pub trait TriggerableAudioRegister: AudioRegister {
+    fn is_going_to_be_triggered_on_by(&self, potential_value: &Byte) -> bool {
+        potential_value & 0b10000000 == 0b10000000
+    }
+}

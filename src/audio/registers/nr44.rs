@@ -1,4 +1,4 @@
-use crate::audio::registers::AudioRegister;
+use crate::audio::registers::{AudioRegister, TriggerableAudioRegister};
 use crate::Byte;
 
 /// Period high & Control
@@ -34,6 +34,8 @@ impl AudioRegister for NR44 {
         self.value
     }
 }
+
+impl TriggerableAudioRegister for NR44 {}
 
 #[cfg(test)]
 mod tests {

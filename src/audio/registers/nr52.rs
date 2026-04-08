@@ -18,8 +18,8 @@ pub struct NR52 {
 }
 
 impl NR52 {
-    pub fn is_going_to_be_off(value: Byte) -> bool {
-        value & 0b10000000 == 0b10000000
+    pub fn is_going_to_be_triggered_off_by(potential_value: Byte) -> bool {
+        potential_value & 0b10000000 == 0b10000000
     }
 
     pub fn is_on(&self) -> bool {
