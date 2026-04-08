@@ -15,8 +15,6 @@ mod io;
 mod memory;
 mod utils;
 
-use crate::audiold::audio_unit_output::CpalAudioUnitOutput;
-use crate::audiold::AudioUnit;
 use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
@@ -82,9 +80,9 @@ fn main() {
         );
         let mut gpu = Gpu::new(memory_thread.clone(), io_registers_thread.clone());
 
-        let audio_unit_output = CpalAudioUnitOutput::new();
+        //let audio_unit_output = CpalAudioUnitOutput::new();
 
-        let mut audio_unit = AudioUnit::new(audio_unit_output, io_registers_thread.clone());
+        //let mut audio_unit = AudioUnit::new(audio_unit_output, io_registers_thread.clone());
 
         'main_loop: loop {
             while runtime_config_thread.read().cpu_has_available_ccycles() {
@@ -135,7 +133,7 @@ fn main() {
 
                 let muted = { runtime_config_thread.read().muted };
 
-                audio_unit.step(last_instruction_cycles, muted);
+                //audio_unit.step(last_instruction_cycles, muted);
 
                 if check_vblank {
                     cpu.vblank_interrupt();

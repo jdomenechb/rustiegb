@@ -1,5 +1,5 @@
-use crate::audiold::volume_envelope::VolumeEnvelopeDirection;
 use crate::Byte;
+use crate::audiold::volume_envelope::VolumeEnvelopeDirection;
 
 #[derive(Default)]
 pub struct VolumeEnvelopeDescription {

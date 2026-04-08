@@ -1,4 +1,4 @@
-use crate::audiold::apu::Apu;
+use crate::audio::apu::APU;
 use crate::bus::address::Address;
 use crate::debug::{
     DebugReason, Debuggable, OutputDebug, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS,
@@ -29,7 +29,7 @@ pub struct IORegisters {
     pub timer_control: TimerControl,
     pub interrupt_flag: InterruptFlag,
 
-    pub apu: Apu,
+    pub apu: APU,
 
     // Wave pattern ram (FF30 - FF3F)
     pub wave_pattern_ram: WavePatternRam,
@@ -75,7 +75,7 @@ impl IORegisters {
             self.tima.value = self.tma;
         }
 
-        self.apu.step();
+        self.apu.step(last_instruction_cycles);
 
         to_return
     }
@@ -135,7 +135,8 @@ impl IORegisters {
 
 impl Debuggable for IORegisters {
     fn get_debug_values(&self) -> BTreeMap<&str, String> {
-        self.apu.get_debug_values()
+        // TODO
+        BTreeMap::new()
     }
 }
 
@@ -151,7 +152,7 @@ impl Default for IORegisters {
             timer_control: TimerControl::default(),
             interrupt_flag: InterruptFlag::new(),
 
-            apu: Apu::default(),
+            apu: APU::default(),
 
             wave_pattern_ram: WavePatternRam::default(),
             lcdc: Lcdc::default(),
@@ -190,10 +191,10 @@ impl ReadMemory for IORegisters {
             Address::TMA_TIMER_MODULO => self.tma,
             Address::IF_INTERRUPT_FLAG => (&self.interrupt_flag).into(),
 
-            Address::APU_START..=Address::APU_END => self.apu.read_byte(position),
-            Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => self
-                .wave_pattern_ram
-                .read_byte(position - Address::WAVE_PATTERN_START),
+            Address::APU_START..=Address::APU_END
+            | Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => {
+                self.apu.read_byte(position)
+            }
             Address::LCDC => (&self.lcdc).into(),
             Address::STAT => (&self.stat).into(),
             Address::SCY_SCROLL_Y => self.scy,
@@ -240,10 +241,9 @@ impl WriteMemory for IORegisters {
                 println!("Attempt to write at an unused RAM position {position:X}",)
             }
             Address::IF_INTERRUPT_FLAG => self.interrupt_flag.update(value),
-            Address::APU_START..=Address::APU_END => self.apu.write_byte(position, value),
-            0xFF30..=0xFF3F => {
-                self.wave_pattern_ram.write_byte(position - 0xFF30, value);
-                self.apu.audio_3_reg_written.wave_pattern = true;
+            Address::APU_START..=Address::APU_END
+            | Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => {
+                self.apu.write_byte(position, value)
             }
             Address::LCDC => self.lcdc.update(value),
             Address::STAT => self.stat.update(value),
@@ -276,19 +276,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_when_sound_is_turned_off_wave_pattern_register_is_writable() {
-        let mut io_registers = IORegisters::default();
-
-        io_registers.write_byte(Address::NR52_SOUND, 0);
-
-        for position in Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END {
-            io_registers.write_byte(position, 0xFF);
-            assert_eq!(0xFF, io_registers.read_byte(position));
-        }
-    }
-
-    #[test]
-    fn test_correct_data_when_writing_audio_registers() {
+    fn test_correct_data_when_writing_unused_audio_registers() {
         let mut io_registers = IORegisters::default();
 
         // Unused registers
@@ -299,19 +287,6 @@ mod tests {
             assert_eq!(
                 io_registers.read_byte(position),
                 0xFF,
-                "Wrong data when writing register {:X}",
-                position
-            );
-        }
-
-        // WAVE
-        for position in 0xFF30..0xFF40 {
-            io_registers.write_byte(position, 0xFF);
-            io_registers.write_byte(position, 0);
-
-            assert_eq!(
-                io_registers.read_byte(position),
-                0,
                 "Wrong data when writing register {:X}",
                 position
             );

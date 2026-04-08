@@ -1,5 +1,5 @@
-use crate::audiold::pulse::sweep::Sweep;
 use crate::audiold::pulse::PulseWavePatternDuty;
+use crate::audiold::pulse::sweep::Sweep;
 use crate::audiold::registers::{
     ChannelStopabble, ControlRegisterUpdatable, ControlUpdatable, EnvelopeRegisterUpdatable,
     EnvelopeUpdatable, FrequencyRegisterUpdatable, FrequencyUpdatable, LengthRegisterUpdatable,
