@@ -1,7 +1,7 @@
 use crate::audio::apu::Apu;
 use crate::bus::address::Address;
 use crate::debug::{
-    DebugReason, Debuggable, OutputDebug, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS,
+    DebugReason, Debuggable, IO_READ_WATCHPOINTS, IO_WRITE_WATCHPOINTS, OutputDebug,
 };
 use crate::io::div::Div;
 use crate::io::dma::Dma;
@@ -15,6 +15,7 @@ use crate::io::stat::{STATMode, Stat};
 use crate::io::tima::Tima;
 use crate::io::timer_control::TimerControl;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
+use crate::utils::math::is_bit_set;
 use crate::{Byte, Word};
 use std::collections::BTreeMap;
 
@@ -56,6 +57,7 @@ impl IORegisters {
             to_return = Some(Word::from(&self.dma));
         }
 
+        let old_div_value = self.div.read();
         self.div.step(last_instruction_cycles);
 
         if !self.timer_control.started {
@@ -72,7 +74,11 @@ impl IORegisters {
             self.tima.value = self.tma;
         }
 
-        self.apu.step(last_instruction_cycles);
+        let is_div_apu = is_bit_set(&old_div_value, 4) && !is_bit_set(&self.div.read(), 4);
+
+        if is_div_apu {
+            self.apu.tick();
+        }
 
         to_return
     }

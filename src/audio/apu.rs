@@ -46,10 +46,24 @@ pub struct Apu {
     nr52: NR52,
 
     wave_pattern_ram: WavePatternRam,
+
+    div_apu: Byte,
 }
 
 impl Apu {
-    pub fn step(&self, last_instruction_cycles: u8) {}
+    /// Ticks every 512 Hz
+    pub fn tick(&mut self) {
+        // Ticks every 256 Hz
+        let length_step = self.div_apu % 2;
+
+        // Ticks every 128 Hz
+        let sweep_step = matches!(self.div_apu, 2 | 6);
+
+        // Ticks every 64 Hz
+        let envelope_step = self.div_apu == 7;
+
+        self.div_apu = (self.div_apu + 1) % 7;
+    }
 
     fn write_nr52(&mut self, value: Byte) {
         if NR52::is_going_to_be_turned_off_by(value) {
@@ -172,6 +186,7 @@ impl Default for Apu {
             nr51: 0xf3,
             nr52: NR52::default(),
             wave_pattern_ram: WavePatternRam::default(),
+            div_apu: 0,
         }
     }
 }
