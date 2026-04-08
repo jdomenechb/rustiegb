@@ -1,5 +1,5 @@
-use crate::audio::registers::{AudioRegister, TriggerableAudioRegister};
 use crate::Byte;
+use crate::audio::registers::{AudioRegister, TriggerableAudioRegister};
 
 /// Period high & Control
 /// ```

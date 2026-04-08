@@ -27,7 +27,7 @@ use io::joypad::JoypadHandler;
 use memory::Memory;
 use parking_lot::RwLock;
 use piston_window::*;
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, mpsc};
 
 const APP_NAME: &str = "RustieGB";
 const WINDOW_SIZE_MULTIPLIER: u32 = 4;

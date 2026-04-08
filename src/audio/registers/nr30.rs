@@ -1,5 +1,5 @@
-use crate::audio::registers::{AudioRegister, DacAudioRegister};
 use crate::Byte;
+use crate::audio::registers::{AudioRegister, DacAudioRegister};
 
 /// DAC enable
 /// ```

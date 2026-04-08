@@ -1,5 +1,5 @@
-use crate::audio::registers::AudioRegister;
 use crate::Byte;
+use crate::audio::registers::AudioRegister;
 
 /// Period (low) - W
 pub struct NRX3 {

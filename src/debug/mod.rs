@@ -1,5 +1,5 @@
 use crate::{Byte, Word};
-use prettytable::{cell, row, Table};
+use prettytable::{Table, cell, row};
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 
