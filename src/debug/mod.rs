@@ -5,9 +5,7 @@ use std::fmt::{Display, Formatter};
 
 // CPU
 pub const CPU_PC_WATCHPOINTS: [Word; 0] = [
-    //0xC162, // Power down for a moment, wreg NR52,$00
-    //0xC1AD, // Test 2,"Powering off should clear NR12" - wreg NR14,$80
-    //0xC1E2, // Test 3,"Powering off should clear NR13" - wreg NR10,$11
+    //0xC203
 ];
 
 // I/O

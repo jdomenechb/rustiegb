@@ -13,7 +13,7 @@ impl AudioRegister for NR31 {
     fn set_value(&mut self, value: Byte) -> WriteEffect {
         self.value = value;
 
-        WriteEffect::None
+        WriteEffect::NRX1Updated
     }
 
     fn value(&self) -> Byte {

@@ -71,13 +71,17 @@ impl<
             WriteEffect::None => ChannelEvent::None,
             WriteEffect::Triggered => {
                 if self.length_counter == self.max_length {
-                    self.length_counter = self.nrx1.get_initial_length();
+                    self.length_counter = 0;
                 }
 
                 ChannelEvent::ChannelEnabled(self.number)
             }
             WriteEffect::DacDisabled => ChannelEvent::ChannelDisabled(self.number),
             WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
+            WriteEffect::NRX1Updated => {
+                self.length_counter = self.nrx1.get_initial_length();
+                ChannelEvent::None
+            }
         }
     }
 

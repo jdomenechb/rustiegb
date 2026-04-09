@@ -61,7 +61,7 @@ impl Apu {
         // Ticks every 64 Hz
         let envelope_step = self.div_apu == 7;
 
-        self.div_apu = (self.div_apu + 1) % 7;
+        self.div_apu = (self.div_apu + 1) % 8;
     }
 
     fn clear_audio_registers(&mut self) {

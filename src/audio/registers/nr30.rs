@@ -1,5 +1,5 @@
 use crate::Byte;
-use crate::audio::registers::{AudioRegister, WriteEffect};
+use crate::audio::registers::{AudioRegister, DacRegister, WriteEffect};
 use crate::utils::math::is_bit_set;
 
 /// DAC enable
@@ -24,7 +24,7 @@ impl AudioRegister for NR30 {
     fn set_value(&mut self, value: Byte) -> WriteEffect {
         self.value = value;
 
-        if !is_bit_set(&value, 7) {
+        if !self.is_dac_enabled() {
             return WriteEffect::DacDisabled;
         }
 
@@ -33,6 +33,12 @@ impl AudioRegister for NR30 {
 
     fn value(&self) -> Byte {
         self.value
+    }
+}
+
+impl DacRegister for NR30 {
+    fn is_dac_enabled(&self) -> bool {
+        is_bit_set(&self.value, 7)
     }
 }
 

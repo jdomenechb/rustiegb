@@ -21,6 +21,7 @@ pub enum WriteEffect {
     Triggered,
     DacDisabled,
     AudioOff,
+    NRX1Updated,
 }
 
 pub trait AudioRegister {
@@ -45,4 +46,8 @@ pub trait AudioRegister {
 
 pub trait InitialLengthRegister {
     fn get_initial_length(&self) -> Byte;
+}
+
+pub trait DacRegister {
+    fn is_dac_enabled(&self) -> bool;
 }

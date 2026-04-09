@@ -63,7 +63,6 @@ impl Cpu {
         if !self.halted {
             let instruction;
             let memory_has_bootstrap_rom;
-
             {
                 let memory = self.memory.read();
 
@@ -81,6 +80,8 @@ impl Cpu {
             if debug_watchpoint {
                 output_debug.push_situation("Before", self.io_registers.read().get_debug_values());
             }
+
+            //println!("{:X}", self.registers.pc);
 
             match instruction {
                 0x00 => self.nop(),
