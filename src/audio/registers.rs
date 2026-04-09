@@ -16,6 +16,7 @@ pub mod nrx2;
 pub mod nrx3;
 pub mod nrx4;
 
+#[derive(PartialEq)]
 pub enum WriteEffect {
     None,
     Triggered,
@@ -23,6 +24,7 @@ pub enum WriteEffect {
     DacEnabled,
     AudioOff,
     NRX1Updated,
+    NRX4TimingQuirkDisablingChannel,
 }
 
 pub trait AudioRegister {
@@ -51,4 +53,8 @@ pub trait InitialLengthRegister {
 
 pub trait DacRegister {
     fn is_dac_enabled(&self) -> bool;
+}
+
+pub trait TriggerableRegister {
+    fn is_triggered(&self) -> bool;
 }

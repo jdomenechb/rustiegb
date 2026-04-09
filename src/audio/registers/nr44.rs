@@ -1,5 +1,5 @@
 use crate::Byte;
-use crate::audio::registers::{AudioRegister, WriteEffect};
+use crate::audio::registers::{AudioRegister, TriggerableRegister, WriteEffect};
 use crate::utils::math::is_bit_set;
 
 /// Period high & Control
@@ -39,6 +39,12 @@ impl AudioRegister for NR44 {
 
     fn value(&self) -> Byte {
         self.value
+    }
+}
+
+impl TriggerableRegister for NR44 {
+    fn is_triggered(&self) -> bool {
+        is_bit_set(&self.value, 7)
     }
 }
 

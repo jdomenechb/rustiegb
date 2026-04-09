@@ -1,4 +1,6 @@
-use crate::audio::registers::{AudioRegister, InitialLengthRegister, WriteEffect};
+use crate::audio::registers::{
+    AudioRegister, InitialLengthRegister, TriggerableRegister, WriteEffect,
+};
 use crate::memory::memory_sector::ReadMemory;
 use crate::utils::math::is_bit_set;
 use crate::{Byte, Word};
@@ -14,7 +16,7 @@ pub struct Channel<
     U: AudioRegister + InitialLengthRegister,
     V: AudioRegister,
     X: AudioRegister,
-    Y: AudioRegister,
+    Y: AudioRegister + TriggerableRegister,
 > {
     number: u8,
 
@@ -35,7 +37,7 @@ impl<
     U: AudioRegister + InitialLengthRegister,
     V: AudioRegister,
     X: AudioRegister,
-    Y: AudioRegister,
+    Y: AudioRegister + TriggerableRegister,
 > Channel<T, U, V, X, Y>
 {
     pub fn new(number: u8, nrx0: T, nrx1: U, nrx2: V, nrx3: X, nrx4: Y, max_length: Byte) -> Self {
@@ -60,13 +62,32 @@ impl<
         self.nrx4.clear();
     }
 
-    pub fn write_byte(&mut self, position: Word, value: Byte) -> ChannelEvent {
+    pub fn write_byte(&mut self, position: Word, value: Byte, div_apu: &Byte) -> ChannelEvent {
         let write_event = match position {
             0 => self.nrx0.write(value),
             1 => self.nrx1.write(value),
             2 => self.nrx2.write(value),
             3 => self.nrx3.write(value),
-            4 => self.nrx4.write(value),
+            4 => {
+                let makes_length_tick = div_apu.is_multiple_of(2);
+                let was_length_disabled = !self.is_length_enabled();
+                let write_effect = self.nrx4.write(value);
+                let is_length_enabled = self.is_length_enabled();
+
+                if !makes_length_tick
+                    && is_length_enabled
+                    && was_length_disabled
+                    && self.length_counter != 0
+                {
+                    self.length_counter = self.length_counter.wrapping_add(1);
+
+                    if self.length_counter == 0 && !self.nrx4.is_triggered() {
+                        return ChannelEvent::ChannelDisabled(self.number);
+                    }
+                }
+
+                write_effect
+            }
             _ => unreachable!("Write address {position:X} not supported for channel"),
         };
 
@@ -96,6 +117,9 @@ impl<
                 self.length_counter = self.nrx1.get_initial_length();
                 ChannelEvent::None
             }
+            WriteEffect::NRX4TimingQuirkDisablingChannel => {
+                ChannelEvent::ChannelDisabled(self.number)
+            }
         }
     }
 
@@ -123,7 +147,7 @@ impl<
     U: AudioRegister + InitialLengthRegister,
     V: AudioRegister,
     X: AudioRegister,
-    Y: AudioRegister,
+    Y: AudioRegister + TriggerableRegister,
 > ReadMemory for Channel<T, U, V, X, Y>
 {
     fn read_byte(&self, position: Word) -> Byte {
