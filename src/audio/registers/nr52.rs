@@ -1,5 +1,6 @@
+use crate::audio::registers::{AudioRegister, WriteEffect};
+use crate::utils::math::is_bit_set;
 use crate::Byte;
-use crate::audio::registers::AudioRegister;
 
 /// Audio master control
 /// ```
@@ -18,10 +19,6 @@ pub struct NR52 {
 }
 
 impl NR52 {
-    pub fn is_going_to_be_turned_off_by(potential_value: Byte) -> bool {
-        potential_value & 0b10000000 == 0b10000000
-    }
-
     pub fn is_on(&self) -> bool {
         self.value & 0b10000000 == 0b10000000
     }
@@ -39,12 +36,18 @@ impl AudioRegister for NR52 {
     const READ_MASK: Byte = 0b0111_0000;
     const WRITE_MASK: Byte = 0;
 
-    fn set_value(&mut self, value: Byte) {
+    fn set_value(&mut self, value: Byte) -> WriteEffect {
         self.value = (self.value & 0b0000_1111) | (value & 0b1000_0000) | 0b0111_0000;
 
         if !self.is_on() {
             self.value &= 0b0111_0000;
         }
+
+        if !is_bit_set(&value, 7) {
+            return WriteEffect::AudioOff;
+        }
+
+        WriteEffect::None
     }
 
     fn value(&self) -> Byte {

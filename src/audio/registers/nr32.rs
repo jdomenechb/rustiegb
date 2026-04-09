@@ -1,5 +1,5 @@
+use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::Byte;
-use crate::audio::registers::AudioRegister;
 
 /// Output level
 /// ```
@@ -20,8 +20,10 @@ impl AudioRegister for NR32 {
     const READ_MASK: Byte = 0b1001_1111;
     const WRITE_MASK: Byte = 0b1001_1111;
 
-    fn set_value(&mut self, value: Byte) {
-        self.value = value
+    fn set_value(&mut self, value: Byte) -> WriteEffect {
+        self.value = value;
+
+        WriteEffect::None
     }
 
     fn value(&self) -> Byte {

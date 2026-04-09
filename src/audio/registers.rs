@@ -6,6 +6,7 @@ pub mod nr30;
 pub mod nr31;
 pub mod nr32;
 
+pub mod no_register;
 pub mod nr41;
 pub mod nr43;
 pub mod nr44;
@@ -15,31 +16,29 @@ pub mod nrx2;
 pub mod nrx3;
 pub mod nrx4;
 
+pub enum WriteEffect {
+    None,
+    Triggered,
+    DacDisabled,
+    AudioOff,
+}
+
 pub trait AudioRegister {
     const READ_MASK: Byte;
     const WRITE_MASK: Byte;
 
-    fn set_value(&mut self, value: Byte);
+    fn set_value(&mut self, value: Byte) -> WriteEffect;
     fn value(&self) -> Byte;
 
     fn read(&self) -> Byte {
         self.value() | Self::READ_MASK
     }
-    fn write(&mut self, value: Byte) {
-        self.set_value(value | Self::WRITE_MASK);
+
+    fn write(&mut self, value: Byte) -> WriteEffect {
+        self.set_value(value | Self::WRITE_MASK)
     }
 
     fn clear(&mut self) {
         self.set_value(0x0);
     }
-}
-
-pub trait TriggerableAudioRegister: AudioRegister {
-    fn is_going_to_be_triggered_on_by(&self, potential_value: &Byte) -> bool {
-        potential_value & 0b10000000 == 0b10000000
-    }
-}
-
-pub trait DacAudioRegister: AudioRegister {
-    fn is_going_to_turn_dac_off(&self, potential_value: &Byte) -> bool;
 }

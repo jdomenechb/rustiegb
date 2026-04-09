@@ -1,12 +1,11 @@
 use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::Byte;
 
-/// Period (low) - W
-pub struct NRX3 {
+pub struct NoRegister {
     value: Byte,
 }
 
-impl AudioRegister for NRX3 {
+impl AudioRegister for NoRegister {
     const READ_MASK: Byte = 0xFF;
     const WRITE_MASK: Byte = 0;
 
@@ -21,23 +20,8 @@ impl AudioRegister for NRX3 {
     }
 }
 
-impl Default for NRX3 {
+impl Default for NoRegister {
     fn default() -> Self {
         Self { value: 0xFF }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_can_write_but_not_read() {
-        let mut fixture = NRX3::default();
-        fixture.write(0xFF);
-        assert_eq!(fixture.read(), 0xFF);
-
-        fixture.write(0x00);
-        assert_eq!(fixture.read(), 0xFF);
     }
 }

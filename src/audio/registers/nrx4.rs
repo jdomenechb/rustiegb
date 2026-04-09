@@ -1,5 +1,6 @@
+use crate::audio::registers::{AudioRegister, WriteEffect};
+use crate::utils::math::is_bit_set;
 use crate::Byte;
-use crate::audio::registers::{AudioRegister, TriggerableAudioRegister};
 
 /// Period high & Control
 /// ```
@@ -26,16 +27,20 @@ impl AudioRegister for NRX4 {
     const READ_MASK: Byte = 0b1011_1111;
     const WRITE_MASK: Byte = 0b0011_1000;
 
-    fn set_value(&mut self, value: Byte) {
-        self.value = value
+    fn set_value(&mut self, value: Byte) -> WriteEffect {
+        self.value = value;
+
+        if is_bit_set(&value, 7) {
+            return WriteEffect::Triggered;
+        }
+
+        WriteEffect::None
     }
 
     fn value(&self) -> Byte {
         self.value
     }
 }
-
-impl TriggerableAudioRegister for NRX4 {}
 
 #[cfg(test)]
 mod tests {

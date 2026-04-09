@@ -1,5 +1,5 @@
+use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::Byte;
-use crate::audio::registers::{AudioRegister, DacAudioRegister};
 
 /// Volume & envelope
 /// ```
@@ -34,18 +34,18 @@ impl AudioRegister for NRX2 {
     const READ_MASK: Byte = 0;
     const WRITE_MASK: Byte = 0;
 
-    fn set_value(&mut self, value: Byte) {
-        self.value = value
+    fn set_value(&mut self, value: Byte) -> WriteEffect {
+        self.value = value;
+
+        if value & 0b1111_1000 == 0 {
+            return WriteEffect::DacDisabled;
+        }
+
+        WriteEffect::None
     }
 
     fn value(&self) -> Byte {
         self.value
-    }
-}
-
-impl DacAudioRegister for NRX2 {
-    fn is_going_to_turn_dac_off(&self, potential_value: &Byte) -> bool {
-        potential_value & 0b1111_1000 == 0
     }
 }
 

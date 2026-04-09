@@ -1,3 +1,5 @@
+use crate::audio::channel::{Channel, ChannelEvent};
+use crate::audio::registers::no_register::NoRegister;
 use crate::audio::registers::nr10::NR10;
 use crate::audio::registers::nr30::NR30;
 use crate::audio::registers::nr31::NR31;
@@ -10,7 +12,7 @@ use crate::audio::registers::nrx1::NRX1;
 use crate::audio::registers::nrx2::NRX2;
 use crate::audio::registers::nrx3::NRX3;
 use crate::audio::registers::nrx4::NRX4;
-use crate::audio::registers::{AudioRegister, DacAudioRegister, TriggerableAudioRegister};
+use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::bus::address::Address;
 use crate::debug::Debuggable;
 use crate::io::wave_pattern_ram::WavePatternRam;
@@ -19,27 +21,10 @@ use crate::{Byte, Word};
 use std::collections::BTreeMap;
 
 pub struct Apu {
-    nr10: NR10,
-    nr11: NRX1,
-    nr12: NRX2,
-    nr13: NRX3,
-    nr14: NRX4,
-
-    nr21: NRX1,
-    nr22: NRX2,
-    nr23: NRX3,
-    nr24: NRX4,
-
-    nr30: NR30,
-    nr31: NR31,
-    nr32: NR32,
-    nr33: NRX3,
-    nr34: NRX4,
-
-    nr41: NR41,
-    nr42: NRX2,
-    nr43: NR43,
-    nr44: NR44,
+    channel_1: Channel<NR10, NRX1, NRX2, NRX3, NRX4>,
+    channel_2: Channel<NoRegister, NRX1, NRX2, NRX3, NRX4>,
+    channel_3: Channel<NR30, NR31, NR32, NRX3, NRX4>,
+    channel_4: Channel<NoRegister, NR41, NRX2, NR43, NR44>,
 
     nr50: Byte,
     nr51: Byte,
@@ -65,123 +50,56 @@ impl Apu {
         self.div_apu = (self.div_apu + 1) % 7;
     }
 
-    fn write_nr52(&mut self, value: Byte) {
-        if NR52::is_going_to_be_turned_off_by(value) {
-            self.clear_audio_registers();
-        }
-
-        self.nr52.set_value(value);
-    }
-
     fn clear_audio_registers(&mut self) {
-        self.nr10.clear();
-        self.nr11.clear();
-        self.nr12.clear();
-        self.nr13.clear();
-        self.nr14.clear();
-        self.nr21.clear();
-        self.nr22.clear();
-        self.nr23.clear();
-        self.nr24.clear();
-        self.nr30.clear();
-        self.nr31.clear();
-        self.nr32.clear();
-        self.nr33.clear();
-        self.nr34.clear();
-        self.nr41.clear();
-        self.nr42.clear();
-        self.nr43.clear();
-        self.nr44.clear();
+        self.channel_1.clear();
+        self.channel_2.clear();
+        self.channel_3.clear();
+        self.channel_4.clear();
+
         self.nr50 = 0;
         self.nr51 = 0;
-    }
-
-    fn write_nr12(&mut self, value: Byte) {
-        if self.nr12.is_going_to_turn_dac_off(&value) {
-            self.nr52.set_ro_channel_flag_inactive(1);
-        }
-
-        self.nr12.set_value(value);
-    }
-
-    fn write_nr14(&mut self, value: Byte) {
-        if self.nr14.is_going_to_be_triggered_on_by(&value) {
-            self.nr52.set_ro_channel_flag_active(1);
-        }
-
-        self.nr14.set_value(value);
-    }
-
-    fn write_nr22(&mut self, value: Byte) {
-        if self.nr22.is_going_to_turn_dac_off(&value) {
-            self.nr52.set_ro_channel_flag_inactive(2);
-        }
-
-        self.nr22.set_value(value);
-    }
-
-    fn write_nr24(&mut self, value: Byte) {
-        if self.nr24.is_going_to_be_triggered_on_by(&value) {
-            self.nr52.set_ro_channel_flag_active(2);
-        }
-
-        self.nr24.set_value(value);
-    }
-
-    fn write_nr30(&mut self, value: Byte) {
-        if self.nr30.is_going_to_turn_dac_off(&value) {
-            self.nr52.set_ro_channel_flag_inactive(3);
-        }
-
-        self.nr30.set_value(value);
-    }
-
-    fn write_nr34(&mut self, value: Byte) {
-        if self.nr34.is_going_to_be_triggered_on_by(&value) {
-            self.nr52.set_ro_channel_flag_active(3);
-        }
-
-        self.nr34.set_value(value);
-    }
-
-    fn write_nr42(&mut self, value: Byte) {
-        if self.nr42.is_going_to_turn_dac_off(&value) {
-            self.nr52.set_ro_channel_flag_inactive(4);
-        }
-
-        self.nr42.set_value(value);
-    }
-
-    fn write_nr44(&mut self, value: Byte) {
-        if self.nr44.is_going_to_be_triggered_on_by(&value) {
-            self.nr52.set_ro_channel_flag_active(4);
-        }
-
-        self.nr44.set_value(value);
     }
 }
 
 impl Default for Apu {
     fn default() -> Self {
         Self {
-            nr10: NR10::default(),
-            nr11: NRX1::new_nr11(),
-            nr12: NRX2::new_nr12(),
-            nr13: NRX3::default(),
-            nr14: NRX4::default(),
-            nr21: NRX1::new_nr21(),
-            nr22: NRX2::new_nr22(),
-            nr23: NRX3::default(),
-            nr24: NRX4::default(),
-            nr30: NR30::default(),
-            nr31: NR31::default(),
-            nr32: NR32::default(),
-            nr33: NRX3::default(),
-            nr34: NRX4::default(),
-            nr41: NR41::default(),
-            nr42: NRX2::new_nr42(),
-            nr43: NR43::default(),
-            nr44: NR44::default(),
+            channel_1: Channel::new(
+                1,
+                NR10::default(),
+                NRX1::new_nr11(),
+                NRX2::new_nr12(),
+                NRX3::default(),
+                NRX4::default(),
+            ),
+
+            channel_2: Channel::new(
+                2,
+                NoRegister::default(),
+                NRX1::new_nr21(),
+                NRX2::new_nr22(),
+                NRX3::default(),
+                NRX4::default(),
+            ),
+
+            channel_3: Channel::new(
+                3,
+                NR30::default(),
+                NR31::default(),
+                NR32::default(),
+                NRX3::default(),
+                NRX4::default(),
+            ),
+
+            channel_4: Channel::new(
+                4,
+                NoRegister::default(),
+                NR41::default(),
+                NRX2::new_nr42(),
+                NR43::default(),
+                NR44::default(),
+            ),
+
             nr50: 0x77,
             nr51: 0xf3,
             nr52: NR52::default(),
@@ -194,29 +112,21 @@ impl Default for Apu {
 impl ReadMemory for Apu {
     fn read_byte(&self, position: Word) -> Byte {
         match position {
-            Address::NR10_SOUND_1_SWEEP => self.nr10.read(),
-            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => self.nr11.read(),
-            Address::NR12_SOUND_1_ENVELOPE => self.nr12.read(),
-            Address::NR13_SOUND_1_FR_LO => self.nr13.read(),
-            Address::NR14_SOUND_1_FR_HI => self.nr14.read(),
+            Address::NR10_SOUND_1_SWEEP..=Address::NR14_SOUND_1_FR_HI => self
+                .channel_1
+                .read_byte(position - Address::NR10_SOUND_1_SWEEP),
 
-            Address::NR20_SOUND_2_UNUSED => 0xFF,
-            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => self.nr21.read(),
-            Address::NR22_SOUND_2_ENVELOPE => self.nr22.read(),
-            Address::NR23_SOUND_2_FR_LO => self.nr23.read(),
-            Address::NR24_SOUND_2_FR_HI => self.nr24.read(),
+            Address::NR20_SOUND_2_UNUSED..=Address::NR24_SOUND_2_FR_HI => self
+                .channel_2
+                .read_byte(position - Address::NR20_SOUND_2_UNUSED),
 
-            Address::NR30_SOUND_3_ON_OFF => self.nr30.read(),
-            Address::NR31_SOUND_3_LENGTH => self.nr31.read(),
-            Address::NR32_SOUND_3_OUTPUT_LEVEL => self.nr32.read(),
-            Address::NR33_SOUND_3_FR_LO => self.nr33.read(),
-            Address::NR34_SOUND_3_FR_HI => self.nr34.read(),
+            Address::NR30_SOUND_3_ON_OFF..=Address::NR34_SOUND_3_FR_HI => self
+                .channel_3
+                .read_byte(position - Address::NR30_SOUND_3_ON_OFF),
 
-            Address::NR40_SOUND_4_UNUSED => 0xFF,
-            Address::NR41_SOUND_4_LENGTH => self.nr41.read(),
-            Address::NR42_SOUND_4_ENVELOPE => self.nr42.read(),
-            Address::NR43_SOUND_4_FR_RANDOMNESS => self.nr43.read(),
-            Address::NR44_SOUND_4_CONTROL => self.nr44.read(),
+            Address::NR40_SOUND_4_UNUSED..=Address::NR44_SOUND_4_CONTROL => self
+                .channel_4
+                .read_byte(position - Address::NR40_SOUND_4_UNUSED),
 
             Address::NR50 => self.nr50,
             Address::NR51 => self.nr51,
@@ -236,7 +146,14 @@ impl ReadMemory for Apu {
 impl WriteMemory for Apu {
     fn write_byte(&mut self, position: Word, value: Byte) {
         if position == Address::NR52_SOUND {
-            self.write_nr52(value);
+            let write_effect = self.nr52.write(value);
+
+            match write_effect {
+                WriteEffect::AudioOff => self.clear_audio_registers(),
+                WriteEffect::None => (),
+                _ => unreachable!("WriteEffect not supported for NR52"),
+            }
+
             return;
         }
 
@@ -251,39 +168,41 @@ impl WriteMemory for Apu {
             return;
         }
 
-        match position {
-            Address::NR10_SOUND_1_SWEEP => self.nr10.write(value),
-            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => self.nr11.write(value),
-            Address::NR12_SOUND_1_ENVELOPE => self.write_nr12(value),
-            Address::NR13_SOUND_1_FR_LO => self.nr13.write(value),
-            Address::NR14_SOUND_1_FR_HI => self.write_nr14(value),
+        let channel_event = match position {
+            Address::NR10_SOUND_1_SWEEP..=Address::NR14_SOUND_1_FR_HI => self
+                .channel_1
+                .write_byte(position - Address::NR10_SOUND_1_SWEEP, value),
 
-            Address::NR20_SOUND_2_UNUSED => {
-                // Ignored, not used
+            Address::NR20_SOUND_2_UNUSED..=Address::NR24_SOUND_2_FR_HI => self
+                .channel_2
+                .write_byte(position - Address::NR20_SOUND_2_UNUSED, value),
+
+            Address::NR30_SOUND_3_ON_OFF..=Address::NR34_SOUND_3_FR_HI => self
+                .channel_3
+                .write_byte(position - Address::NR30_SOUND_3_ON_OFF, value),
+
+            Address::NR40_SOUND_4_UNUSED..=Address::NR44_SOUND_4_CONTROL => self
+                .channel_4
+                .write_byte(position - Address::NR40_SOUND_4_UNUSED, value),
+
+            Address::NR50 => {
+                self.nr50 = value;
+                ChannelEvent::None
             }
-            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => self.nr21.write(value),
-            Address::NR22_SOUND_2_ENVELOPE => self.write_nr22(value),
-            Address::NR23_SOUND_2_FR_LO => self.nr23.write(value),
-            Address::NR24_SOUND_2_FR_HI => self.write_nr24(value),
-
-            Address::NR30_SOUND_3_ON_OFF => self.write_nr30(value),
-            Address::NR31_SOUND_3_LENGTH => self.nr31.write(value),
-            Address::NR32_SOUND_3_OUTPUT_LEVEL => self.nr32.write(value),
-            Address::NR33_SOUND_3_FR_LO => self.nr33.write(value),
-            Address::NR34_SOUND_3_FR_HI => self.write_nr34(value),
-
-            Address::NR40_SOUND_4_UNUSED => {
-                // Ignored, not used
+            Address::NR51 => {
+                self.nr51 = value;
+                ChannelEvent::None
             }
-            Address::NR41_SOUND_4_LENGTH => self.nr41.write(value),
-            Address::NR42_SOUND_4_ENVELOPE => self.write_nr42(value),
-            Address::NR43_SOUND_4_FR_RANDOMNESS => self.nr43.write(value),
-            Address::NR44_SOUND_4_CONTROL => self.write_nr44(value),
-
-            Address::NR50 => self.nr50 = value,
-            Address::NR51 => self.nr51 = value,
 
             _ => panic!("Write address {position:X} not supported for APU"),
+        };
+
+        match channel_event {
+            ChannelEvent::ChannelEnabled(channel) => self.nr52.set_ro_channel_flag_active(channel),
+            ChannelEvent::ChannelDisabled(channel) => {
+                self.nr52.set_ro_channel_flag_inactive(channel)
+            }
+            ChannelEvent::None => (),
         }
     }
 }
@@ -291,15 +210,15 @@ impl WriteMemory for Apu {
 impl Debuggable for Apu {
     fn get_debug_values(&self) -> BTreeMap<&str, String> {
         BTreeMap::from([
-            ("NR12", format!("{:X}", self.nr12.value())),
-            ("NR22", format!("{:X}", self.nr22.value())),
-            ("NR30", format!("{:X}", self.nr30.value())),
-            ("NR42", format!("{:X}", self.nr42.value())),
-            ("NR14", format!("{:X}", self.nr14.value())),
-            ("NR24", format!("{:X}", self.nr24.value())),
-            ("NR34", format!("{:X}", self.nr34.value())),
-            ("NR44", format!("{:X}", self.nr44.value())),
-            ("NR52", format!("{:X}", self.nr52.value())),
+            // ("NR12", format!("{:X}", self.nr12.value())),
+            // ("NR22", format!("{:X}", self.nr22.value())),
+            // ("NR30", format!("{:X}", self.nr30.value())),
+            // ("NR42", format!("{:X}", self.nr42.value())),
+            // ("NR14", format!("{:X}", self.nr14.value())),
+            // ("NR24", format!("{:X}", self.nr24.value())),
+            // ("NR34", format!("{:X}", self.nr34.value())),
+            // ("NR44", format!("{:X}", self.nr44.value())),
+            // ("NR52", format!("{:X}", self.nr52.value())),
         ])
     }
 }
