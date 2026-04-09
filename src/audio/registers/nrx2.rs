@@ -37,11 +37,11 @@ impl AudioRegister for NRX2 {
     fn set_value(&mut self, value: Byte) -> WriteEffect {
         self.value = value;
 
-        if self.is_dac_enabled() {
+        if !self.is_dac_enabled() {
             return WriteEffect::DacDisabled;
         }
 
-        WriteEffect::None
+        WriteEffect::DacEnabled
     }
 
     fn value(&self) -> Byte {

@@ -26,6 +26,8 @@ pub struct Channel<
 
     length_counter: Byte,
     max_length: Byte,
+
+    dac: bool,
 }
 
 impl<
@@ -46,6 +48,7 @@ impl<
             nrx4,
             length_counter: 0,
             max_length,
+            dac: true,
         }
     }
 
@@ -74,9 +77,20 @@ impl<
                     self.length_counter = 0;
                 }
 
+                if !self.dac {
+                    return ChannelEvent::None;
+                }
+
                 ChannelEvent::ChannelEnabled(self.number)
             }
-            WriteEffect::DacDisabled => ChannelEvent::ChannelDisabled(self.number),
+            WriteEffect::DacDisabled => {
+                self.dac = false;
+                ChannelEvent::ChannelDisabled(self.number)
+            }
+            WriteEffect::DacEnabled => {
+                self.dac = true;
+                ChannelEvent::None
+            }
             WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
             WriteEffect::NRX1Updated => {
                 self.length_counter = self.nrx1.get_initial_length();

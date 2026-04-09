@@ -28,7 +28,7 @@ impl AudioRegister for NR30 {
             return WriteEffect::DacDisabled;
         }
 
-        WriteEffect::None
+        WriteEffect::DacEnabled
     }
 
     fn value(&self) -> Byte {

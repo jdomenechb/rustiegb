@@ -20,6 +20,7 @@ pub enum WriteEffect {
     None,
     Triggered,
     DacDisabled,
+    DacEnabled,
     AudioOff,
     NRX1Updated,
 }
