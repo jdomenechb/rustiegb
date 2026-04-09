@@ -1,5 +1,5 @@
-use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::Byte;
+use crate::audio::registers::{AudioRegister, InitialLengthRegister, WriteEffect};
 
 /// Length timer - W
 pub struct NR31 {
@@ -28,6 +28,12 @@ impl AudioRegister for NR31 {
 impl Default for NR31 {
     fn default() -> Self {
         Self { value: 0xFF }
+    }
+}
+
+impl InitialLengthRegister for NR31 {
+    fn get_initial_length(&self) -> Byte {
+        self.value
     }
 }
 

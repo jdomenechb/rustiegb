@@ -60,6 +60,12 @@ impl IORegisters {
         let old_div_value = self.div.read();
         self.div.step(last_instruction_cycles);
 
+        let is_div_apu = is_bit_set(&old_div_value, 4) && !is_bit_set(&self.div.read(), 4);
+
+        if is_div_apu {
+            self.apu.tick();
+        }
+
         if !self.timer_control.started {
             self.tima.reset_cycles();
             return to_return;
@@ -72,12 +78,6 @@ impl IORegisters {
         if tima_cycles_overflowed {
             self.interrupt_flag.set_timer_overflow(true);
             self.tima.value = self.tma;
-        }
-
-        let is_div_apu = is_bit_set(&old_div_value, 4) && !is_bit_set(&self.div.read(), 4);
-
-        if is_div_apu {
-            self.apu.tick();
         }
 
         to_return

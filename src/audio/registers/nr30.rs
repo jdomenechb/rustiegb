@@ -1,6 +1,6 @@
+use crate::Byte;
 use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::utils::math::is_bit_set;
-use crate::Byte;
 
 /// DAC enable
 /// ```

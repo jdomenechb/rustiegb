@@ -1,5 +1,5 @@
-use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::Byte;
+use crate::audio::registers::{AudioRegister, WriteEffect};
 
 /// Period (low) - W
 pub struct NRX3 {

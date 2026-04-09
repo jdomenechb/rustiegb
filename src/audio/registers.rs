@@ -42,3 +42,7 @@ pub trait AudioRegister {
         self.set_value(0x0);
     }
 }
+
+pub trait InitialLengthRegister {
+    fn get_initial_length(&self) -> Byte;
+}

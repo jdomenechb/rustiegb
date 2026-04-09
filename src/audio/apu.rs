@@ -39,7 +39,21 @@ impl Apu {
     /// Ticks every 512 Hz
     pub fn tick(&mut self) {
         // Ticks every 256 Hz
-        let length_step = self.div_apu % 2;
+        let length_step = self.div_apu.is_multiple_of(2);
+
+        if length_step {
+            let channel_event = self.channel_1.tick_length();
+            self.process_channel_event(channel_event);
+
+            let channel_event = self.channel_2.tick_length();
+            self.process_channel_event(channel_event);
+
+            let channel_event = self.channel_3.tick_length();
+            self.process_channel_event(channel_event);
+
+            let channel_event = self.channel_4.tick_length();
+            self.process_channel_event(channel_event);
+        }
 
         // Ticks every 128 Hz
         let sweep_step = matches!(self.div_apu, 2 | 6);
@@ -59,6 +73,16 @@ impl Apu {
         self.nr50 = 0;
         self.nr51 = 0;
     }
+
+    fn process_channel_event(&mut self, channel_event: ChannelEvent) {
+        match channel_event {
+            ChannelEvent::ChannelEnabled(channel) => self.nr52.set_ro_channel_flag_active(channel),
+            ChannelEvent::ChannelDisabled(channel) => {
+                self.nr52.set_ro_channel_flag_inactive(channel)
+            }
+            ChannelEvent::None => (),
+        }
+    }
 }
 
 impl Default for Apu {
@@ -71,6 +95,7 @@ impl Default for Apu {
                 NRX2::new_nr12(),
                 NRX3::default(),
                 NRX4::default(),
+                64,
             ),
 
             channel_2: Channel::new(
@@ -80,6 +105,7 @@ impl Default for Apu {
                 NRX2::new_nr22(),
                 NRX3::default(),
                 NRX4::default(),
+                64,
             ),
 
             channel_3: Channel::new(
@@ -89,6 +115,7 @@ impl Default for Apu {
                 NR32::default(),
                 NRX3::default(),
                 NRX4::default(),
+                0,
             ),
 
             channel_4: Channel::new(
@@ -98,6 +125,7 @@ impl Default for Apu {
                 NRX2::new_nr42(),
                 NR43::default(),
                 NR44::default(),
+                64,
             ),
 
             nr50: 0x77,
@@ -197,13 +225,7 @@ impl WriteMemory for Apu {
             _ => panic!("Write address {position:X} not supported for APU"),
         };
 
-        match channel_event {
-            ChannelEvent::ChannelEnabled(channel) => self.nr52.set_ro_channel_flag_active(channel),
-            ChannelEvent::ChannelDisabled(channel) => {
-                self.nr52.set_ro_channel_flag_inactive(channel)
-            }
-            ChannelEvent::None => (),
-        }
+        self.process_channel_event(channel_event);
     }
 }
 

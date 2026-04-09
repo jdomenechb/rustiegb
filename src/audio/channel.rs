@@ -1,5 +1,6 @@
-use crate::audio::registers::{AudioRegister, WriteEffect};
+use crate::audio::registers::{AudioRegister, InitialLengthRegister, WriteEffect};
 use crate::memory::memory_sector::ReadMemory;
+use crate::utils::math::is_bit_set;
 use crate::{Byte, Word};
 
 pub enum ChannelEvent {
@@ -10,23 +11,32 @@ pub enum ChannelEvent {
 
 pub struct Channel<
     T: AudioRegister,
-    U: AudioRegister,
+    U: AudioRegister + InitialLengthRegister,
     V: AudioRegister,
     X: AudioRegister,
     Y: AudioRegister,
 > {
     number: u8,
+
     nrx0: T,
     nrx1: U,
     nrx2: V,
     nrx3: X,
     nrx4: Y,
+
+    length_counter: Byte,
+    max_length: Byte,
 }
 
-impl<T: AudioRegister, U: AudioRegister, V: AudioRegister, X: AudioRegister, Y: AudioRegister>
-    Channel<T, U, V, X, Y>
+impl<
+    T: AudioRegister,
+    U: AudioRegister + InitialLengthRegister,
+    V: AudioRegister,
+    X: AudioRegister,
+    Y: AudioRegister,
+> Channel<T, U, V, X, Y>
 {
-    pub fn new(number: u8, nrx0: T, nrx1: U, nrx2: V, nrx3: X, nrx4: Y) -> Self {
+    pub fn new(number: u8, nrx0: T, nrx1: U, nrx2: V, nrx3: X, nrx4: Y, max_length: Byte) -> Self {
         Self {
             number,
             nrx0,
@@ -34,6 +44,8 @@ impl<T: AudioRegister, U: AudioRegister, V: AudioRegister, X: AudioRegister, Y: 
             nrx2,
             nrx3,
             nrx4,
+            length_counter: 0,
+            max_length,
         }
     }
 
@@ -57,15 +69,44 @@ impl<T: AudioRegister, U: AudioRegister, V: AudioRegister, X: AudioRegister, Y: 
 
         match write_event {
             WriteEffect::None => ChannelEvent::None,
-            WriteEffect::Triggered => ChannelEvent::ChannelEnabled(self.number),
+            WriteEffect::Triggered => {
+                if self.length_counter == self.max_length {
+                    self.length_counter = self.nrx1.get_initial_length();
+                }
+
+                ChannelEvent::ChannelEnabled(self.number)
+            }
             WriteEffect::DacDisabled => ChannelEvent::ChannelDisabled(self.number),
             WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
         }
     }
+
+    pub fn tick_length(&mut self) -> ChannelEvent {
+        if !self.is_length_enabled() {
+            return ChannelEvent::None;
+        }
+
+        self.length_counter = self.length_counter.wrapping_add(1);
+
+        if self.length_counter == self.max_length {
+            return ChannelEvent::ChannelDisabled(self.number);
+        }
+
+        ChannelEvent::None
+    }
+
+    fn is_length_enabled(&self) -> bool {
+        is_bit_set(&self.nrx4.read(), 6)
+    }
 }
 
-impl<T: AudioRegister, U: AudioRegister, V: AudioRegister, X: AudioRegister, Y: AudioRegister>
-    ReadMemory for Channel<T, U, V, X, Y>
+impl<
+    T: AudioRegister,
+    U: AudioRegister + InitialLengthRegister,
+    V: AudioRegister,
+    X: AudioRegister,
+    Y: AudioRegister,
+> ReadMemory for Channel<T, U, V, X, Y>
 {
     fn read_byte(&self, position: Word) -> Byte {
         match position {

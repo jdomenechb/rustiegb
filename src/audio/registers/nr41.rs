@@ -1,5 +1,5 @@
-use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::Byte;
+use crate::audio::registers::{AudioRegister, InitialLengthRegister, WriteEffect};
 
 /// Length timer
 /// ```
@@ -34,6 +34,12 @@ impl AudioRegister for NR41 {
 impl Default for NR41 {
     fn default() -> Self {
         Self { value: 0xFF }
+    }
+}
+
+impl InitialLengthRegister for NR41 {
+    fn get_initial_length(&self) -> Byte {
+        self.value & 0b0011_1111
     }
 }
 
