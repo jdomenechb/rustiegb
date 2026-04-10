@@ -81,7 +81,7 @@ impl<
                 {
                     self.length_counter = self.length_counter.wrapping_add(1);
 
-                    if self.length_counter == 0 && !self.nrx4.is_triggered() {
+                    if self.length_counter == self.max_length && !self.nrx4.is_triggered() {
                         return ChannelEvent::ChannelDisabled(self.number);
                     }
                 }
