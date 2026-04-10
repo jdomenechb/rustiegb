@@ -63,13 +63,14 @@ impl<
     }
 
     pub fn write_byte(&mut self, position: Word, value: Byte, div_apu: &Byte) -> ChannelEvent {
+        let makes_length_tick = div_apu.is_multiple_of(2);
+
         let write_event = match position {
             0 => self.nrx0.write(value),
             1 => self.nrx1.write(value),
             2 => self.nrx2.write(value),
             3 => self.nrx3.write(value),
             4 => {
-                let makes_length_tick = div_apu.is_multiple_of(2);
                 let was_length_disabled = !self.is_length_enabled();
                 let write_effect = self.nrx4.write(value);
                 let is_length_enabled = self.is_length_enabled();
@@ -77,7 +78,7 @@ impl<
                 if !makes_length_tick
                     && is_length_enabled
                     && was_length_disabled
-                    && self.length_counter != 0
+                    && self.length_counter != self.max_length
                 {
                     self.length_counter = self.length_counter.wrapping_add(1);
 
@@ -96,6 +97,10 @@ impl<
             WriteEffect::Triggered => {
                 if self.length_counter == self.max_length {
                     self.length_counter = 0;
+
+                    if !makes_length_tick && self.is_length_enabled() {
+                        self.length_counter += 1;
+                    }
                 }
 
                 if !self.dac {
