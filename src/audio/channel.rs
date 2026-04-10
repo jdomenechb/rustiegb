@@ -26,8 +26,8 @@ pub struct Channel<
     nrx3: X,
     nrx4: Y,
 
-    length_counter: Byte,
-    max_length: Byte,
+    length_counter: Word,
+    max_length: Word,
 
     dac: bool,
 }
@@ -40,7 +40,7 @@ impl<
     Y: AudioRegister + TriggerableRegister,
 > Channel<T, U, V, X, Y>
 {
-    pub fn new(number: u8, nrx0: T, nrx1: U, nrx2: V, nrx3: X, nrx4: Y, max_length: Byte) -> Self {
+    pub fn new(number: u8, nrx0: T, nrx1: U, nrx2: V, nrx3: X, nrx4: Y, max_length: Word) -> Self {
         Self {
             number,
             nrx0,
@@ -99,7 +99,7 @@ impl<
                     self.length_counter = 0;
 
                     if !makes_length_tick && self.is_length_enabled() {
-                        self.length_counter += 1;
+                        self.length_counter = self.length_counter.wrapping_add(1);
                     }
                 }
 
@@ -119,7 +119,7 @@ impl<
             }
             WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
             WriteEffect::NRX1Updated => {
-                self.length_counter = self.nrx1.get_initial_length();
+                self.length_counter = self.nrx1.get_initial_length() as Word;
                 ChannelEvent::None
             }
             WriteEffect::NRX4TimingQuirkDisablingChannel => {

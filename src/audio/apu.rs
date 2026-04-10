@@ -115,7 +115,7 @@ impl Default for Apu {
                 NR32::default(),
                 NRX3::default(),
                 NRX4::default(),
-                0,
+                256,
             ),
 
             channel_4: Channel::new(
