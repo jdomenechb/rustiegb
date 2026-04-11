@@ -67,7 +67,7 @@ impl SweepChannel {
     }
 
     fn refresh_sweep_pace(&mut self) {
-        self.sweep_pace = (self.read_byte(1) & 0b0111_0000) >> 4;
+        self.sweep_pace = self.channel.get_nrx0().read_pace();
     }
 
     fn calculate_new_frequency(&self) -> u32 {
