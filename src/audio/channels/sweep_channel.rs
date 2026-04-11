@@ -13,8 +13,7 @@ pub struct SweepChannel {
     channel: DefaultChannel<NR10, NRX1, NRX2, NRX3, NRX4>,
 
     sweep_enabled: bool,
-    sweep_pace: Byte,
-    sweep_ticks_accumulated: Byte,
+    sweep_ticks_left: Byte,
     sweep_frequency_shadow_register: u32,
 }
 
@@ -31,8 +30,7 @@ impl SweepChannel {
                 64,
             ),
             sweep_enabled: false,
-            sweep_pace: 0,
-            sweep_ticks_accumulated: 0,
+            sweep_ticks_left: 0,
             sweep_frequency_shadow_register: 0,
         }
     }
@@ -40,7 +38,7 @@ impl SweepChannel {
 
 impl SweepChannel {
     pub fn tick_sweep(&mut self) -> ChannelEvent {
-        if !self.sweep_enabled || self.sweep_pace == 0 {
+        if !self.sweep_enabled || self.channel.get_nrx0().read_pace() == 0 {
             return ChannelEvent::None;
         }
 
@@ -50,29 +48,39 @@ impl SweepChannel {
             return ChannelEvent::ChannelDisabled(self.channel.get_number());
         }
 
-        self.sweep_ticks_accumulated = (self.sweep_ticks_accumulated + 1) % self.sweep_pace;
+        if self.sweep_ticks_left == 0 {
+            return ChannelEvent::None;
+        };
 
-        if self.sweep_ticks_accumulated == 0 && self.channel.get_nrx0().read_step() != 0 {
-            self.sweep_frequency_shadow_register = new_frequency;
-            self.channel.write_frequency(new_frequency);
+        self.sweep_ticks_left = self.sweep_ticks_left - 1;
 
-            if Self::frequency_will_overflow(self.calculate_new_frequency()) {
-                return ChannelEvent::ChannelDisabled(self.channel.get_number());
+        if self.sweep_ticks_left == 0 {
+            self.reset_sweep_ticks_left();
+
+            if self.channel.get_nrx0().read_step() != 0 {
+                self.sweep_frequency_shadow_register = new_frequency;
+                self.channel.write_frequency(new_frequency);
+
+                if Self::frequency_will_overflow(self.calculate_new_frequency()) {
+                    return ChannelEvent::ChannelDisabled(self.channel.get_number());
+                }
             }
         }
 
-        self.refresh_sweep_pace();
-
         ChannelEvent::None
-    }
-
-    fn refresh_sweep_pace(&mut self) {
-        self.sweep_pace = self.channel.get_nrx0().read_pace();
     }
 
     fn refresh_sweep_enabled(&mut self) {
         let nr10 = self.channel.get_nrx0();
         self.sweep_enabled = nr10.read_pace() != 0 || nr10.read_step() != 0;
+    }
+
+    fn reset_sweep_ticks_left(&mut self) {
+        self.sweep_ticks_left = self.channel.get_nrx0().read_pace();
+
+        if self.sweep_ticks_left == 0 {
+            self.sweep_ticks_left = 8;
+        }
     }
 
     fn calculate_new_frequency(&self) -> u32 {
@@ -97,10 +105,8 @@ impl SweepChannel {
     fn process_triggered_write_effect(&mut self, channel_event: ChannelEvent) -> ChannelEvent {
         self.sweep_frequency_shadow_register = self.channel.read_frequency();
 
+        self.reset_sweep_ticks_left();
         self.refresh_sweep_enabled();
-        self.refresh_sweep_pace();
-
-        self.sweep_ticks_accumulated = 0;
 
         if (self.channel.get_nrx0().read_step() != 0)
             && Self::frequency_will_overflow(self.calculate_new_frequency())
@@ -132,17 +138,16 @@ impl Channel for SweepChannel {
         let (channel_event, write_effect) = self.channel.write_byte(position, value, div_apu);
 
         if position == 0 {
-            self.refresh_sweep_pace();
+            self.reset_sweep_ticks_left()
         }
 
         if write_effect != WriteEffect::Triggered {
             return (channel_event, write_effect);
         }
 
-        (
-            self.process_triggered_write_effect(channel_event),
-            write_effect,
-        )
+        let new_channel_event = self.process_triggered_write_effect(channel_event);
+
+        (new_channel_event, write_effect)
     }
 
     fn tick_length(&mut self) -> ChannelEvent {
