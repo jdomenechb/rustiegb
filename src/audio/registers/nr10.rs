@@ -23,11 +23,11 @@ pub struct NR10 {
 
 impl NR10 {
     pub fn read_pace(&self) -> Byte {
-        self.value & 0b0111_0000 >> 4
+        (self.value & 0b0111_0000) >> 4
     }
 
     pub fn read_direction(&self) -> SweepDirection {
-        let value = self.value & 0b0000_1000 >> 3;
+        let value = (self.value & 0b0000_1000) >> 3;
 
         if value == 0 {
             SweepDirection::Add

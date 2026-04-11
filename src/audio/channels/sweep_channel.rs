@@ -77,7 +77,7 @@ impl SweepChannel {
         let direction = nr10.read_direction();
         let step = nr10.read_step() as u32;
 
-        let to_add_or_sub = frequency / 2 ^ step;
+        let to_add_or_sub = frequency / 2_u32.pow(step);
 
         match direction {
             SweepDirection::Add => frequency.wrapping_add(to_add_or_sub),
