@@ -68,7 +68,6 @@ impl SweepChannel {
 
     fn refresh_sweep_pace(&mut self) {
         self.sweep_pace = (self.read_byte(1) & 0b0111_0000) >> 4;
-        self.sweep_ticks_accumulated = 0;
     }
 
     fn calculate_new_frequency(&self) -> u32 {
@@ -98,6 +97,7 @@ impl SweepChannel {
         self.sweep_enabled = nr10.read_pace() != 0 || step_is_non_zero;
 
         self.refresh_sweep_pace();
+        self.sweep_ticks_accumulated = 0;
 
         if step_is_non_zero && Self::frequency_will_overflow(self.calculate_new_frequency()) {
             return ChannelEvent::ChannelDisabled(
