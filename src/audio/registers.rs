@@ -25,7 +25,6 @@ pub enum WriteEffect {
     AudioOff,
     NRX1Updated,
     NRX4TimingQuirkDisablingChannel,
-    SweepOverflow,
 }
 
 pub trait AudioRegister {

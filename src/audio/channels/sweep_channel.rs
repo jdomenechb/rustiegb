@@ -41,13 +41,13 @@ impl SweepChannel {
 impl SweepChannel {
     pub fn tick_sweep(&mut self) -> ChannelEvent {
         if !self.sweep_enabled || self.sweep_pace == 0 {
-            return ChannelEvent::None(None);
+            return ChannelEvent::None;
         }
 
         let new_frequency = self.calculate_new_frequency();
 
         if Self::frequency_will_overflow(new_frequency) {
-            return ChannelEvent::ChannelDisabled(self.channel.get_number(), None);
+            return ChannelEvent::ChannelDisabled(self.channel.get_number());
         }
 
         self.sweep_ticks_accumulated = (self.sweep_ticks_accumulated + 1) % self.sweep_pace;
@@ -57,13 +57,13 @@ impl SweepChannel {
             self.channel.write_frequency(new_frequency);
 
             if Self::frequency_will_overflow(self.calculate_new_frequency()) {
-                return ChannelEvent::ChannelDisabled(self.channel.get_number(), None);
+                return ChannelEvent::ChannelDisabled(self.channel.get_number());
             }
         }
 
         self.refresh_sweep_pace();
 
-        ChannelEvent::None(None)
+        ChannelEvent::None
     }
 
     fn refresh_sweep_pace(&mut self) {
@@ -105,10 +105,7 @@ impl SweepChannel {
         if (self.channel.get_nrx0().read_step() != 0)
             && Self::frequency_will_overflow(self.calculate_new_frequency())
         {
-            return ChannelEvent::ChannelDisabled(
-                self.channel.get_number(),
-                Some(WriteEffect::SweepOverflow),
-            );
+            return ChannelEvent::ChannelDisabled(self.channel.get_number());
         }
 
         channel_event
@@ -126,22 +123,26 @@ impl Channel for SweepChannel {
         self.channel.clear();
     }
 
-    fn write_byte(&mut self, position: u16, value: u8, div_apu: &u8) -> ChannelEvent {
-        let channel_event = self.channel.write_byte(position, value, div_apu);
+    fn write_byte(
+        &mut self,
+        position: u16,
+        value: u8,
+        div_apu: &u8,
+    ) -> (ChannelEvent, WriteEffect) {
+        let (channel_event, write_effect) = self.channel.write_byte(position, value, div_apu);
 
         if position == 0 {
             self.refresh_sweep_pace();
         }
 
-        let Some(write_effect): Option<WriteEffect> = (&channel_event).try_into().ok() else {
-            return channel_event;
-        };
-
         if write_effect != WriteEffect::Triggered {
-            return channel_event;
+            return (channel_event, write_effect);
         }
 
-        self.process_triggered_write_effect(channel_event)
+        (
+            self.process_triggered_write_effect(channel_event),
+            write_effect,
+        )
     }
 
     fn tick_length(&mut self) -> ChannelEvent {

@@ -89,7 +89,12 @@ impl<
         self.nrx4.clear();
     }
 
-    fn write_byte(&mut self, position: Word, value: Byte, div_apu: &Byte) -> ChannelEvent {
+    fn write_byte(
+        &mut self,
+        position: Word,
+        value: Byte,
+        div_apu: &Byte,
+    ) -> (ChannelEvent, WriteEffect) {
         let makes_length_tick = div_apu.is_multiple_of(2);
 
         let write_effect = match position {
@@ -110,7 +115,7 @@ impl<
                     self.length_counter = self.length_counter.wrapping_add(1);
 
                     if self.length_counter == self.max_length && !self.nrx4.is_triggered() {
-                        return ChannelEvent::ChannelDisabled(self.number, Some(write_effect));
+                        return (ChannelEvent::ChannelDisabled(self.number), write_effect);
                     }
                 }
 
@@ -120,7 +125,7 @@ impl<
         };
 
         match write_effect {
-            WriteEffect::None => ChannelEvent::None(Some(write_effect)),
+            WriteEffect::None => (ChannelEvent::None, write_effect),
             WriteEffect::Triggered => {
                 if self.length_counter == self.max_length {
                     self.length_counter = 0;
@@ -131,45 +136,42 @@ impl<
                 }
 
                 if !self.dac {
-                    return ChannelEvent::None(Some(write_effect));
+                    return (ChannelEvent::None, write_effect);
                 }
 
-                ChannelEvent::ChannelEnabled(self.number, Some(write_effect))
+                (ChannelEvent::ChannelEnabled(self.number), write_effect)
             }
             WriteEffect::DacDisabled => {
                 self.dac = false;
-                ChannelEvent::ChannelDisabled(self.number, Some(write_effect))
+                (ChannelEvent::ChannelDisabled(self.number), write_effect)
             }
             WriteEffect::DacEnabled => {
                 self.dac = true;
-                ChannelEvent::None(Some(write_effect))
+                (ChannelEvent::None, write_effect)
             }
             WriteEffect::NRX1Updated => {
                 self.length_counter = self.nrx1.get_initial_length() as Word;
-                ChannelEvent::None(Some(write_effect))
+                (ChannelEvent::None, write_effect)
             }
             WriteEffect::NRX4TimingQuirkDisablingChannel => {
-                ChannelEvent::ChannelDisabled(self.number, Some(write_effect))
+                (ChannelEvent::ChannelDisabled(self.number), write_effect)
             }
             WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
-            WriteEffect::SweepOverflow => {
-                unreachable!("SweepOverflow is not expected on the default channel")
-            }
         }
     }
 
     fn tick_length(&mut self) -> ChannelEvent {
         if !self.is_length_enabled() {
-            return ChannelEvent::None(None);
+            return ChannelEvent::None;
         }
 
         self.length_counter = self.length_counter.wrapping_add(1);
 
         if self.length_counter == self.max_length {
-            return ChannelEvent::ChannelDisabled(self.number, None);
+            return ChannelEvent::ChannelDisabled(self.number);
         }
 
-        ChannelEvent::None(None)
+        ChannelEvent::None
     }
 }
 

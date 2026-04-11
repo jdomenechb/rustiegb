@@ -82,13 +82,11 @@ impl Apu {
 
     fn process_channel_event(&mut self, channel_event: ChannelEvent) {
         match channel_event {
-            ChannelEvent::ChannelEnabled(channel, _) => {
-                self.nr52.set_ro_channel_flag_active(channel)
-            }
-            ChannelEvent::ChannelDisabled(channel, _) => {
+            ChannelEvent::ChannelEnabled(channel) => self.nr52.set_ro_channel_flag_active(channel),
+            ChannelEvent::ChannelDisabled(channel) => {
                 self.nr52.set_ro_channel_flag_inactive(channel)
             }
-            ChannelEvent::None(_) => (),
+            ChannelEvent::None => (),
         }
     }
 }
@@ -196,47 +194,54 @@ impl WriteMemory for Apu {
             return;
         }
 
-        let channel_event =
-            match position {
-                Address::NR10_SOUND_1_SWEEP..=Address::NR14_SOUND_1_FR_HI => self
-                    .channel_1
-                    .write_byte(position - Address::NR10_SOUND_1_SWEEP, value, &self.div_apu),
+        let channel_event = match position {
+            Address::NR10_SOUND_1_SWEEP..=Address::NR14_SOUND_1_FR_HI => {
+                self.channel_1
+                    .write_byte(position - Address::NR10_SOUND_1_SWEEP, value, &self.div_apu)
+                    .0
+            }
 
-                Address::NR20_SOUND_2_UNUSED..=Address::NR24_SOUND_2_FR_HI => {
-                    self.channel_2.write_byte(
+            Address::NR20_SOUND_2_UNUSED..=Address::NR24_SOUND_2_FR_HI => {
+                self.channel_2
+                    .write_byte(
                         position - Address::NR20_SOUND_2_UNUSED,
                         value,
                         &self.div_apu,
                     )
-                }
+                    .0
+            }
 
-                Address::NR30_SOUND_3_ON_OFF..=Address::NR34_SOUND_3_FR_HI => {
-                    self.channel_3.write_byte(
+            Address::NR30_SOUND_3_ON_OFF..=Address::NR34_SOUND_3_FR_HI => {
+                self.channel_3
+                    .write_byte(
                         position - Address::NR30_SOUND_3_ON_OFF,
                         value,
                         &self.div_apu,
                     )
-                }
+                    .0
+            }
 
-                Address::NR40_SOUND_4_UNUSED..=Address::NR44_SOUND_4_CONTROL => {
-                    self.channel_4.write_byte(
+            Address::NR40_SOUND_4_UNUSED..=Address::NR44_SOUND_4_CONTROL => {
+                self.channel_4
+                    .write_byte(
                         position - Address::NR40_SOUND_4_UNUSED,
                         value,
                         &self.div_apu,
                     )
-                }
+                    .0
+            }
 
-                Address::NR50 => {
-                    self.nr50 = value;
-                    ChannelEvent::None(None)
-                }
-                Address::NR51 => {
-                    self.nr51 = value;
-                    ChannelEvent::None(None)
-                }
+            Address::NR50 => {
+                self.nr50 = value;
+                ChannelEvent::None
+            }
+            Address::NR51 => {
+                self.nr51 = value;
+                ChannelEvent::None
+            }
 
-                _ => panic!("Write address {position:X} not supported for APU"),
-            };
+            _ => panic!("Write address {position:X} not supported for APU"),
+        };
 
         self.process_channel_event(channel_event);
     }
