@@ -1,3 +1,4 @@
+use crate::audio::channels::channel::{Channel, ChannelEvent};
 use crate::audio::registers::{
     AudioRegister, InitialLengthRegister, TriggerableRegister, WriteEffect,
 };
@@ -5,13 +6,7 @@ use crate::memory::memory_sector::ReadMemory;
 use crate::utils::math::is_bit_set;
 use crate::{Byte, Word};
 
-pub enum ChannelEvent {
-    None,
-    ChannelEnabled(u8),
-    ChannelDisabled(u8),
-}
-
-pub struct Channel<
+pub struct DefaultChannel<
     T: AudioRegister,
     U: AudioRegister + InitialLengthRegister,
     V: AudioRegister,
@@ -38,7 +33,7 @@ impl<
     V: AudioRegister,
     X: AudioRegister,
     Y: AudioRegister + TriggerableRegister,
-> Channel<T, U, V, X, Y>
+> DefaultChannel<T, U, V, X, Y>
 {
     pub fn new(number: u8, nrx0: T, nrx1: U, nrx2: V, nrx3: X, nrx4: Y, max_length: Word) -> Self {
         Self {
@@ -54,7 +49,39 @@ impl<
         }
     }
 
-    pub fn clear(&mut self) {
+    pub fn get_number(&self) -> u8 {
+        self.number
+    }
+
+    pub fn get_nrx0(&self) -> &T {
+        &self.nrx0
+    }
+
+    fn is_length_enabled(&self) -> bool {
+        is_bit_set(&self.nrx4.read(), 6)
+    }
+
+    pub fn read_frequency(&self) -> u32 {
+        (((self.nrx4.value() as u32) & 0b111) << 8) | self.nrx3.value() as u32
+    }
+
+    pub fn write_frequency(&mut self, new_value: u32) {
+        self.nrx3.write(new_value as Byte);
+
+        let new_value = (self.nrx4.value() & 0b1111_1000) | ((new_value >> 8) as Byte);
+        self.nrx4.write(new_value);
+    }
+}
+
+impl<
+    T: AudioRegister,
+    U: AudioRegister + InitialLengthRegister,
+    V: AudioRegister,
+    X: AudioRegister,
+    Y: AudioRegister + TriggerableRegister,
+> Channel for DefaultChannel<T, U, V, X, Y>
+{
+    fn clear(&mut self) {
         self.nrx0.clear();
         self.nrx1.clear();
         self.nrx2.clear();
@@ -62,7 +89,7 @@ impl<
         self.nrx4.clear();
     }
 
-    pub fn write_byte(&mut self, position: Word, value: Byte, div_apu: &Byte) -> ChannelEvent {
+    fn write_byte(&mut self, position: Word, value: Byte, div_apu: &Byte) -> ChannelEvent {
         let makes_length_tick = div_apu.is_multiple_of(2);
 
         let write_event = match position {
@@ -94,21 +121,7 @@ impl<
 
         match write_event {
             WriteEffect::None => ChannelEvent::None,
-            WriteEffect::Triggered => {
-                if self.length_counter == self.max_length {
-                    self.length_counter = 0;
-
-                    if !makes_length_tick && self.is_length_enabled() {
-                        self.length_counter = self.length_counter.wrapping_add(1);
-                    }
-                }
-
-                if !self.dac {
-                    return ChannelEvent::None;
-                }
-
-                ChannelEvent::ChannelEnabled(self.number)
-            }
+            WriteEffect::Triggered => self.process_triggered_write_effect(makes_length_tick),
             WriteEffect::DacDisabled => {
                 self.dac = false;
                 ChannelEvent::ChannelDisabled(self.number)
@@ -128,7 +141,7 @@ impl<
         }
     }
 
-    pub fn tick_length(&mut self) -> ChannelEvent {
+    fn tick_length(&mut self) -> ChannelEvent {
         if !self.is_length_enabled() {
             return ChannelEvent::None;
         }
@@ -142,8 +155,22 @@ impl<
         ChannelEvent::None
     }
 
-    fn is_length_enabled(&self) -> bool {
-        is_bit_set(&self.nrx4.read(), 6)
+    fn process_triggered_write_effect(&mut self, makes_length_tick: bool) -> ChannelEvent {
+        {
+            if self.length_counter == self.max_length {
+                self.length_counter = 0;
+
+                if !makes_length_tick && self.is_length_enabled() {
+                    self.length_counter = self.length_counter.wrapping_add(1);
+                }
+            }
+
+            if !self.dac {
+                return ChannelEvent::None;
+            }
+
+            ChannelEvent::ChannelEnabled(self.number)
+        }
     }
 }
 
@@ -153,7 +180,7 @@ impl<
     V: AudioRegister,
     X: AudioRegister,
     Y: AudioRegister + TriggerableRegister,
-> ReadMemory for Channel<T, U, V, X, Y>
+> ReadMemory for DefaultChannel<T, U, V, X, Y>
 {
     fn read_byte(&self, position: Word) -> Byte {
         match position {

@@ -1,6 +1,7 @@
-use crate::audio::channel::{Channel, ChannelEvent};
+use crate::audio::channels::channel::{Channel, ChannelEvent};
+use crate::audio::channels::default_channel::DefaultChannel;
+use crate::audio::channels::sweep_channel::SweepChannel;
 use crate::audio::registers::no_register::NoRegister;
-use crate::audio::registers::nr10::NR10;
 use crate::audio::registers::nr30::NR30;
 use crate::audio::registers::nr31::NR31;
 use crate::audio::registers::nr32::NR32;
@@ -21,10 +22,10 @@ use crate::{Byte, Word};
 use std::collections::BTreeMap;
 
 pub struct Apu {
-    channel_1: Channel<NR10, NRX1, NRX2, NRX3, NRX4>,
-    channel_2: Channel<NoRegister, NRX1, NRX2, NRX3, NRX4>,
-    channel_3: Channel<NR30, NR31, NR32, NRX3, NRX4>,
-    channel_4: Channel<NoRegister, NR41, NRX2, NR43, NR44>,
+    channel_1: SweepChannel,
+    channel_2: DefaultChannel<NoRegister, NRX1, NRX2, NRX3, NRX4>,
+    channel_3: DefaultChannel<NR30, NR31, NR32, NRX3, NRX4>,
+    channel_4: DefaultChannel<NoRegister, NR41, NRX2, NR43, NR44>,
 
     nr50: Byte,
     nr51: Byte,
@@ -58,6 +59,11 @@ impl Apu {
         // Ticks every 128 Hz
         let sweep_step = matches!(self.div_apu, 2 | 6);
 
+        if sweep_step {
+            let channel_event = self.channel_1.tick_sweep();
+            self.process_channel_event(channel_event);
+        }
+
         // Ticks every 64 Hz
         let envelope_step = self.div_apu == 7;
 
@@ -88,17 +94,9 @@ impl Apu {
 impl Default for Apu {
     fn default() -> Self {
         Self {
-            channel_1: Channel::new(
-                1,
-                NR10::default(),
-                NRX1::new_nr11(),
-                NRX2::new_nr12(),
-                NRX3::default(),
-                NRX4::default(),
-                64,
-            ),
+            channel_1: SweepChannel::new(),
 
-            channel_2: Channel::new(
+            channel_2: DefaultChannel::new(
                 2,
                 NoRegister::default(),
                 NRX1::new_nr21(),
@@ -108,7 +106,7 @@ impl Default for Apu {
                 64,
             ),
 
-            channel_3: Channel::new(
+            channel_3: DefaultChannel::new(
                 3,
                 NR30::default(),
                 NR31::default(),
@@ -118,7 +116,7 @@ impl Default for Apu {
                 256,
             ),
 
-            channel_4: Channel::new(
+            channel_4: DefaultChannel::new(
                 4,
                 NoRegister::default(),
                 NR41::default(),

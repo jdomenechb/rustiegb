@@ -1,6 +1,11 @@
 use crate::Byte;
 use crate::audio::registers::{AudioRegister, WriteEffect};
 
+pub enum SweepDirection {
+    Add,
+    Sub,
+}
+
 /// Sweep
 /// ```
 /// 7
@@ -14,6 +19,26 @@ use crate::audio::registers::{AudioRegister, WriteEffect};
 /// ```
 pub struct NR10 {
     value: Byte,
+}
+
+impl NR10 {
+    pub fn read_pace(&self) -> Byte {
+        self.value & 0b0111_0000 >> 4
+    }
+
+    pub fn read_direction(&self) -> SweepDirection {
+        let value = self.value & 0b0000_1000 >> 3;
+
+        if value == 0 {
+            SweepDirection::Add
+        } else {
+            SweepDirection::Sub
+        }
+    }
+
+    pub fn read_step(&self) -> Byte {
+        self.value & 0b0000_0111
+    }
 }
 
 impl AudioRegister for NR10 {

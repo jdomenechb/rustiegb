@@ -1,3 +1,3 @@
 pub mod apu;
-pub mod channel;
+pub mod channels;
 pub mod registers;
