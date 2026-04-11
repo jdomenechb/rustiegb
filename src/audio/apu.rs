@@ -82,11 +82,13 @@ impl Apu {
 
     fn process_channel_event(&mut self, channel_event: ChannelEvent) {
         match channel_event {
-            ChannelEvent::ChannelEnabled(channel) => self.nr52.set_ro_channel_flag_active(channel),
-            ChannelEvent::ChannelDisabled(channel) => {
+            ChannelEvent::ChannelEnabled(channel, _) => {
+                self.nr52.set_ro_channel_flag_active(channel)
+            }
+            ChannelEvent::ChannelDisabled(channel, _) => {
                 self.nr52.set_ro_channel_flag_inactive(channel)
             }
-            ChannelEvent::None => (),
+            ChannelEvent::None(_) => (),
         }
     }
 }
@@ -226,11 +228,11 @@ impl WriteMemory for Apu {
 
                 Address::NR50 => {
                     self.nr50 = value;
-                    ChannelEvent::None
+                    ChannelEvent::None(None)
                 }
                 Address::NR51 => {
                     self.nr51 = value;
-                    ChannelEvent::None
+                    ChannelEvent::None(None)
                 }
 
                 _ => panic!("Write address {position:X} not supported for APU"),

@@ -16,7 +16,7 @@ pub mod nrx2;
 pub mod nrx3;
 pub mod nrx4;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Clone)]
 pub enum WriteEffect {
     None,
     Triggered,
@@ -25,6 +25,7 @@ pub enum WriteEffect {
     AudioOff,
     NRX1Updated,
     NRX4TimingQuirkDisablingChannel,
+    SweepOverflow,
 }
 
 pub trait AudioRegister {

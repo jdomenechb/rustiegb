@@ -92,7 +92,7 @@ impl<
     fn write_byte(&mut self, position: Word, value: Byte, div_apu: &Byte) -> ChannelEvent {
         let makes_length_tick = div_apu.is_multiple_of(2);
 
-        let write_event = match position {
+        let write_effect = match position {
             0 => self.nrx0.write(value),
             1 => self.nrx1.write(value),
             2 => self.nrx2.write(value),
@@ -110,7 +110,7 @@ impl<
                     self.length_counter = self.length_counter.wrapping_add(1);
 
                     if self.length_counter == self.max_length && !self.nrx4.is_triggered() {
-                        return ChannelEvent::ChannelDisabled(self.number);
+                        return ChannelEvent::ChannelDisabled(self.number, Some(write_effect));
                     }
                 }
 
@@ -119,58 +119,57 @@ impl<
             _ => unreachable!("Write address {position:X} not supported for channel"),
         };
 
-        match write_event {
-            WriteEffect::None => ChannelEvent::None,
-            WriteEffect::Triggered => self.process_triggered_write_effect(makes_length_tick),
+        match write_effect {
+            WriteEffect::None => ChannelEvent::None(Some(write_effect)),
+            WriteEffect::Triggered => {
+                if self.length_counter == self.max_length {
+                    self.length_counter = 0;
+
+                    if !makes_length_tick && self.is_length_enabled() {
+                        self.length_counter = self.length_counter.wrapping_add(1);
+                    }
+                }
+
+                if !self.dac {
+                    return ChannelEvent::None(Some(write_effect));
+                }
+
+                ChannelEvent::ChannelEnabled(self.number, Some(write_effect))
+            }
             WriteEffect::DacDisabled => {
                 self.dac = false;
-                ChannelEvent::ChannelDisabled(self.number)
+                ChannelEvent::ChannelDisabled(self.number, Some(write_effect))
             }
             WriteEffect::DacEnabled => {
                 self.dac = true;
-                ChannelEvent::None
+                ChannelEvent::None(Some(write_effect))
             }
-            WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
             WriteEffect::NRX1Updated => {
                 self.length_counter = self.nrx1.get_initial_length() as Word;
-                ChannelEvent::None
+                ChannelEvent::None(Some(write_effect))
             }
             WriteEffect::NRX4TimingQuirkDisablingChannel => {
-                ChannelEvent::ChannelDisabled(self.number)
+                ChannelEvent::ChannelDisabled(self.number, Some(write_effect))
+            }
+            WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
+            WriteEffect::SweepOverflow => {
+                unreachable!("SweepOverflow is not expected on the default channel")
             }
         }
     }
 
     fn tick_length(&mut self) -> ChannelEvent {
         if !self.is_length_enabled() {
-            return ChannelEvent::None;
+            return ChannelEvent::None(None);
         }
 
         self.length_counter = self.length_counter.wrapping_add(1);
 
         if self.length_counter == self.max_length {
-            return ChannelEvent::ChannelDisabled(self.number);
+            return ChannelEvent::ChannelDisabled(self.number, None);
         }
 
-        ChannelEvent::None
-    }
-
-    fn process_triggered_write_effect(&mut self, makes_length_tick: bool) -> ChannelEvent {
-        {
-            if self.length_counter == self.max_length {
-                self.length_counter = 0;
-
-                if !makes_length_tick && self.is_length_enabled() {
-                    self.length_counter = self.length_counter.wrapping_add(1);
-                }
-            }
-
-            if !self.dac {
-                return ChannelEvent::None;
-            }
-
-            ChannelEvent::ChannelEnabled(self.number)
-        }
+        ChannelEvent::None(None)
     }
 }
 

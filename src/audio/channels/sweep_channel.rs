@@ -1,5 +1,6 @@
 use crate::audio::channels::channel::{Channel, ChannelEvent};
 use crate::audio::channels::default_channel::DefaultChannel;
+use crate::audio::registers::WriteEffect;
 use crate::audio::registers::nr10::{NR10, SweepDirection};
 use crate::audio::registers::nrx1::NRX1;
 use crate::audio::registers::nrx2::NRX2;
@@ -40,13 +41,13 @@ impl SweepChannel {
 impl SweepChannel {
     pub fn tick_sweep(&mut self) -> ChannelEvent {
         if !self.sweep_enabled || self.sweep_pace == 0 {
-            return ChannelEvent::None;
+            return ChannelEvent::None(None);
         }
 
         let new_frequency = self.calculate_new_frequency();
 
         if Self::frequency_will_overflow(new_frequency) {
-            return ChannelEvent::ChannelDisabled(self.channel.get_number());
+            return ChannelEvent::ChannelDisabled(self.channel.get_number(), None);
         }
 
         self.sweep_ticks_accumulated = (self.sweep_ticks_accumulated + 1) % self.sweep_pace;
@@ -56,13 +57,13 @@ impl SweepChannel {
             self.channel.write_frequency(new_frequency);
 
             if Self::frequency_will_overflow(self.calculate_new_frequency()) {
-                return ChannelEvent::ChannelDisabled(self.channel.get_number());
+                return ChannelEvent::ChannelDisabled(self.channel.get_number(), None);
             }
         }
 
         self.refresh_sweep_pace();
 
-        ChannelEvent::None
+        ChannelEvent::None(None)
     }
 
     fn refresh_sweep_pace(&mut self) {
@@ -88,6 +89,25 @@ impl SweepChannel {
     fn frequency_will_overflow(new_frequency: u32) -> bool {
         new_frequency > 0x7FF
     }
+
+    fn process_triggered_write_effect(&mut self, channel_event: ChannelEvent) -> ChannelEvent {
+        let nr10 = self.channel.get_nrx0();
+        let step_is_non_zero = nr10.read_step() != 0;
+
+        self.sweep_frequency_shadow_register = self.channel.read_frequency();
+        self.sweep_enabled = nr10.read_pace() != 0 || step_is_non_zero;
+
+        self.refresh_sweep_pace();
+
+        if step_is_non_zero && Self::frequency_will_overflow(self.calculate_new_frequency()) {
+            return ChannelEvent::ChannelDisabled(
+                self.channel.get_number(),
+                Some(WriteEffect::SweepOverflow),
+            );
+        }
+
+        channel_event
+    }
 }
 
 impl ReadMemory for SweepChannel {
@@ -102,29 +122,20 @@ impl Channel for SweepChannel {
     }
 
     fn write_byte(&mut self, position: u16, value: u8, div_apu: &u8) -> ChannelEvent {
-        self.channel.write_byte(position, value, div_apu)
+        let channel_event = self.channel.write_byte(position, value, div_apu);
+
+        let Some(write_effect): Option<WriteEffect> = (&channel_event).try_into().ok() else {
+            return channel_event;
+        };
+
+        if write_effect != WriteEffect::Triggered {
+            return channel_event;
+        }
+
+        self.process_triggered_write_effect(channel_event)
     }
 
     fn tick_length(&mut self) -> ChannelEvent {
         self.channel.tick_length()
-    }
-
-    fn process_triggered_write_effect(&mut self, makes_length_tick: bool) -> ChannelEvent {
-        let channel_event = self
-            .channel
-            .process_triggered_write_effect(makes_length_tick);
-        let nr10 = self.channel.get_nrx0();
-        let step_is_non_zero = nr10.read_step() != 0;
-
-        self.sweep_frequency_shadow_register = self.channel.read_frequency();
-        self.sweep_enabled = nr10.read_pace() != 0 || step_is_non_zero;
-
-        self.refresh_sweep_pace();
-
-        if step_is_non_zero && Self::frequency_will_overflow(self.calculate_new_frequency()) {
-            return ChannelEvent::ChannelDisabled(self.channel.get_number());
-        }
-
-        channel_event
     }
 }

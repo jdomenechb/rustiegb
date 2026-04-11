@@ -15,6 +15,7 @@ anyhow = "1"
 parking_lot = { version = "0" }
 nix = "0"
 prettytable-rs = "0"
+thiserror = "2"
 
 [dev-dependencies]
 test-case = "3"
