@@ -52,7 +52,7 @@ impl SweepChannel {
 
         self.sweep_ticks_accumulated = (self.sweep_ticks_accumulated + 1) % self.sweep_pace;
 
-        if self.sweep_ticks_accumulated == 0 {
+        if self.sweep_ticks_accumulated == 0 && self.channel.get_nrx0().read_step() != 0 {
             self.sweep_frequency_shadow_register = new_frequency;
             self.channel.write_frequency(new_frequency);
 
@@ -68,6 +68,11 @@ impl SweepChannel {
 
     fn refresh_sweep_pace(&mut self) {
         self.sweep_pace = self.channel.get_nrx0().read_pace();
+    }
+
+    fn refresh_sweep_enabled(&mut self) {
+        let nr10 = self.channel.get_nrx0();
+        self.sweep_enabled = nr10.read_pace() != 0 || nr10.read_step() != 0;
     }
 
     fn calculate_new_frequency(&self) -> u32 {
@@ -90,16 +95,14 @@ impl SweepChannel {
     }
 
     fn process_triggered_write_effect(&mut self, channel_event: ChannelEvent) -> ChannelEvent {
-        let nr10 = self.channel.get_nrx0();
-        let step_is_non_zero = nr10.read_step() != 0;
-
         self.sweep_frequency_shadow_register = self.channel.read_frequency();
-        self.sweep_enabled = nr10.read_pace() != 0 || step_is_non_zero;
 
+        self.refresh_sweep_enabled();
         self.refresh_sweep_pace();
+
         self.sweep_ticks_accumulated = 0;
 
-        if step_is_non_zero && Self::frequency_will_overflow(self.calculate_new_frequency()) {
+        if (self.channel.get_nrx0().read_step() != 0) && Self::frequency_will_overflow(self.calculate_new_frequency()) {
             return ChannelEvent::ChannelDisabled(
                 self.channel.get_number(),
                 Some(WriteEffect::SweepOverflow),
@@ -123,6 +126,11 @@ impl Channel for SweepChannel {
 
     fn write_byte(&mut self, position: u16, value: u8, div_apu: &u8) -> ChannelEvent {
         let channel_event = self.channel.write_byte(position, value, div_apu);
+
+        if position == 0 {
+            self.refresh_sweep_enabled();
+            self.refresh_sweep_pace();
+        }
 
         let Some(write_effect): Option<WriteEffect> = (&channel_event).try_into().ok() else {
             return channel_event;
