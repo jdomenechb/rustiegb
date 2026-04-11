@@ -42,14 +42,7 @@ impl SweepChannel {
             return ChannelEvent::None;
         };
 
-        self.sweep_ticks_left = self.sweep_ticks_left - 1;
-
-        let mut ticks_exhausted = false;
-
-        if self.sweep_ticks_left == 0 {
-            self.reset_sweep_ticks_left();
-            ticks_exhausted = true;
-        }
+        let ticks_exhausted = self.decrease_sweep_ticks_left();
 
         if !self.sweep_enabled || self.channel.get_nrx0().read_pace() == 0 {
             return ChannelEvent::None;
@@ -75,6 +68,18 @@ impl SweepChannel {
         }
 
         ChannelEvent::None
+    }
+
+    // Returns true if sweep is reset
+    fn decrease_sweep_ticks_left(&mut self) -> bool {
+        self.sweep_ticks_left = self.sweep_ticks_left - 1;
+
+        if self.sweep_ticks_left == 0 {
+            self.reset_sweep_ticks_left();
+            return true;
+        }
+
+        false
     }
 
     fn refresh_sweep_enabled(&mut self) {
@@ -143,10 +148,6 @@ impl Channel for SweepChannel {
         div_apu: &u8,
     ) -> (ChannelEvent, WriteEffect) {
         let (channel_event, write_effect) = self.channel.write_byte(position, value, div_apu);
-
-        if position == 0 {
-            self.reset_sweep_ticks_left()
-        }
 
         if write_effect != WriteEffect::Triggered {
             return (channel_event, write_effect);
