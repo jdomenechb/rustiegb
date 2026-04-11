@@ -38,6 +38,19 @@ impl SweepChannel {
 
 impl SweepChannel {
     pub fn tick_sweep(&mut self) -> ChannelEvent {
+        if self.sweep_ticks_left == 0 {
+            return ChannelEvent::None;
+        };
+
+        self.sweep_ticks_left = self.sweep_ticks_left - 1;
+
+        let mut ticks_exhausted = false;
+
+        if self.sweep_ticks_left == 0 {
+            self.reset_sweep_ticks_left();
+            ticks_exhausted = true;
+        }
+
         if !self.sweep_enabled || self.channel.get_nrx0().read_pace() == 0 {
             return ChannelEvent::None;
         }
@@ -48,22 +61,16 @@ impl SweepChannel {
             return ChannelEvent::ChannelDisabled(self.channel.get_number());
         }
 
-        if self.sweep_ticks_left == 0 {
+        if !ticks_exhausted {
             return ChannelEvent::None;
-        };
+        }
 
-        self.sweep_ticks_left = self.sweep_ticks_left - 1;
+        if self.channel.get_nrx0().read_step() != 0 {
+            self.sweep_frequency_shadow_register = new_frequency;
+            self.channel.write_frequency(new_frequency);
 
-        if self.sweep_ticks_left == 0 {
-            self.reset_sweep_ticks_left();
-
-            if self.channel.get_nrx0().read_step() != 0 {
-                self.sweep_frequency_shadow_register = new_frequency;
-                self.channel.write_frequency(new_frequency);
-
-                if Self::frequency_will_overflow(self.calculate_new_frequency()) {
-                    return ChannelEvent::ChannelDisabled(self.channel.get_number());
-                }
+            if Self::frequency_will_overflow(self.calculate_new_frequency()) {
+                return ChannelEvent::ChannelDisabled(self.channel.get_number());
             }
         }
 
