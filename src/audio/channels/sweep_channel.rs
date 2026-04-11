@@ -102,7 +102,9 @@ impl SweepChannel {
 
         self.sweep_ticks_accumulated = 0;
 
-        if (self.channel.get_nrx0().read_step() != 0) && Self::frequency_will_overflow(self.calculate_new_frequency()) {
+        if (self.channel.get_nrx0().read_step() != 0)
+            && Self::frequency_will_overflow(self.calculate_new_frequency())
+        {
             return ChannelEvent::ChannelDisabled(
                 self.channel.get_number(),
                 Some(WriteEffect::SweepOverflow),
@@ -128,7 +130,6 @@ impl Channel for SweepChannel {
         let channel_event = self.channel.write_byte(position, value, div_apu);
 
         if position == 0 {
-            self.refresh_sweep_enabled();
             self.refresh_sweep_pace();
         }
 
