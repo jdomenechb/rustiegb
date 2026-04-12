@@ -150,11 +150,18 @@ impl Channel for SweepChannel {
     ) -> (ChannelEvent, WriteEffect) {
         let (channel_event, write_effect) = self.channel.write_byte(position, value, div_apu);
 
-        if write_effect != WriteEffect::Triggered {
-            return (channel_event, write_effect);
-        }
-
-        let new_channel_event = self.process_triggered_write_effect(channel_event);
+        let new_channel_event = match write_effect {
+            WriteEffect::Triggered => self.process_triggered_write_effect(channel_event),
+            WriteEffect::SweepDirectionFromSubToAdd => {
+                if (self.at_least_one_sweep_has_been_calculated_since_last_trigger) {
+                    self.at_least_one_sweep_has_been_calculated_since_last_trigger = false;
+                    ChannelEvent::ChannelDisabled(self.channel.get_number())
+                } else {
+                    channel_event
+                }
+            }
+            _ => channel_event,
+        };
 
         (new_channel_event, write_effect)
     }
