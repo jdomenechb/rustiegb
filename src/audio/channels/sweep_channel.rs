@@ -15,6 +15,7 @@ pub struct SweepChannel {
     sweep_enabled: bool,
     sweep_ticks_left: Byte,
     sweep_frequency_shadow_register: u32,
+    at_least_one_sweep_negate_has_been_calculated_since_last_trigger: bool,
 }
 
 impl SweepChannel {
@@ -32,6 +33,7 @@ impl SweepChannel {
             sweep_enabled: false,
             sweep_ticks_left: 0,
             sweep_frequency_shadow_register: 0,
+            at_least_one_sweep_negate_has_been_calculated_since_last_trigger: false,
         }
     }
 }
@@ -96,7 +98,7 @@ impl SweepChannel {
         }
     }
 
-    fn calculate_new_frequency(&self) -> u32 {
+    fn calculate_new_frequency(&mut self) -> u32 {
         let nr10 = self.channel.get_nrx0();
 
         let frequency = self.sweep_frequency_shadow_register;
@@ -107,7 +109,10 @@ impl SweepChannel {
 
         match direction {
             SweepDirection::Add => frequency.wrapping_add(to_add_or_sub),
-            SweepDirection::Sub => frequency.wrapping_sub(to_add_or_sub),
+            SweepDirection::Sub => {
+                self.at_least_one_sweep_negate_has_been_calculated_since_last_trigger = true;
+                frequency.wrapping_sub(to_add_or_sub)
+            }
         }
     }
 
@@ -153,8 +158,7 @@ impl Channel for SweepChannel {
         let new_channel_event = match write_effect {
             WriteEffect::Triggered => self.process_triggered_write_effect(channel_event),
             WriteEffect::SweepDirectionFromSubToAdd => {
-                if (self.at_least_one_sweep_has_been_calculated_since_last_trigger) {
-                    self.at_least_one_sweep_has_been_calculated_since_last_trigger = false;
+                if (self.at_least_one_sweep_negate_has_been_calculated_since_last_trigger) {
                     ChannelEvent::ChannelDisabled(self.channel.get_number())
                 } else {
                     channel_event
@@ -162,6 +166,10 @@ impl Channel for SweepChannel {
             }
             _ => channel_event,
         };
+
+        if position == 0 {
+            self.at_least_one_sweep_negate_has_been_calculated_since_last_trigger = false;
+        }
 
         (new_channel_event, write_effect)
     }
