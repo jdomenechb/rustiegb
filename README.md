@@ -42,7 +42,7 @@ sudo apt update && sudo apt install -y libasound2-dev pkg-config
 - [x] 04: Sweep
 - [x] 05: Sweep details
 - [x] 06: Overflow on trigger
-- [ ] 07: Len Sweep period sync
+- [X] 07: Len Sweep period sync
 - [ ] 08: Len CTR during power
 - [ ] 09: Wave read while on
 - [ ] 10: Wave trigger while on
