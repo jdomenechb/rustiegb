@@ -38,6 +38,7 @@ impl SweepChannel {
 
 impl SweepChannel {
     pub fn tick_sweep(&mut self) -> ChannelEvent {
+        // Prevents overflows
         if self.sweep_ticks_left == 0 {
             return ChannelEvent::None;
         };
