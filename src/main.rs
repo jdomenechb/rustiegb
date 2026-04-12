@@ -96,7 +96,8 @@ fn main() {
                     continue 'main_loop;
                 }
 
-                let last_instruction_cycles = cpu.step(runtime_config_thread.read().is_debug());
+                let last_instruction_cycles =
+                    cpu.step(runtime_config_thread.read().is_debug(), configuration.trace);
 
                 {
                     runtime_config_thread.write().available_cycles -=

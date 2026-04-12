@@ -11,6 +11,8 @@ use crate::memory::Memory;
 use crate::{Byte, Word};
 
 pub mod alu;
+#[cfg(debug_assertions)]
+mod disassemble;
 pub mod registers;
 
 pub struct Cpu {
@@ -55,7 +57,9 @@ impl Cpu {
         self.registers.pc = 0x100;
     }
 
-    pub fn step(&mut self, debug: bool) -> u8 {
+    pub fn step(&mut self, debug: bool, trace: bool) -> u8 {
+        #[cfg(not(debug_assertions))]
+        let _ = trace;
         self.last_instruction = "".to_string();
         self.pc_to_increment = -1;
         self.last_instruction_ccycles = 0;
@@ -68,6 +72,15 @@ impl Cpu {
 
                 instruction = memory.read_byte(self.registers.pc);
                 memory_has_bootstrap_rom = memory.has_bootstrap_rom();
+
+                #[cfg(debug_assertions)]
+                if trace {
+                    println!(
+                        "{:04X}: {}",
+                        self.registers.pc,
+                        disassemble::disassemble(self.registers.pc, &memory)
+                    );
+                }
             }
 
             if self.registers.pc == Address::CARTRIDGE_START && memory_has_bootstrap_rom {
