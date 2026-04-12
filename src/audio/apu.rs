@@ -176,6 +176,7 @@ impl WriteMemory for Apu {
 
             match write_effect {
                 WriteEffect::AudioOff => self.clear_audio_registers(),
+                WriteEffect::AudioOn => self.div_apu = 0,
                 WriteEffect::None => (),
                 _ => unreachable!("WriteEffect not supported for NR52"),
             }

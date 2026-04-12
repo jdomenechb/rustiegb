@@ -37,6 +37,7 @@ impl AudioRegister for NR52 {
     const WRITE_MASK: Byte = 0;
 
     fn set_value(&mut self, value: Byte) -> WriteEffect {
+        let was_on = self.is_on();
         self.value = (self.value & 0b0000_1111) | (value & 0b1000_0000) | 0b0111_0000;
 
         if !self.is_on() {
@@ -45,6 +46,10 @@ impl AudioRegister for NR52 {
 
         if !is_bit_set(&value, 7) {
             return WriteEffect::AudioOff;
+        }
+
+        if !was_on {
+            return WriteEffect::AudioOn;
         }
 
         WriteEffect::None

@@ -153,7 +153,9 @@ impl<
                 self.length_counter = self.max_length - self.nrx1.get_initial_length() as Word;
                 (ChannelEvent::None, write_effect)
             }
-            WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
+            WriteEffect::AudioOff | WriteEffect::AudioOn => {
+                unreachable!("Audio power effects not supported for channel")
+            }
             WriteEffect::SweepDirectionFromSubToAdd => (ChannelEvent::None, write_effect),
         }
     }

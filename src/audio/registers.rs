@@ -23,6 +23,7 @@ pub enum WriteEffect {
     DacDisabled,
     DacEnabled,
     AudioOff,
+    AudioOn,
     NRX1Updated,
     SweepDirectionFromSubToAdd,
 }
