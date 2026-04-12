@@ -24,7 +24,7 @@ pub enum WriteEffect {
     DacEnabled,
     AudioOff,
     NRX1Updated,
-    NRX4TimingQuirkDisablingChannel,
+    SweepDirectionFromSubToAdd,
 }
 
 pub trait AudioRegister {

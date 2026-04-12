@@ -47,7 +47,14 @@ impl AudioRegister for NR10 {
     const WRITE_MASK: Byte = 0b1000_0000;
 
     fn set_value(&mut self, value: Byte) -> WriteEffect {
+        let old_direction = self.read_direction();
+
         self.value = value;
+        let new_direction = self.read_direction();
+
+        if old_direction == SweepDirection::Sub && new_direction == SweepDirection::Add {
+            return WriteEffect::SweepDirectionFromSubToAdd;
+        }
 
         WriteEffect::None
     }
