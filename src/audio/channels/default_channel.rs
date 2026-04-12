@@ -110,11 +110,11 @@ impl<
                 if !makes_length_tick
                     && is_length_enabled
                     && was_length_disabled
-                    && self.length_counter != self.max_length
+                    && self.length_counter != 0
                 {
-                    self.length_counter = self.length_counter.wrapping_add(1);
+                    self.length_counter = self.length_counter.wrapping_sub(1);
 
-                    if self.length_counter == self.max_length && !self.nrx4.is_triggered() {
+                    if self.length_counter == 0 && !self.nrx4.is_triggered() {
                         return (ChannelEvent::ChannelDisabled(self.number), write_effect);
                     }
                 }
@@ -127,11 +127,11 @@ impl<
         match write_effect {
             WriteEffect::None => (ChannelEvent::None, write_effect),
             WriteEffect::Triggered => {
-                if self.length_counter == self.max_length {
-                    self.length_counter = 0;
+                if self.length_counter == 0 {
+                    self.length_counter = self.max_length;
 
                     if !makes_length_tick && self.is_length_enabled() {
-                        self.length_counter = self.length_counter.wrapping_add(1);
+                        self.length_counter = self.length_counter.wrapping_sub(1);
                     }
                 }
 
@@ -150,7 +150,7 @@ impl<
                 (ChannelEvent::None, write_effect)
             }
             WriteEffect::NRX1Updated => {
-                self.length_counter = self.nrx1.get_initial_length() as Word;
+                self.length_counter = self.max_length - self.nrx1.get_initial_length() as Word;
                 (ChannelEvent::None, write_effect)
             }
             WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
@@ -163,9 +163,9 @@ impl<
             return ChannelEvent::None;
         }
 
-        self.length_counter = self.length_counter.wrapping_add(1);
+        self.length_counter = self.length_counter.wrapping_sub(1);
 
-        if self.length_counter == self.max_length {
+        if self.length_counter == 0 {
             return ChannelEvent::ChannelDisabled(self.number);
         }
 
