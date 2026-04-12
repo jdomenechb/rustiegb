@@ -164,7 +164,7 @@ impl Channel for SweepChannel {
         let new_channel_event = match write_effect {
             WriteEffect::Triggered => self.process_triggered_write_effect(channel_event),
             WriteEffect::SweepDirectionFromSubToAdd => {
-                if (self.at_least_one_sweep_negate_has_been_calculated_since_last_trigger) {
+                if self.at_least_one_sweep_negate_has_been_calculated_since_last_trigger {
                     ChannelEvent::ChannelDisabled(self.channel.get_number())
                 } else {
                     channel_event

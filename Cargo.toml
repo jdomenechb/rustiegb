@@ -7,15 +7,12 @@ edition = "2024"
 [dependencies]
 piston_window = "0"
 clap = "4"
-gfx_device_gl = "0"
 image = "0"
 readonly = "0"
 cpal = "0"
 anyhow = "1"
 parking_lot = { version = "0" }
-nix = "0"
 prettytable-rs = "0"
-thiserror = "2"
 
 [dev-dependencies]
 test-case = "3"
