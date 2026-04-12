@@ -153,10 +153,8 @@ impl<
                 self.length_counter = self.nrx1.get_initial_length() as Word;
                 (ChannelEvent::None, write_effect)
             }
-            WriteEffect::NRX4TimingQuirkDisablingChannel => {
-                (ChannelEvent::ChannelDisabled(self.number), write_effect)
-            }
             WriteEffect::AudioOff => unreachable!("Audio off is not supported for channel"),
+            WriteEffect::SweepDirectionFromSubToAdd => (ChannelEvent::None, write_effect),
         }
     }
 
