@@ -1,6 +1,7 @@
 use crate::Byte;
 use crate::audio::registers::{AudioRegister, WriteEffect};
 
+#[derive(PartialEq)]
 pub enum SweepDirection {
     Add,
     Sub,
