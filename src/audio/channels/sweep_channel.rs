@@ -51,9 +51,9 @@ impl SweepChannel {
             return ChannelEvent::None;
         }
 
-        let new_frequency = self.calculate_new_frequency();
+        let (new_frequency, frequency_will_overflow) = self.calculate_new_frequency();
 
-        if Self::frequency_will_overflow(new_frequency) {
+        if frequency_will_overflow {
             return ChannelEvent::ChannelDisabled(self.channel.get_number());
         }
 
@@ -65,7 +65,9 @@ impl SweepChannel {
             self.sweep_frequency_shadow_register = new_frequency;
             self.channel.write_frequency(new_frequency);
 
-            if Self::frequency_will_overflow(self.calculate_new_frequency()) {
+            let (_, frequency_will_overflow) = self.calculate_new_frequency();
+
+            if frequency_will_overflow {
                 return ChannelEvent::ChannelDisabled(self.channel.get_number());
             }
         }
@@ -98,7 +100,7 @@ impl SweepChannel {
         }
     }
 
-    fn calculate_new_frequency(&mut self) -> u32 {
+    fn calculate_new_frequency(&mut self) -> (u32, bool) {
         let nr10 = self.channel.get_nrx0();
 
         let frequency = self.sweep_frequency_shadow_register;
@@ -107,13 +109,15 @@ impl SweepChannel {
 
         let to_add_or_sub = frequency / 2_u32.pow(step);
 
-        match direction {
+        let new_frequency = match direction {
             SweepDirection::Add => frequency.wrapping_add(to_add_or_sub),
             SweepDirection::Sub => {
                 self.at_least_one_sweep_negate_has_been_calculated_since_last_trigger = true;
                 frequency.wrapping_sub(to_add_or_sub)
             }
-        }
+        };
+
+        (new_frequency, Self::frequency_will_overflow(new_frequency))
     }
 
     fn frequency_will_overflow(new_frequency: u32) -> bool {
@@ -126,10 +130,12 @@ impl SweepChannel {
         self.reset_sweep_ticks_left();
         self.refresh_sweep_enabled();
 
-        if (self.channel.get_nrx0().read_step() != 0)
-            && Self::frequency_will_overflow(self.calculate_new_frequency())
-        {
-            return ChannelEvent::ChannelDisabled(self.channel.get_number());
+        if self.channel.get_nrx0().read_step() != 0 {
+            let (_, frequency_will_overflow) = self.calculate_new_frequency();
+
+            if frequency_will_overflow {
+                return ChannelEvent::ChannelDisabled(self.channel.get_number());
+            }
         }
 
         channel_event
