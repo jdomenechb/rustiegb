@@ -8,11 +8,12 @@ pub struct Configuration {
     pub rom_file: String,
 
     pub user_speed_multiplier: i32,
+    pub trace: bool,
 }
 
 impl Configuration {
     pub fn from_command(app_name: &'static str) -> Self {
-        let matches = Command::new(app_name)
+        let command = Command::new(app_name)
             .arg(
                 Arg::new("ROMFILE")
                     .required(true)
@@ -28,8 +29,22 @@ impl Configuration {
                 Arg::new("bootstrap")
                     .long("bootstrap")
                     .help("Uses bootstrap ROM"),
-            )
-            .get_matches();
+            );
+
+        #[cfg(debug_assertions)]
+        let command = command.arg(
+            Arg::new("trace")
+                .long("trace")
+                .num_args(0)
+                .help("Print each instruction as it executes (dev builds only)"),
+        );
+
+        let matches = command.get_matches();
+
+        #[cfg(debug_assertions)]
+        let trace = matches.contains_id("trace");
+        #[cfg(not(debug_assertions))]
+        let trace = false;
 
         Self {
             debug_header: matches.contains_id("debug-header"),
@@ -39,6 +54,7 @@ impl Configuration {
             rom_file: matches.get_one::<String>("ROMFILE").unwrap().to_string(),
 
             user_speed_multiplier: 1,
+            trace,
         }
     }
 }
