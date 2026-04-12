@@ -1,5 +1,5 @@
-use crate::Byte;
 use crate::audio::registers::{AudioRegister, WriteEffect};
+use crate::Byte;
 
 #[derive(PartialEq)]
 pub enum SweepDirection {
@@ -28,7 +28,7 @@ impl NR10 {
     }
 
     pub fn read_direction(&self) -> SweepDirection {
-        let value = (self.value & 0b0000_1000) >> 3;
+        let value = (self.value >> 3) & 0b1;
 
         if value == 0 {
             SweepDirection::Add
