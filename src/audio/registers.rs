@@ -46,6 +46,10 @@ pub trait AudioRegister {
     fn clear(&mut self) {
         self.set_value(0x0);
     }
+
+    fn clear_because_of_audio_off(&mut self) {
+        self.clear();
+    }
 }
 
 pub trait InitialLengthRegister {

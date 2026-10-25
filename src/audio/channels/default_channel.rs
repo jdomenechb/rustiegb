@@ -89,6 +89,14 @@ impl<
         self.nrx4.clear();
     }
 
+    fn clear_because_of_audio_off(&mut self) {
+        self.nrx0.clear();
+        self.nrx1.clear_because_of_audio_off();
+        self.nrx2.clear();
+        self.nrx3.clear();
+        self.nrx4.clear();
+    }
+
     fn write_byte(
         &mut self,
         position: Word,
@@ -192,5 +200,63 @@ impl<
             4 => self.nrx4.read(),
             _ => unreachable!("Read address {position:X} not supported for channel"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::audio::registers::nr31::NR31;
+    use crate::audio::registers::no_register::NoRegister;
+    use crate::audio::registers::nrx1::NRX1;
+    use crate::audio::registers::nrx2::NRX2;
+    use crate::audio::registers::nrx3::NRX3;
+    use crate::audio::registers::nrx4::NRX4;
+
+    #[test]
+    fn it_keeps_length_and_clears_the_rest_when_audio_is_off() {
+        let mut fixture = DefaultChannel::new(
+            2,
+            NoRegister::default(),
+            NRX1::new_nr21(),
+            NRX2::new_nr22(),
+            NRX3::default(),
+            NRX4::default(),
+            64,
+        );
+
+        fixture.write_byte(1, 0xFF, &0);
+        fixture.write_byte(2, 0xFF, &0);
+        fixture.write_byte(3, 0xFF, &0);
+        fixture.write_byte(4, 0x07, &0);
+
+        fixture.clear_because_of_audio_off();
+
+        assert_eq!(fixture.length_counter, 1);
+        assert_eq!(fixture.nrx1.get_initial_length(), 0b11_1111);
+        assert_eq!(fixture.read_byte(1), 0x3F);
+        assert_eq!(fixture.read_byte(2), 0x00);
+        assert_eq!(fixture.read_byte(3), 0xFF);
+        assert_eq!(fixture.read_byte(4), 0xBF);
+    }
+
+    #[test]
+    fn it_keeps_length_of_wave_channel_when_audio_is_off() {
+        let mut fixture = DefaultChannel::new(
+            3,
+            NoRegister::default(),
+            NR31::default(),
+            NoRegister::default(),
+            NRX3::default(),
+            NRX4::default(),
+            256,
+        );
+
+        fixture.write_byte(1, 0x10, &0);
+
+        fixture.clear_because_of_audio_off();
+
+        assert_eq!(fixture.length_counter, 256 - 0x10);
+        assert_eq!(fixture.nrx1.get_initial_length(), 0x10);
     }
 }

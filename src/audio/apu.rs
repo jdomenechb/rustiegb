@@ -70,11 +70,11 @@ impl Apu {
         self.div_apu = (self.div_apu + 1) % 8;
     }
 
-    fn clear_audio_registers(&mut self) {
-        self.channel_1.clear();
-        self.channel_2.clear();
-        self.channel_3.clear();
-        self.channel_4.clear();
+    fn clear_audio_registers_because_of_audio_off(&mut self) {
+        self.channel_1.clear_because_of_audio_off();
+        self.channel_2.clear_because_of_audio_off();
+        self.channel_3.clear_because_of_audio_off();
+        self.channel_4.clear_because_of_audio_off();
 
         self.nr50 = 0;
         self.nr51 = 0;
@@ -175,7 +175,7 @@ impl WriteMemory for Apu {
             let write_effect = self.nr52.write(value);
 
             match write_effect {
-                WriteEffect::AudioOff => self.clear_audio_registers(),
+                WriteEffect::AudioOff => self.clear_audio_registers_because_of_audio_off(),
                 WriteEffect::AudioOn => self.div_apu = 0,
                 WriteEffect::None => (),
                 _ => unreachable!("WriteEffect not supported for NR52"),

@@ -39,6 +39,11 @@ impl AudioRegister for NRX1 {
     fn value(&self) -> Byte {
         self.value
     }
+
+    fn clear_because_of_audio_off(&mut self) {
+        // Only the duty is cleared, the length is kept
+        self.value &= 0b0011_1111;
+    }
 }
 
 impl InitialLengthRegister for NRX1 {
@@ -58,6 +63,18 @@ mod tests {
         assert_eq!(fixture.read(), 0xFF);
 
         fixture.write(0x00);
+        assert_eq!(fixture.read(), 0x3F);
+    }
+
+    #[test]
+    fn it_clears_only_the_duty_when_audio_is_off() {
+        let mut fixture = NRX1::new_nr11();
+        fixture.write(0xFF);
+
+        fixture.clear_because_of_audio_off();
+
+        assert_eq!(fixture.value(), 0b0011_1111);
+        assert_eq!(fixture.get_initial_length(), 0b11_1111);
         assert_eq!(fixture.read(), 0x3F);
     }
 }
