@@ -261,9 +261,6 @@ impl Gpu {
 
             if lcdc.bg_display {
                 let screen_x_with_offset = ((screen_x as u8).wrapping_add(scx)) as u16;
-                let tile_x;
-                let bg_tile_map_location;
-                let tile_row;
 
                 let wy;
                 let wx;
@@ -275,30 +272,38 @@ impl Gpu {
                 }
 
                 // Window
-                if lcdc.window_display && wy <= screen_y as Byte && wx <= (screen_x + 7) as Byte {
+                let (bg_tile_map_location, tile_x, tile_row) = if lcdc.window_display
+                    && wy <= screen_y as Byte
+                    && wx <= (screen_x + 7) as Byte
+                {
                     let last_window_rendered_position_x: u16 = screen_x + 7 - wx as u16;
-
                     let last_window_rendered_position_y = screen_y - wy as u16;
 
-                    bg_tile_map_location = window_tile_map_start_location
+                    let bg_tile_map_location = window_tile_map_start_location
                         + (((last_window_rendered_position_y / Gpu::PIXELS_PER_TILE)
                             * Gpu::BACKGROUND_MAP_TILE_SIZE_X)
                             % (Gpu::BACKGROUND_MAP_TILE_SIZE_X * Gpu::BACKGROUND_MAP_TILE_SIZE_Y))
                         + (last_window_rendered_position_x / Gpu::PIXELS_PER_TILE);
 
-                    tile_x = last_window_rendered_position_x % 8;
-                    tile_row = last_window_rendered_position_y % 8;
+                    (
+                        bg_tile_map_location,
+                        last_window_rendered_position_x % 8,
+                        last_window_rendered_position_y % 8,
+                    )
                 } else {
                     // Background
-                    bg_tile_map_location = bg_tile_map_start_location
+                    let bg_tile_map_location = bg_tile_map_start_location
                         + (((screen_y_with_offset / Gpu::PIXELS_PER_TILE)
                             * Gpu::BACKGROUND_MAP_TILE_SIZE_X)
                             % (Gpu::BACKGROUND_MAP_TILE_SIZE_X * Gpu::BACKGROUND_MAP_TILE_SIZE_Y))
                         + (screen_x_with_offset / Gpu::PIXELS_PER_TILE);
 
-                    tile_x = screen_x_with_offset % 8;
-                    tile_row = screen_y_with_offset % 8;
-                }
+                    (
+                        bg_tile_map_location,
+                        screen_x_with_offset % 8,
+                        screen_y_with_offset % 8,
+                    )
+                };
 
                 if previous_bg_tile_map_location != bg_tile_map_location {
                     let bg_tile_map = { self.memory.read().read_byte(bg_tile_map_location) };
