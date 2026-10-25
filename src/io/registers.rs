@@ -98,11 +98,10 @@ impl IORegisters {
 
                 self.interrupt_flag.set_vblank(true);
             }
-            STATMode::SearchOamRam => {
-                if self.stat.mode_2 {
-                    self.interrupt_flag.set_lcd_stat(true);
-                }
+            STATMode::SearchOamRam if self.stat.mode_2 => {
+                self.interrupt_flag.set_lcd_stat(true);
             }
+
             _ => {}
         }
 

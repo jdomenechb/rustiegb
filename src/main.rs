@@ -20,17 +20,24 @@ use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
 use crate::io::registers::IORegisters;
 use crate::memory::bootstrap_rom::BootstrapRom;
+use crate::piston_window::texture::UpdateTexture;
 use cpu::Cpu;
 use gpu::Gpu;
 use image::ImageBuffer;
 use io::joypad::JoypadHandler;
 use memory::Memory;
 use parking_lot::RwLock;
+use piston_window::graphics::image as draw_image;
+use piston_window::graphics::{Transformed, clear};
+use piston_window::texture::{Filter, Format};
+use piston_window::wgpu_graphics::{Texture, TextureSettings};
 use piston_window::*;
-use std::sync::{Arc, mpsc};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 const APP_NAME: &str = "RustieGB";
 const WINDOW_SIZE_MULTIPLIER: u32 = 4;
+const GB_CLOCK_HZ: f64 = 4_194_304.0;
 
 type Byte = u8;
 type Word = u16;
@@ -70,7 +77,6 @@ fn main() {
     let io_registers_thread = io_registers.clone();
     let canvas_thread = canvas.clone();
     let runtime_config_thread = runtime_config.clone();
-    let (sx, rx) = mpsc::channel();
 
     std::thread::spawn(move || {
         let mut cpu = Cpu::new(
@@ -84,7 +90,23 @@ fn main() {
 
         //let mut audio_unit = AudioUnit::new(audio_unit_output, io_registers_thread.clone());
 
+        let frame_duration =
+            Duration::from_secs_f64(Cpu::AVAILABLE_CCYCLES_PER_FRAME as f64 / GB_CLOCK_HZ);
+        let mut next_frame = Instant::now();
+
         'main_loop: loop {
+            // Emulation is paced by wall-clock time, independent of the window's frame rate
+            next_frame += frame_duration;
+            let now = Instant::now();
+
+            if next_frame > now {
+                std::thread::sleep(next_frame - now);
+            } else if now - next_frame > Duration::from_millis(100) {
+                next_frame = now;
+            }
+
+            runtime_config_thread.write().reset_available_ccycles();
+
             while runtime_config_thread.read().cpu_has_available_ccycles() {
                 if runtime_config_thread.read().has_been_reset() {
                     let mut rcw = runtime_config_thread.write();
@@ -163,7 +185,6 @@ fn main() {
                 }
             }
 
-            rx.recv().expect("Could not receive from thread");
         }
     });
 
@@ -184,10 +205,7 @@ fn main() {
     event_settings.set_max_fps(60);
     window.events.set_event_settings(event_settings);
 
-    let mut texture_context = TextureContext {
-        factory: window.factory.clone(),
-        encoder: window.factory.create_command_buffer().into(),
-    };
+    let mut texture_context = window.create_texture_context();
 
     let texture_settings = &mut TextureSettings::new();
     texture_settings.set_filter(Filter::Nearest);
@@ -206,8 +224,17 @@ fn main() {
 
         // Actions to do on render
         event.render(|render_args| {
+            let canvas_read = canvas.read();
+            let (w, h) = canvas_read.dimensions();
+
             texture
-                .update(&mut texture_context, &canvas.read())
+                .update(
+                    &mut texture_context,
+                    Format::Rgba8,
+                    &canvas_read,
+                    [0, 0],
+                    [w, h],
+                )
                 .unwrap();
 
             let pixel_size: (f64, f64) = (
@@ -215,24 +242,19 @@ fn main() {
                 render_args.window_size.get(1).unwrap() / (Gpu::PIXEL_HEIGHT as f64),
             );
 
-            window.draw_2d(&event, |context, graphics, device| {
-                texture_context.encoder.flush(device);
-
+            window.draw_2d(&event, |context, graphics, _device| {
                 clear(Color::white().to_f_rgba(), graphics);
 
                 if !io_registers.read().lcdc.lcd_control_operation {
                     return;
                 }
 
-                image(
+                draw_image(
                     &texture,
                     context.transform.scale(pixel_size.0, pixel_size.1),
                     graphics,
                 );
             });
-
-            runtime_config.write().reset_available_ccycles();
-            sx.send(1).expect("Could not send to thread");
         });
     }
 }
