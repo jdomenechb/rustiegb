@@ -93,7 +93,7 @@ impl CpalAudioUnitOutput {
     where
         T: cpal::Sample + cpal::SizedSample + FromSample<f32>,
     {
-        let config = &StreamConfig::from(self.config.clone());
+        let config = &StreamConfig::from(self.config);
 
         let device = &self.device;
         let sample_rate = config.sample_rate as f32;
@@ -111,7 +111,7 @@ impl CpalAudioUnitOutput {
         let noise_func = CpalAudioUnitOutput::next_value_noise;
 
         let stream = device.build_output_stream(
-            config,
+            *config,
             move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 for frame in data.chunks_mut(channels) {
                     let next_value1 =

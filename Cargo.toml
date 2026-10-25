@@ -10,7 +10,7 @@ clap = "4.6"
 gfx_device_gl = "0.16"
 image = "0.25"
 readonly = "0.2"
-cpal = "0.17"
+cpal = "0.18"
 anyhow = "1.0"
 parking_lot = { version = "0.13" }
 nix = "0.31"
