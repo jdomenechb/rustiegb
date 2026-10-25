@@ -5,20 +5,20 @@ authors = ["Jordi Domènech <jdomenechbborges@gmail.com>"]
 edition = "2024"
 
 [dependencies]
-piston_window = "0"
-clap = "4"
-gfx_device_gl = "0"
-image = "0"
-readonly = "0"
-cpal = "0"
-anyhow = "1"
-parking_lot = { version = "0" }
-nix = "0"
-prettytable-rs = "0"
+piston_window = "0.132"
+clap = "4.6"
+gfx_device_gl = "0.16"
+image = "0.25"
+readonly = "0.2"
+cpal = "0.17"
+anyhow = "1.0"
+parking_lot = { version = "0.13" }
+nix = "0.31"
+prettytable-rs = "0.10"
 
 [dev-dependencies]
-test-case = "3"
-assert_fs = "1"
+test-case = "3.4"
+assert_fs = "1.1"
 
 #[profile.release]
 #debug = true
