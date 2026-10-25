@@ -20,12 +20,17 @@ use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
 use crate::io::registers::IORegisters;
 use crate::memory::bootstrap_rom::BootstrapRom;
+use crate::piston_window::texture::UpdateTexture;
 use cpu::Cpu;
 use gpu::Gpu;
 use image::ImageBuffer;
 use io::joypad::JoypadHandler;
 use memory::Memory;
 use parking_lot::RwLock;
+use piston_window::graphics::image as draw_image;
+use piston_window::graphics::{Transformed, clear};
+use piston_window::texture::{Filter, Format};
+use piston_window::wgpu_graphics::{Texture, TextureSettings};
 use piston_window::*;
 use std::sync::{Arc, mpsc};
 
@@ -184,10 +189,7 @@ fn main() {
     event_settings.set_max_fps(60);
     window.events.set_event_settings(event_settings);
 
-    let mut texture_context = TextureContext {
-        factory: window.factory.clone(),
-        encoder: window.factory.create_command_buffer().into(),
-    };
+    let mut texture_context = window.create_texture_context();
 
     let texture_settings = &mut TextureSettings::new();
     texture_settings.set_filter(Filter::Nearest);
@@ -206,8 +208,17 @@ fn main() {
 
         // Actions to do on render
         event.render(|render_args| {
+            let canvas_read = canvas.read();
+            let (w, h) = canvas_read.dimensions();
+
             texture
-                .update(&mut texture_context, &canvas.read())
+                .update(
+                    &mut texture_context,
+                    Format::Rgba8,
+                    &canvas_read,
+                    [0, 0],
+                    [w, h],
+                )
                 .unwrap();
 
             let pixel_size: (f64, f64) = (
@@ -215,16 +226,14 @@ fn main() {
                 render_args.window_size.get(1).unwrap() / (Gpu::PIXEL_HEIGHT as f64),
             );
 
-            window.draw_2d(&event, |context, graphics, device| {
-                texture_context.encoder.flush(device);
-
+            window.draw_2d(&event, |context, graphics, _device| {
                 clear(Color::white().to_f_rgba(), graphics);
 
                 if !io_registers.read().lcdc.lcd_control_operation {
                     return;
                 }
 
-                image(
+                draw_image(
                     &texture,
                     context.transform.scale(pixel_size.0, pixel_size.1),
                     graphics,

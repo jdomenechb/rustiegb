@@ -42,7 +42,7 @@ impl Configuration {
         let matches = command.get_matches();
 
         #[cfg(debug_assertions)]
-        let trace = matches.contains_id("trace");
+        let trace = matches.get_flag("trace");
         #[cfg(not(debug_assertions))]
         let trace = false;
 

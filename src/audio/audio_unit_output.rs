@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, Stream, StreamConfig, SupportedStreamConfig};
 use parking_lot::RwLock;
 
@@ -135,6 +135,8 @@ impl CpalAudioUnitOutput {
             err_fn,
             None,
         )?;
+
+        stream.play()?;
 
         Ok(stream)
     }
