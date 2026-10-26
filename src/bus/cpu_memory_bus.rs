@@ -21,8 +21,26 @@ impl CpuMemoryBus {
         }
     }
 
-    pub fn read_signed_byte(&self, position: Word) -> SignedByte {
-        self.memory.read().read_byte(position) as SignedByte
+    pub fn read_byte(&mut self, position: Word) -> Byte {
+        let value = self.memory.read().read_byte(position);
+
+        self.cycles_accumulated += 4;
+        self.step(4);
+
+        value
+    }
+
+    pub fn read_word(&mut self, position: Word) -> Word {
+        let value = self.memory.read().read_word(position);
+
+        self.cycles_accumulated += 8;
+        self.step(8);
+
+        value
+    }
+
+    pub fn read_signed_byte(&mut self, position: Word) -> SignedByte {
+        self.read_byte(position) as SignedByte
     }
 
     pub fn peak_byte(&self, position: Word) -> Byte {
@@ -37,7 +55,7 @@ impl CpuMemoryBus {
         self.memory.write().clear_bootstrap_rom();
     }
 
-    pub fn single_step(&mut self) {
+    fn single_step(&mut self) {
         {
             self.memory.write().single_step();
         }
@@ -45,7 +63,7 @@ impl CpuMemoryBus {
         self.gpu.single_step();
     }
 
-    pub fn step(&mut self, cycles: u8) {
+    fn step(&mut self, cycles: u8) {
         for _ in 0..cycles {
             self.single_step();
         }
@@ -59,21 +77,9 @@ impl CpuMemoryBus {
     }
 }
 
-impl ReadMemory for CpuMemoryBus {
-    fn read_byte(&self, position: Word) -> Byte {
-        self.memory.read().read_byte(position)
-    }
-}
-
 impl WriteMemory for CpuMemoryBus {
     fn write_byte(&mut self, position: Word, value: Byte) {
         self.memory.write().write_byte(position, value)
-    }
-}
-
-impl ReadWordMemory for CpuMemoryBus {
-    fn read_word(&self, position: Word) -> Word {
-        self.memory.read().read_word(position)
     }
 }
 
