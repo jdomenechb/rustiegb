@@ -181,6 +181,8 @@ impl<
 
         ChannelEvent::None
     }
+
+    fn single_step(&mut self) {}
 }
 
 impl<

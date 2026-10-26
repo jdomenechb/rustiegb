@@ -1,10 +1,8 @@
 use crate::audio::channels::channel::{Channel, ChannelEvent};
 use crate::audio::channels::default_channel::DefaultChannel;
 use crate::audio::channels::sweep_channel::SweepChannel;
+use crate::audio::channels::wave_channel::WaveChannel;
 use crate::audio::registers::no_register::NoRegister;
-use crate::audio::registers::nr30::NR30;
-use crate::audio::registers::nr31::NR31;
-use crate::audio::registers::nr32::NR32;
 use crate::audio::registers::nr41::NR41;
 use crate::audio::registers::nr43::NR43;
 use crate::audio::registers::nr44::NR44;
@@ -16,7 +14,6 @@ use crate::audio::registers::nrx4::NRX4;
 use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::bus::address::Address;
 use crate::debug::Debuggable;
-use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 use std::collections::BTreeMap;
@@ -24,19 +21,24 @@ use std::collections::BTreeMap;
 pub struct Apu {
     channel_1: SweepChannel,
     channel_2: DefaultChannel<NoRegister, NRX1, NRX2, NRX3, NRX4>,
-    channel_3: DefaultChannel<NR30, NR31, NR32, NRX3, NRX4>,
+    channel_3: WaveChannel,
     channel_4: DefaultChannel<NoRegister, NR41, NRX2, NR43, NR44>,
 
     nr50: Byte,
     nr51: Byte,
     nr52: NR52,
 
-    wave_pattern_ram: WavePatternRam,
-
     div_apu: Byte,
 }
 
 impl Apu {
+    pub fn single_step(&mut self) {
+        self.channel_1.single_step();
+        self.channel_2.single_step();
+        self.channel_3.single_step();
+        self.channel_4.single_step();
+    }
+
     /// Ticks every 512 Hz
     pub fn tick(&mut self) {
         // Ticks every 256 Hz
@@ -117,15 +119,7 @@ impl Default for Apu {
                 64,
             ),
 
-            channel_3: DefaultChannel::new(
-                3,
-                NR30::default(),
-                NR31::default(),
-                NR32::default(),
-                NRX3::default(),
-                NRX4::default(),
-                256,
-            ),
+            channel_3: WaveChannel::new(),
 
             channel_4: DefaultChannel::new(
                 4,
@@ -140,7 +134,6 @@ impl Default for Apu {
             nr50: 0x77,
             nr51: 0xf3,
             nr52: NR52::default(),
-            wave_pattern_ram: WavePatternRam::default(),
             div_apu: 0,
         }
     }
@@ -169,9 +162,12 @@ impl ReadMemory for Apu {
             Address::NR51 => self.nr51,
             Address::NR52_SOUND => self.nr52.read(),
 
-            Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => self
-                .wave_pattern_ram
-                .read_byte(position - Address::WAVE_PATTERN_START),
+            Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => {
+                self.channel_3.read_wave_pattern_byte(
+                    position - Address::WAVE_PATTERN_START,
+                    self.nr52.is_channel_on(3),
+                )
+            }
             _ => {
                 println!("Read address {position:X} not supported for APU");
                 0xFF
@@ -196,8 +192,8 @@ impl WriteMemory for Apu {
         }
 
         if (Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END).contains(&position) {
-            self.wave_pattern_ram
-                .write_byte(position - Address::WAVE_PATTERN_START, value);
+            self.channel_3
+                .write_wave_pattern_byte(position - Address::WAVE_PATTERN_START, value);
 
             return;
         }

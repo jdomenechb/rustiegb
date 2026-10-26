@@ -44,7 +44,7 @@ sudo apt update && sudo apt install -y libasound2-dev pkg-config
 - [x] 06: Overflow on trigger
 - [X] 07: Len Sweep period sync
 - [x] 08: Len CTR during power
-- [ ] 09: Wave read while on
+- [x] 09: Wave read while on
 - [ ] 10: Wave trigger while on
 - [ ] 11: Regs after power
 - [ ] 12: Wave write while on

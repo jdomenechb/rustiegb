@@ -23,6 +23,11 @@ impl NR52 {
         self.value & 0b10000000 == 0b10000000
     }
 
+    pub fn is_channel_on(&self, channel: u8) -> bool {
+        let mask: Byte = 0b1 << (channel - 1);
+        self.value & mask == mask
+    }
+
     pub fn set_ro_channel_flag_active(&mut self, channel: u8) {
         self.value |= 0b1 << (channel - 1);
     }

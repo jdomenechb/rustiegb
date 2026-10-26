@@ -59,6 +59,7 @@ impl IORegisters {
 
         let old_div_value = self.div.read();
         self.div.single_step();
+        self.apu.single_step();
 
         let is_div_apu = is_bit_set(&old_div_value, 4) && !is_bit_set(&self.div.read(), 4);
 

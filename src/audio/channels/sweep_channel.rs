@@ -36,9 +36,7 @@ impl SweepChannel {
             at_least_one_sweep_negate_has_been_calculated_since_last_trigger: false,
         }
     }
-}
 
-impl SweepChannel {
     pub fn tick_sweep(&mut self) -> ChannelEvent {
         // Prevents overflows
         if self.sweep_ticks_left == 0 {
@@ -187,4 +185,6 @@ impl Channel for SweepChannel {
     fn tick_length(&mut self) -> ChannelEvent {
         self.channel.tick_length()
     }
+
+    fn single_step(&mut self) {}
 }
