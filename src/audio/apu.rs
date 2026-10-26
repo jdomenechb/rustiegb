@@ -217,7 +217,12 @@ impl WriteMemory for Apu {
         let channel_event = match position {
             Address::NR10_SOUND_1_SWEEP..=Address::NR14_SOUND_1_FR_HI => {
                 self.channel_1
-                    .write_byte(position - Address::NR10_SOUND_1_SWEEP, value, &self.div_apu)
+                    .write_byte(
+                        position - Address::NR10_SOUND_1_SWEEP,
+                        value,
+                        &self.div_apu,
+                        self.nr52.is_channel_on(1),
+                    )
                     .0
             }
 
@@ -227,6 +232,7 @@ impl WriteMemory for Apu {
                         position - Address::NR20_SOUND_2_UNUSED,
                         value,
                         &self.div_apu,
+                        self.nr52.is_channel_on(2),
                     )
                     .0
             }
@@ -237,6 +243,7 @@ impl WriteMemory for Apu {
                         position - Address::NR30_SOUND_3_ON_OFF,
                         value,
                         &self.div_apu,
+                        self.nr52.is_channel_on(3),
                     )
                     .0
             }
@@ -247,6 +254,7 @@ impl WriteMemory for Apu {
                         position - Address::NR40_SOUND_4_UNUSED,
                         value,
                         &self.div_apu,
+                        self.nr52.is_channel_on(4),
                     )
                     .0
             }

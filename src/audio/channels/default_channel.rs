@@ -102,6 +102,7 @@ impl<
         position: Word,
         value: Byte,
         div_apu: &Byte,
+        _is_channel_on: bool,
     ) -> (ChannelEvent, WriteEffect) {
         let makes_length_tick = div_apu.is_multiple_of(2);
 
@@ -227,10 +228,10 @@ mod tests {
             64,
         );
 
-        fixture.write_byte(1, 0xFF, &0);
-        fixture.write_byte(2, 0xFF, &0);
-        fixture.write_byte(3, 0xFF, &0);
-        fixture.write_byte(4, 0x07, &0);
+        fixture.write_byte(1, 0xFF, &0, false);
+        fixture.write_byte(2, 0xFF, &0, false);
+        fixture.write_byte(3, 0xFF, &0, false);
+        fixture.write_byte(4, 0x07, &0, false);
 
         fixture.clear_because_of_audio_off();
 
@@ -254,7 +255,7 @@ mod tests {
             256,
         );
 
-        fixture.write_byte(1, 0x10, &0);
+        fixture.write_byte(1, 0x10, &0, false);
 
         fixture.clear_because_of_audio_off();
 

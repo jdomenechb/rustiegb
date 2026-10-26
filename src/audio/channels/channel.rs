@@ -18,6 +18,7 @@ pub trait Channel: ReadMemory {
         position: Word,
         value: Byte,
         div_apu: &Byte,
+        is_channel_on: bool,
     ) -> (ChannelEvent, WriteEffect);
 
     fn tick_length(&mut self) -> ChannelEvent;

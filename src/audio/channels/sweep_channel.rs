@@ -160,8 +160,11 @@ impl Channel for SweepChannel {
         position: u16,
         value: u8,
         div_apu: &u8,
+        is_channel_on: bool,
     ) -> (ChannelEvent, WriteEffect) {
-        let (channel_event, write_effect) = self.channel.write_byte(position, value, div_apu);
+        let (channel_event, write_effect) =
+            self.channel
+                .write_byte(position, value, div_apu, is_channel_on);
 
         let new_channel_event = match write_effect {
             WriteEffect::Triggered => self.process_triggered_write_effect(channel_event),
