@@ -392,18 +392,18 @@ impl Cpu {
 
         self.registers.pc += self.pc_to_increment as Word;
 
-        self.step(self.last_instruction_ccycles);
+        self.bus.step(self.last_instruction_ccycles);
+
+        self.check_interrupts();
 
         self.last_instruction_ccycles
     }
 
-    fn step(&mut self, cycles: u8) {
+    fn check_interrupts(&mut self) {
         let check_vblank;
         let check_lcd_stat;
         let check_timer_overflow;
         let check_joystick;
-
-        self.bus.step(cycles);
 
         {
             let io_registers = self.io_registers.read();

@@ -38,6 +38,8 @@ impl CpuMemoryBus {
     }
 
     pub fn step(&mut self, cycles: u8) {
+        let cycles = cycles - self.cycles_accumulated;
+        self.cycles_accumulated = 0;
         {
             self.memory.write().step(cycles);
         }
