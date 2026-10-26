@@ -8,6 +8,20 @@ pub struct Dma {
 }
 
 impl Dma {
+    pub fn single_step(&mut self) -> bool {
+        if self.remaining_cycles == 0 {
+            return false;
+        }
+
+        self.remaining_cycles = self.remaining_cycles.saturating_sub(1);
+
+        if self.remaining_cycles == 0 {
+            return true;
+        }
+
+        false
+    }
+
     pub fn step(&mut self, cycles: u8) -> bool {
         if self.remaining_cycles == 0 {
             return false;

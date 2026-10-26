@@ -88,6 +88,42 @@ impl Gpu {
         }
     }
 
+    pub fn single_step(&mut self) {
+        let mode;
+        let lcdc;
+
+        {
+            let io_registers = self.io_registers.read();
+            mode = io_registers.stat.mode();
+            lcdc = io_registers.lcdc;
+        }
+
+        if !lcdc.lcd_control_operation {
+            {
+                self.io_registers.write().ly_reset_wo_interrupt();
+            }
+            self.cycles_accumulated = 0;
+
+            return;
+        }
+
+        self.cycles_accumulated += 1;
+
+        match mode {
+            // H-blank mode
+            STATMode::HBlank => self.hblank(),
+
+            // V-blank mode
+            STATMode::VBlank => self.vblank(),
+
+            // Searching OAM-RAM mode
+            STATMode::SearchOamRam => self.search_oam_ram(),
+
+            // Transferring data to LCD Driver mode
+            STATMode::LCDTransfer => self.lcd_transfer(),
+        }
+    }
+
     fn hblank(&mut self) {
         if self.cycles_accumulated >= 204 {
             self.cycles_accumulated = 0;

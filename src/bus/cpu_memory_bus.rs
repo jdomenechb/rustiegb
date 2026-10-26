@@ -37,14 +37,25 @@ impl CpuMemoryBus {
         self.memory.write().clear_bootstrap_rom();
     }
 
-    pub fn step(&mut self, cycles: u8) {
-        let cycles = cycles - self.cycles_accumulated;
-        self.cycles_accumulated = 0;
+    pub fn single_step(&mut self) {
         {
-            self.memory.write().step(cycles);
+            self.memory.write().single_step();
         }
 
-        self.gpu.step(cycles);
+        self.gpu.single_step();
+    }
+
+    pub fn step(&mut self, cycles: u8) {
+        for _ in 0..cycles {
+            self.single_step();
+        }
+    }
+
+    pub fn step_remaining(&mut self, cycles: u8) {
+        let cycles = cycles - self.cycles_accumulated;
+        self.cycles_accumulated = 0;
+
+        self.step(cycles)
     }
 }
 

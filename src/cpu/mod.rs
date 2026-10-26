@@ -392,7 +392,7 @@ impl Cpu {
 
         self.registers.pc += self.pc_to_increment as Word;
 
-        self.bus.step(self.last_instruction_ccycles);
+        self.bus.step_remaining(self.last_instruction_ccycles);
 
         self.check_interrupts();
 

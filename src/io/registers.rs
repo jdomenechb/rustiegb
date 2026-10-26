@@ -50,15 +50,15 @@ pub struct IORegisters {
 }
 
 impl IORegisters {
-    pub fn step(&mut self, last_instruction_cycles: u8) -> Option<Word> {
+    pub fn single_step(&mut self) -> Option<Word> {
         let mut to_return = None;
 
-        if self.dma.step(last_instruction_cycles) {
+        if self.dma.single_step() {
             to_return = Some(Word::from(&self.dma));
         }
 
         let old_div_value = self.div.read();
-        self.div.step(last_instruction_cycles);
+        self.div.single_step();
 
         let is_div_apu = is_bit_set(&old_div_value, 4) && !is_bit_set(&self.div.read(), 4);
 
@@ -71,9 +71,7 @@ impl IORegisters {
             return to_return;
         }
 
-        let tima_cycles_overflowed = self
-            .tima
-            .step(last_instruction_cycles, self.timer_control.get_divider());
+        let tima_cycles_overflowed = self.tima.single_step(self.timer_control.get_divider());
 
         if tima_cycles_overflowed {
             self.interrupt_flag.set_timer_overflow(true);

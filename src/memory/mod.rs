@@ -56,10 +56,10 @@ impl Memory {
         }
     }
 
-    pub fn step(&mut self, last_instruction_cycles: u8) {
+    pub fn single_step(&mut self) {
         let dma_init_address = {
             let mut io_registers = self.io_registers.write();
-            io_registers.step(last_instruction_cycles)
+            io_registers.single_step()
         };
 
         if let Some(dma_init_address) = dma_init_address {
