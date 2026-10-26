@@ -8,7 +8,7 @@ use crate::cpu::alu::Alu;
 use crate::cpu::registers::{ByteRegister, CpuRegisters, WordRegister};
 use crate::debug::{CPU_PC_WATCHPOINTS, DebugReason, Debuggable, OutputDebug};
 use crate::io::registers::IORegisters;
-use crate::memory::memory_sector::{ReadMemory, ReadWordMemory, WriteMemory, WriteWordMemory};
+use crate::memory::memory_sector::{WriteMemory, WriteWordMemory};
 use crate::{Byte, Word};
 
 pub mod alu;
@@ -2560,7 +2560,7 @@ mod test {
 
     fn create_empty_cpu() -> Cpu {
         let memory = Arc::new(RwLock::new(Memory::default()));
-        let io_registers = Arc::new(RwLock::new(IORegisters::default()));
+        let io_registers = memory.read().io_registers.clone();
 
         Cpu::new(
             CpuMemoryBus::new(
@@ -2577,5 +2577,187 @@ mod test {
             io_registers,
             false,
         )
+    }
+
+    fn load_program(cpu: &mut Cpu, program: &[Byte]) {
+        for (i, byte) in program.iter().enumerate() {
+            cpu.bus.write_byte(0xC000 + i as Word, *byte);
+        }
+
+        cpu.registers.pc = 0xC000;
+        cpu.registers.sp = 0xDFFE;
+    }
+
+    #[test]
+    fn test_next_instruction_returns_cycles_and_advances_pc() {
+        let mut cpu = create_empty_cpu();
+        load_program(&mut cpu, &[0x00, 0x3E, 0x42]);
+
+        assert_eq!(cpu.next_instruction(false, false), 4);
+        assert_eq!(cpu.registers.pc, 0xC001);
+
+        assert_eq!(cpu.next_instruction(false, false), 8);
+        assert_eq!(cpu.registers.pc, 0xC003);
+        assert_eq!(cpu.registers.a, 0x42);
+    }
+
+    #[test]
+    fn test_next_instruction_steps_the_rest_of_the_hardware_for_the_whole_instruction() {
+        let mut cpu = create_empty_cpu();
+        let io_registers = cpu.io_registers.clone();
+        // 64 NOPs of 4 cycles each = 256 cycles = 1 increment of DIV
+        load_program(&mut cpu, &[0x00; 64]);
+
+        for _ in 0..63 {
+            cpu.next_instruction(false, false);
+        }
+        assert_eq!(io_registers.read().div.read(), 0);
+
+        cpu.next_instruction(false, false);
+        assert_eq!(io_registers.read().div.read(), 1);
+    }
+
+    #[test]
+    fn test_next_instruction_steps_instructions_longer_than_their_memory_accesses() {
+        let mut cpu = create_empty_cpu();
+        let io_registers = cpu.io_registers.clone();
+        // LD A,n takes 8 cycles: 8 * 32 = 256
+        let program: Vec<Byte> = [0x3E, 0x01].repeat(32);
+        load_program(&mut cpu, &program);
+
+        for _ in 0..32 {
+            cpu.next_instruction(false, false);
+        }
+
+        assert_eq!(io_registers.read().div.read(), 1);
+    }
+
+    #[test]
+    fn test_interrupt_is_serviced_at_the_end_of_the_instruction() {
+        let mut cpu = create_empty_cpu();
+        let io_registers = cpu.io_registers.clone();
+        load_program(&mut cpu, &[0x00, 0x00]);
+        cpu.ime = true;
+
+        {
+            let mut io_registers = io_registers.write();
+            io_registers.interrupt_enable.set_vblank(true);
+            io_registers.interrupt_flag.set_vblank(true);
+        }
+
+        cpu.next_instruction(false, false);
+
+        assert_eq!(cpu.registers.pc, 0x40);
+        assert!(!cpu.ime);
+        assert!(!io_registers.read().interrupt_flag.vblank);
+        // Return address pushed is the instruction after the executed one
+        assert_eq!(cpu.registers.sp, 0xDFFC);
+        assert_eq!(cpu.bus.peak_byte(0xDFFC), 0x01);
+        assert_eq!(cpu.bus.peak_byte(0xDFFD), 0xC0);
+    }
+
+    #[test_case(0x48)]
+    #[test_case(0x50)]
+    #[test_case(0x60)]
+    fn test_interrupts_other_than_vblank_jump_to_their_vector(vector: Word) {
+        let mut cpu = create_empty_cpu();
+        let io_registers = cpu.io_registers.clone();
+        load_program(&mut cpu, &[0x00]);
+        cpu.ime = true;
+        io_registers.write().lcdc.update(0x80);
+
+        {
+            let mut io_registers = io_registers.write();
+            match vector {
+                0x48 => {
+                    io_registers.interrupt_enable.set_lcd_stat(true);
+                    io_registers.interrupt_flag.set_lcd_stat(true);
+                }
+                0x50 => {
+                    io_registers.interrupt_enable.set_timer_overflow(true);
+                    io_registers.interrupt_flag.set_timer_overflow(true);
+                }
+                _ => {
+                    io_registers.interrupt_enable.set_p10_p13_transition(true);
+                    io_registers.interrupt_flag.set_p10_p13_transition(true);
+                }
+            }
+        }
+
+        cpu.next_instruction(false, false);
+
+        assert_eq!(cpu.registers.pc, vector);
+    }
+
+    #[test]
+    fn test_interrupts_have_priority_vblank_first() {
+        let mut cpu = create_empty_cpu();
+        let io_registers = cpu.io_registers.clone();
+        load_program(&mut cpu, &[0x00]);
+        cpu.ime = true;
+
+        {
+            let mut io_registers = io_registers.write();
+            io_registers.interrupt_enable.set_vblank(true);
+            io_registers.interrupt_enable.set_timer_overflow(true);
+            io_registers.interrupt_flag.set_vblank(true);
+            io_registers.interrupt_flag.set_timer_overflow(true);
+        }
+
+        cpu.next_instruction(false, false);
+
+        assert_eq!(cpu.registers.pc, 0x40);
+        assert!(io_registers.read().interrupt_flag.timer_overflow);
+    }
+
+    #[test]
+    fn test_interrupt_is_not_serviced_if_ime_is_off() {
+        let mut cpu = create_empty_cpu();
+        let io_registers = cpu.io_registers.clone();
+        load_program(&mut cpu, &[0x00]);
+
+        {
+            let mut io_registers = io_registers.write();
+            io_registers.interrupt_enable.set_vblank(true);
+            io_registers.interrupt_flag.set_vblank(true);
+        }
+
+        cpu.next_instruction(false, false);
+
+        assert_eq!(cpu.registers.pc, 0xC001);
+        assert!(io_registers.read().interrupt_flag.vblank);
+    }
+
+    #[test]
+    fn test_interrupt_is_not_serviced_if_not_enabled() {
+        let mut cpu = create_empty_cpu();
+        let io_registers = cpu.io_registers.clone();
+        load_program(&mut cpu, &[0x00]);
+        cpu.ime = true;
+        io_registers.write().interrupt_flag.set_vblank(true);
+
+        cpu.next_instruction(false, false);
+
+        assert_eq!(cpu.registers.pc, 0xC001);
+    }
+
+    #[test]
+    fn test_interrupt_wakes_up_a_halted_cpu_even_if_ime_is_off() {
+        let mut cpu = create_empty_cpu();
+        let io_registers = cpu.io_registers.clone();
+        load_program(&mut cpu, &[0x76]);
+
+        cpu.next_instruction(false, false);
+        assert!(cpu.halted);
+
+        {
+            let mut io_registers = io_registers.write();
+            io_registers.interrupt_enable.set_timer_overflow(true);
+            io_registers.interrupt_flag.set_timer_overflow(true);
+        }
+
+        cpu.next_instruction(false, false);
+
+        assert!(!cpu.halted);
     }
 }

@@ -455,6 +455,36 @@ mod tests {
     }
 
     #[test]
+    fn test_wave_pattern_reads_0xff_while_channel_3_is_on() {
+        let mut apu = Apu::default();
+        apu.write_byte(Address::WAVE_PATTERN_START, 0x12);
+        assert_eq!(apu.read_byte(Address::WAVE_PATTERN_START), 0x12);
+
+        apu.write_byte(Address::NR30_SOUND_3_ON_OFF, 0x80);
+        apu.write_byte(Address::NR34_SOUND_3_FR_HI, 0x80);
+
+        assert_eq!(apu.read_byte(Address::WAVE_PATTERN_START), 0xFF);
+
+        apu.write_byte(Address::NR30_SOUND_3_ON_OFF, 0x00);
+
+        assert_eq!(apu.read_byte(Address::WAVE_PATTERN_START), 0x12);
+    }
+
+    #[test]
+    fn test_single_step_does_not_panic_and_advances_wave_channel() {
+        let mut apu = Apu::default();
+        apu.write_byte(Address::NR30_SOUND_3_ON_OFF, 0x80);
+        apu.write_byte(Address::NR33_SOUND_3_FR_LO, 0xFF);
+        apu.write_byte(Address::NR34_SOUND_3_FR_HI, 0x87);
+
+        for _ in 0..8 {
+            apu.single_step();
+        }
+
+        assert_eq!(apu.read_byte(Address::NR52_SOUND) & 0b100, 0b100);
+    }
+
+    #[test]
     fn test_when_sound_is_turned_off_wave_pattern_register_is_writable() {
         let mut apu = Apu::default();
 

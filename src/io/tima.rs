@@ -24,3 +24,55 @@ impl Tima {
         addition_result.1
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_increases_once_every_divider_single_steps() {
+        let mut fixture = Tima::default();
+
+        for _ in 0..15 {
+            assert!(!fixture.single_step(16));
+        }
+        assert_eq!(fixture.value, 0);
+
+        assert!(!fixture.single_step(16));
+        assert_eq!(fixture.value, 1);
+
+        for _ in 0..16 {
+            fixture.single_step(16);
+        }
+        assert_eq!(fixture.value, 2);
+    }
+
+    #[test]
+    fn it_reports_overflow() {
+        let mut fixture = Tima {
+            value: 0xFF,
+            ..Default::default()
+        };
+
+        for _ in 0..15 {
+            assert!(!fixture.single_step(16));
+        }
+
+        assert!(fixture.single_step(16));
+        assert_eq!(fixture.value, 0);
+    }
+
+    #[test]
+    fn it_restarts_the_internal_cycles_when_reset() {
+        let mut fixture = Tima::default();
+
+        for _ in 0..15 {
+            fixture.single_step(16);
+        }
+
+        fixture.reset_cycles();
+        fixture.single_step(16);
+
+        assert_eq!(fixture.value, 0);
+    }
+}

@@ -106,4 +106,22 @@ mod tests {
         fixture.write(0x00);
         assert_eq!(fixture.read(), 0b01110000);
     }
+
+    #[test]
+    fn it_reports_if_a_channel_is_on() {
+        let mut fixture = NR52::default();
+        for channel in 1..=4 {
+            fixture.set_ro_channel_flag_inactive(channel);
+        }
+
+        for channel in 1..=4 {
+            assert!(!fixture.is_channel_on(channel));
+
+            fixture.set_ro_channel_flag_active(channel);
+
+            for other in 1..=4 {
+                assert_eq!(fixture.is_channel_on(other), other <= channel);
+            }
+        }
+    }
 }
