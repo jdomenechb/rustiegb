@@ -77,7 +77,7 @@ impl SweepChannel {
 
     // Returns true if sweep is reset
     fn decrease_sweep_ticks_left(&mut self) -> bool {
-        self.sweep_ticks_left = self.sweep_ticks_left - 1;
+        self.sweep_ticks_left -= 1;
 
         if self.sweep_ticks_left == 0 {
             self.reset_sweep_ticks_left();

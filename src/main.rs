@@ -184,7 +184,6 @@ fn main() {
                     continue;
                 }
             }
-
         }
     });
 

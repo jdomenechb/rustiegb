@@ -40,7 +40,7 @@ impl Apu {
     /// Ticks every 512 Hz
     pub fn tick(&mut self) {
         // Ticks every 256 Hz
-        let length_step = self.div_apu.is_multiple_of(2);
+        let length_step = self.div_apu.is_multiple_of(2) && self.nr52.is_on();
 
         if length_step {
             let channel_event = self.channel_1.tick_length();
@@ -68,6 +68,17 @@ impl Apu {
         let envelope_step = self.div_apu == 7;
 
         self.div_apu = (self.div_apu + 1) % 8;
+    }
+
+    /// Length registers can be written even when audio is off
+    fn is_length_register(position: Word) -> bool {
+        matches!(
+            position,
+            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY
+                | Address::NR21_SOUND_2_WAVE_PATTERN_DUTY
+                | Address::NR31_SOUND_3_LENGTH
+                | Address::NR41_SOUND_4_LENGTH
+        )
     }
 
     fn clear_audio_registers_because_of_audio_off(&mut self) {
@@ -191,9 +202,21 @@ impl WriteMemory for Apu {
             return;
         }
 
-        if !self.nr52.is_on() {
+        let audio_is_off = !self.nr52.is_on();
+
+        if audio_is_off && !Self::is_length_register(position) {
             return;
         }
+
+        let value = if audio_is_off
+            && !matches!(
+                position,
+                Address::NR31_SOUND_3_LENGTH | Address::NR41_SOUND_4_LENGTH
+            ) {
+            value & 0b0011_1111
+        } else {
+            value
+        };
 
         let channel_event = match position {
             Address::NR10_SOUND_1_SWEEP..=Address::NR14_SOUND_1_FR_HI => {
@@ -351,6 +374,80 @@ mod tests {
         }
 
         check_basic_audio_registers_are_reset(&mut apu);
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_length_registers_are_writable_and_kept() {
+        let items = [
+            (
+                1,
+                Address::NR11_SOUND_1_WAVE_PATTERN_DUTY,
+                Address::NR12_SOUND_1_ENVELOPE,
+                0xF8,
+            ),
+            (
+                2,
+                Address::NR21_SOUND_2_WAVE_PATTERN_DUTY,
+                Address::NR22_SOUND_2_ENVELOPE,
+                0xF8,
+            ),
+            (
+                3,
+                Address::NR31_SOUND_3_LENGTH,
+                Address::NR30_SOUND_3_ON_OFF,
+                0x80,
+            ),
+            (
+                4,
+                Address::NR41_SOUND_4_LENGTH,
+                Address::NR42_SOUND_4_ENVELOPE,
+                0xF8,
+            ),
+        ];
+
+        for (channel, length_address, dac_address, dac_value) in items {
+            let mut apu = Apu::default();
+            apu.write_byte(Address::NR52_SOUND, 0);
+
+            // Length counter is left with only 1 tick to go
+            apu.write_byte(length_address, 0xFF);
+
+            apu.write_byte(Address::NR52_SOUND, 0x80);
+            apu.write_byte(dac_address, dac_value);
+            apu.write_byte(get_trigger_address(channel), 0b1100_0000);
+
+            let channel_flag = 1 << (channel - 1);
+            let is_active = |apu: &Apu| apu.read_byte(Address::NR52_SOUND) & channel_flag != 0;
+
+            assert!(is_active(&apu), "Channel {channel} should be active");
+
+            apu.tick();
+
+            assert!(
+                !is_active(&apu),
+                "Channel {channel} should have run out of length"
+            );
+        }
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_length_is_not_clocked() {
+        let mut apu = Apu::default();
+
+        apu.write_byte(Address::NR41_SOUND_4_LENGTH, 0xFF);
+        apu.write_byte(Address::NR42_SOUND_4_ENVELOPE, 0xF8);
+        apu.write_byte(Address::NR44_SOUND_4_CONTROL, 0b1100_0000);
+        apu.write_byte(Address::NR52_SOUND, 0);
+
+        for _ in 0..16 {
+            apu.tick();
+        }
+
+        apu.write_byte(Address::NR52_SOUND, 0x80);
+        apu.write_byte(Address::NR42_SOUND_4_ENVELOPE, 0xF8);
+        apu.write_byte(Address::NR44_SOUND_4_CONTROL, 0b1100_0000);
+
+        assert_eq!(apu.read_byte(Address::NR52_SOUND) & 0b1000, 0b1000);
     }
 
     #[test]

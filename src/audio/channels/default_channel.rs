@@ -206,8 +206,8 @@ impl<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audio::registers::nr31::NR31;
     use crate::audio::registers::no_register::NoRegister;
+    use crate::audio::registers::nr31::NR31;
     use crate::audio::registers::nrx1::NRX1;
     use crate::audio::registers::nrx2::NRX2;
     use crate::audio::registers::nrx3::NRX3;
