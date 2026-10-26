@@ -1,10 +1,10 @@
 use crate::Word;
-use crate::memory::Memory;
+use crate::bus::cpu_memory_bus::CpuMemoryBus;
 
-pub(super) fn disassemble(pc: Word, memory: &Memory) -> String {
-    let op = memory.read_byte(pc);
-    let b1 = memory.read_byte(pc.wrapping_add(1));
-    let b2 = memory.read_byte(pc.wrapping_add(2));
+pub(super) fn disassemble(pc: Word, bus: &CpuMemoryBus) -> String {
+    let op = bus.peak_byte(pc);
+    let b1 = bus.peak_byte(pc.wrapping_add(1));
+    let b2 = bus.peak_byte(pc.wrapping_add(2));
     let nn: Word = (b2 as Word) << 8 | b1 as Word;
 
     match op {

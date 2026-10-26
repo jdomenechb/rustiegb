@@ -8,6 +8,7 @@ use crate::gpu::color::Color;
 use crate::io::registers::IORegisters;
 use crate::io::stat::STATMode;
 use crate::memory::Memory;
+use crate::memory::memory_sector::{ReadMemory, ReadWordMemory};
 use crate::memory::oam_entry::OamEntry;
 use crate::utils::math::word_to_two_bytes;
 use crate::{Byte, Word};

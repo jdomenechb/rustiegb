@@ -4,11 +4,11 @@ use crate::io::registers::IORegisters;
 use crate::memory::bootstrap_rom::BootstrapRom;
 use crate::memory::internal_ram_8k_memory_sector::InternalRam8kMemorySector;
 use crate::memory::internal_ram_memory_sector::InternalRamMemorySector;
-use crate::memory::memory_sector::{ReadMemory, WriteMemory};
+use crate::memory::memory_sector::{ReadMemory, ReadWordMemory, WriteMemory, WriteWordMemory};
 use crate::memory::oam_memory_sector::{OAM_MEMORY_SECTOR_SIZE, OamMemorySector};
 use crate::memory::video_ram_8k_memory_sector::VideoRam8kMemorySector;
 use crate::utils::math::{two_bytes_to_word, word_to_two_bytes};
-use crate::{Byte, SignedByte, Word};
+use crate::{Byte, Word};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -56,7 +56,31 @@ impl Memory {
         }
     }
 
-    pub fn read_byte(&self, position: Word) -> Byte {
+    pub fn step(&mut self, last_instruction_cycles: u8) {
+        let dma_init_address = {
+            let mut io_registers = self.io_registers.write();
+            io_registers.step(last_instruction_cycles)
+        };
+
+        if let Some(dma_init_address) = dma_init_address {
+            for i in 0..OAM_MEMORY_SECTOR_SIZE {
+                self.oam_ram
+                    .write_byte(i, self.read_byte(dma_init_address + i));
+            }
+        }
+    }
+
+    pub fn has_bootstrap_rom(&self) -> bool {
+        self.bootstrap_rom.is_some()
+    }
+
+    pub fn clear_bootstrap_rom(&mut self) {
+        self.bootstrap_rom = None;
+    }
+}
+
+impl ReadMemory for Memory {
+    fn read_byte(&self, position: Word) -> Byte {
         // Bootstrap rom
         if position < Address::CARTRIDGE_START
             && let Some(bootstrap_rom) = &self.bootstrap_rom
@@ -79,16 +103,10 @@ impl Memory {
             _ => 0xFF,
         }
     }
+}
 
-    pub fn read_signed_byte(&self, position: Word) -> SignedByte {
-        self.read_byte(position) as SignedByte
-    }
-
-    pub fn read_word(&self, position: Word) -> Word {
-        two_bytes_to_word(self.read_byte(position + 1), self.read_byte(position))
-    }
-
-    pub fn write_byte(&mut self, position: Word, value: Byte) {
+impl WriteMemory for Memory {
+    fn write_byte(&mut self, position: Word, value: Byte) {
         match position {
             0..=0x7FFF => self.cartridge.write_byte(position, value),
             0x8000..=0x9FFF => self.video_ram.write_byte(position - 0x8000, value),
@@ -106,34 +124,20 @@ impl Memory {
             }
         };
     }
+}
 
-    pub fn write_word(&mut self, position: Word, value: Word) {
+impl ReadWordMemory for Memory {
+    fn read_word(&self, position: Word) -> Word {
+        two_bytes_to_word(self.read_byte(position + 1), self.read_byte(position))
+    }
+}
+
+impl WriteWordMemory for Memory {
+    fn write_word(&mut self, position: Word, value: Word) {
         let bytes = word_to_two_bytes(value);
 
         self.write_byte(position, bytes.1);
         self.write_byte(position + 1, bytes.0);
-    }
-
-    pub fn step(&mut self, last_instruction_cycles: u8) {
-        let dma_init_address = {
-            let mut io_registers = self.io_registers.write();
-            io_registers.step(last_instruction_cycles)
-        };
-
-        if let Some(dma_init_address) = dma_init_address {
-            for i in 0..OAM_MEMORY_SECTOR_SIZE {
-                self.oam_ram
-                    .write_byte(i, self.read_byte(dma_init_address + i));
-            }
-        }
-    }
-
-    pub fn has_bootstrap_rom(&self) -> bool {
-        self.bootstrap_rom.is_some()
-    }
-
-    pub fn erase_bootstrap_rom(&mut self) {
-        self.bootstrap_rom = None;
     }
 }
 

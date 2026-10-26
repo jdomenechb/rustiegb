@@ -15,6 +15,7 @@ mod io;
 mod memory;
 mod utils;
 
+use crate::bus::cpu_memory_bus::CpuMemoryBus;
 use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
 use crate::gpu::color::Color;
@@ -80,13 +81,15 @@ fn main() {
 
     std::thread::spawn(move || {
         let mut cpu = Cpu::new(
-            memory_thread.clone(),
-            io_registers_thread.clone(),
-            Gpu::new(
+            CpuMemoryBus::new(
                 memory_thread.clone(),
-                io_registers_thread.clone(),
-                canvas_thread.clone(),
+                Gpu::new(
+                    memory_thread.clone(),
+                    io_registers_thread.clone(),
+                    canvas_thread.clone(),
+                ),
             ),
+            io_registers_thread.clone(),
             configuration.bootstrap_path.is_some(),
         );
 
