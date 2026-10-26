@@ -6,6 +6,7 @@ use crate::bus::address::Address;
 use crate::cpu::alu::Alu;
 use crate::cpu::registers::{ByteRegister, CpuRegisters, WordRegister};
 use crate::debug::{CPU_PC_WATCHPOINTS, DebugReason, Debuggable, OutputDebug};
+use crate::gpu::Gpu;
 use crate::io::registers::IORegisters;
 use crate::memory::Memory;
 use crate::{Byte, Word};
@@ -18,6 +19,7 @@ pub mod registers;
 pub struct Cpu {
     memory: Arc<RwLock<Memory>>,
     io_registers: Arc<RwLock<IORegisters>>,
+    gpu: Gpu,
 
     pub registers: CpuRegisters,
     alu: Alu,
@@ -36,11 +38,13 @@ impl Cpu {
     pub fn new(
         memory: Arc<RwLock<Memory>>,
         io_registers: Arc<RwLock<IORegisters>>,
+        gpu: Gpu,
         bootstrap: bool,
     ) -> Cpu {
         Cpu {
             memory,
             io_registers,
+            gpu,
 
             registers: CpuRegisters::new(bootstrap),
             alu: Alu {},
@@ -57,7 +61,7 @@ impl Cpu {
         self.registers.pc = 0x100;
     }
 
-    pub fn step(&mut self, debug: bool, trace: bool) -> u8 {
+    pub fn next_instruction(&mut self, debug: bool, trace: bool) -> u8 {
         #[cfg(not(debug_assertions))]
         let _ = trace;
         self.last_instruction = "".to_string();
@@ -398,7 +402,59 @@ impl Cpu {
 
         self.registers.pc += self.pc_to_increment as Word;
 
+        self.step(self.last_instruction_ccycles);
+
         self.last_instruction_ccycles
+    }
+
+    fn step(&mut self, cycles: u8) {
+        let check_vblank;
+        let check_lcd_stat;
+        let check_timer_overflow;
+        let check_joystick;
+
+        {
+            self.memory.write().step(cycles);
+        }
+        {
+            let io_registers = self.io_registers.read();
+
+            check_vblank =
+                io_registers.interrupt_enable.vblank && io_registers.interrupt_flag.vblank;
+
+            check_lcd_stat =
+                io_registers.interrupt_enable.lcd_stat && io_registers.interrupt_flag.lcd_stat;
+
+            check_timer_overflow = io_registers.interrupt_enable.timer_overflow
+                && io_registers.interrupt_flag.timer_overflow;
+
+            check_joystick = io_registers.interrupt_enable.p10_13_transition
+                && io_registers.interrupt_flag.p10_13_transition;
+        }
+
+        self.gpu.step(cycles);
+
+        if check_vblank {
+            self.vblank_interrupt();
+            return;
+        }
+
+        if check_lcd_stat {
+            self.lcd_stat_interrupt();
+            return;
+        }
+
+        if check_timer_overflow {
+            self.timer_overflow_interrupt();
+            return;
+        }
+
+        // TODO: Serial transfer
+
+        if check_joystick {
+            self.p10_p13_transition_interrupt();
+            return;
+        }
     }
 
     fn prefix_cb(&mut self) {
@@ -2479,6 +2535,7 @@ impl Cpu {
 mod test {
     use super::*;
 
+    use image::ImageBuffer;
     use std::sync::Arc;
     use test_case::test_case;
 
@@ -2566,9 +2623,20 @@ mod test {
     }
 
     fn create_empty_cpu() -> Cpu {
+        let memory = Arc::new(RwLock::new(Memory::default()));
+        let io_registers = Arc::new(RwLock::new(IORegisters::default()));
+
         Cpu::new(
-            Arc::new(RwLock::new(Memory::default())),
-            Arc::new(RwLock::new(IORegisters::default())),
+            memory.clone(),
+            io_registers.clone(),
+            Gpu::new(
+                memory,
+                io_registers,
+                Arc::new(RwLock::new(ImageBuffer::new(
+                    Gpu::PIXEL_WIDTH as u32,
+                    Gpu::PIXEL_HEIGHT as u32,
+                ))),
+            ),
             false,
         )
     }

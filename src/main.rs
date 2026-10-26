@@ -82,9 +82,13 @@ fn main() {
         let mut cpu = Cpu::new(
             memory_thread.clone(),
             io_registers_thread.clone(),
+            Gpu::new(
+                memory_thread.clone(),
+                io_registers_thread.clone(),
+                canvas_thread.clone(),
+            ),
             configuration.bootstrap_path.is_some(),
         );
-        let mut gpu = Gpu::new(memory_thread.clone(), io_registers_thread.clone());
 
         //let audio_unit_output = CpalAudioUnitOutput::new();
 
@@ -118,71 +122,17 @@ fn main() {
                     continue 'main_loop;
                 }
 
-                let last_instruction_cycles =
-                    cpu.step(runtime_config_thread.read().is_debug(), configuration.trace);
+                let debug = runtime_config_thread.read().is_debug();
+                let last_instruction_cycles = cpu.next_instruction(debug, configuration.trace);
 
                 {
                     runtime_config_thread.write().available_cycles -=
                         last_instruction_cycles as i32;
                 }
 
-                let check_vblank;
-                let check_lcd_stat;
-                let check_timer_overflow;
-                let check_joystick;
-
-                {
-                    memory_thread.write().step(last_instruction_cycles);
-                }
-                {
-                    let io_registers = io_registers_thread.read();
-
-                    check_vblank =
-                        io_registers.interrupt_enable.vblank && io_registers.interrupt_flag.vblank;
-
-                    check_lcd_stat = io_registers.interrupt_enable.lcd_stat
-                        && io_registers.interrupt_flag.lcd_stat;
-
-                    check_timer_overflow = io_registers.interrupt_enable.timer_overflow
-                        && io_registers.interrupt_flag.timer_overflow;
-
-                    check_joystick = io_registers.interrupt_enable.p10_13_transition
-                        && io_registers.interrupt_flag.p10_13_transition;
-                }
-
-                {
-                    gpu.step(last_instruction_cycles, &mut canvas_thread.write());
-                }
-
                 let muted = { runtime_config_thread.read().muted };
 
                 //audio_unit.step(last_instruction_cycles, muted);
-
-                if check_vblank {
-                    cpu.vblank_interrupt();
-
-                    continue;
-                }
-
-                if check_lcd_stat {
-                    cpu.lcd_stat_interrupt();
-
-                    continue;
-                }
-
-                if check_timer_overflow {
-                    cpu.timer_overflow_interrupt();
-
-                    continue;
-                }
-
-                // TODO: Serial transfer
-
-                if check_joystick {
-                    cpu.p10_p13_transition_interrupt();
-
-                    continue;
-                }
             }
         }
     });

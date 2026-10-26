@@ -1,7 +1,7 @@
 use std::cmp::{max, min};
 use std::sync::Arc;
 
-use image::{ImageBuffer, Rgba, RgbaImage};
+use image::{ImageBuffer, Rgba};
 use parking_lot::RwLock;
 
 use crate::gpu::color::Color;
@@ -24,6 +24,7 @@ pub struct Gpu {
 
     memory: Arc<RwLock<Memory>>,
     io_registers: Arc<RwLock<IORegisters>>,
+    canvas: Arc<RwLock<ImageBuffer<Rgba<u8>, Vec<u8>>>>,
 }
 
 impl Gpu {
@@ -35,17 +36,22 @@ impl Gpu {
     const BACKGROUND_MAP_TILE_SIZE_Y: u16 = 32;
     const PIXELS_PER_TILE: u16 = 8;
 
-    pub fn new(memory: Arc<RwLock<Memory>>, io_registers: Arc<RwLock<IORegisters>>) -> Gpu {
+    pub fn new(
+        memory: Arc<RwLock<Memory>>,
+        io_registers: Arc<RwLock<IORegisters>>,
+        canvas: Arc<RwLock<ImageBuffer<Rgba<u8>, Vec<u8>>>>,
+    ) -> Gpu {
         Gpu {
             cycles_accumulated: 0,
             sprites_to_be_drawn_with_priority: Vec::with_capacity(10),
             sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
             io_registers,
+            canvas,
         }
     }
 
-    pub fn step(&mut self, last_instruction_cycles: u8, canvas: &mut RgbaImage) {
+    pub fn step(&mut self, last_instruction_cycles: u8) {
         let mode;
         let lcdc;
 
@@ -77,7 +83,7 @@ impl Gpu {
             STATMode::SearchOamRam => self.search_oam_ram(),
 
             // Transferring data to LCD Driver mode
-            STATMode::LCDTransfer => self.lcd_transfer(canvas),
+            STATMode::LCDTransfer => self.lcd_transfer(),
         }
     }
 
@@ -163,7 +169,7 @@ impl Gpu {
             .sort_by_key(|a| a.x);
     }
 
-    fn lcd_transfer(&mut self, canvas: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
+    fn lcd_transfer(&mut self) {
         if self.cycles_accumulated < 172 {
             return;
         }
@@ -248,12 +254,15 @@ impl Gpu {
             );
         }
 
+        let mut canvas = self.canvas.write();
+
         for screen_x in 0..(Gpu::PIXEL_WIDTH as u16) {
             let mut pixel_to_write = *screen_row_no_priority.get(screen_x as usize).unwrap();
 
             if let Some(ptw) = pixel_to_write {
-                canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
-
+                {
+                    canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
+                }
                 continue;
             }
 
@@ -334,7 +343,9 @@ impl Gpu {
             }
 
             if let Some(ptw) = pixel_to_write {
-                canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
+                {
+                    canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
+                }
             }
         }
     }
