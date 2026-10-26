@@ -4,7 +4,6 @@ use crate::{Byte, Word};
 #[readonly::make]
 pub struct Div {
     value: Word,
-    remaining_div_cycles: u16,
 }
 
 impl Div {
@@ -13,8 +12,7 @@ impl Div {
     }
 
     fn reset_value(&mut self) {
-        // FIXME: Possibly it needs to be reset to 0
-        self.value &= 0x00FF;
+        self.value = 0x00;
     }
 
     pub fn write(&mut self) {
@@ -67,12 +65,16 @@ mod tests {
     }
 
     #[test]
-    fn it_resets_value_but_keeps_counting_cycles_internally() {
+    fn it_resets_value_and_internal_cycles() {
         let mut div = Div::default();
         div.step(0xFF);
         div.step(0xFF);
         div.reset_value();
         div.step(0xFF);
+
+        assert_eq!(div.read(), 0);
+
+        div.step(0x01);
 
         assert_eq!(div.read(), 1);
     }
