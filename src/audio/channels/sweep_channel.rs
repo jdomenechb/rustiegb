@@ -147,12 +147,8 @@ impl ReadMemory for SweepChannel {
 }
 
 impl Channel for SweepChannel {
-    fn clear(&mut self) {
-        self.channel.clear();
-    }
-
-    fn clear_because_of_audio_off(&mut self) {
-        self.channel.clear_because_of_audio_off()
+    fn clear(&mut self) -> ChannelEvent {
+        self.channel.clear()
     }
 
     fn write_byte(

@@ -90,12 +90,8 @@ impl ReadMemory for WaveChannel {
 }
 
 impl Channel for WaveChannel {
-    fn clear(&mut self) {
+    fn clear(&mut self) -> ChannelEvent {
         self.channel.clear()
-    }
-
-    fn clear_because_of_audio_off(&mut self) {
-        self.channel.clear_because_of_audio_off()
     }
 
     fn write_byte(

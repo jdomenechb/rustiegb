@@ -83,11 +83,17 @@ impl Apu {
         )
     }
 
-    fn clear_audio_registers_because_of_audio_off(&mut self) {
-        self.channel_1.clear_because_of_audio_off();
-        self.channel_2.clear_because_of_audio_off();
-        self.channel_3.clear_because_of_audio_off();
-        self.channel_4.clear_because_of_audio_off();
+    fn clear(&mut self) {
+        let events = [
+            self.channel_1.clear(),
+            self.channel_2.clear(),
+            self.channel_3.clear(),
+            self.channel_4.clear(),
+        ];
+
+        for event in events {
+            self.process_channel_event(event);
+        }
 
         self.nr50 = 0;
         self.nr51 = 0;
@@ -182,7 +188,7 @@ impl WriteMemory for Apu {
             let write_effect = self.nr52.write(value);
 
             match write_effect {
-                WriteEffect::AudioOff => self.clear_audio_registers_because_of_audio_off(),
+                WriteEffect::AudioOff => self.clear(),
                 WriteEffect::AudioOn => self.div_apu = 0,
                 WriteEffect::None => (),
                 _ => unreachable!("WriteEffect not supported for NR52"),
@@ -452,6 +458,67 @@ mod tests {
         apu.write_byte(Address::NR44_SOUND_4_CONTROL, 0b1100_0000);
 
         assert_eq!(apu.read_byte(Address::NR52_SOUND) & 0b1000, 0b1000);
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_the_dac_of_every_channel_is_off() {
+        let items = [
+            (
+                1,
+                Address::NR12_SOUND_1_ENVELOPE,
+                0xFF,
+                Address::NR14_SOUND_1_FR_HI,
+            ),
+            (
+                2,
+                Address::NR22_SOUND_2_ENVELOPE,
+                0xFF,
+                Address::NR24_SOUND_2_FR_HI,
+            ),
+            (
+                3,
+                Address::NR30_SOUND_3_ON_OFF,
+                0x80,
+                Address::NR34_SOUND_3_FR_HI,
+            ),
+            (
+                4,
+                Address::NR42_SOUND_4_ENVELOPE,
+                0xFF,
+                Address::NR44_SOUND_4_CONTROL,
+            ),
+        ];
+
+        for (channel, dac_address, dac_value, trigger_address) in items {
+            let mut apu = Apu::default();
+            apu.write_byte(dac_address, dac_value);
+
+            apu.write_byte(Address::NR52_SOUND, 0);
+            apu.write_byte(dac_address, dac_value);
+            apu.write_byte(Address::NR52_SOUND, 0x80);
+            apu.write_byte(trigger_address, 0x80);
+
+            let channel_flag = 1 << (channel - 1);
+
+            assert_eq!(
+                apu.read_byte(Address::NR52_SOUND) & channel_flag,
+                0,
+                "Channel {channel} should not be activated by a trigger after power cycle"
+            );
+        }
+    }
+
+    #[test]
+    fn test_channel_flags_are_cleared_when_sound_is_turned_off() {
+        let mut apu = Apu::default();
+        apu.write_byte(Address::NR12_SOUND_1_ENVELOPE, 0xF8);
+        apu.write_byte(Address::NR14_SOUND_1_FR_HI, 0x80);
+        assert_eq!(apu.read_byte(Address::NR52_SOUND) & 0b1, 0b1);
+
+        apu.write_byte(Address::NR52_SOUND, 0);
+        apu.write_byte(Address::NR52_SOUND, 0x80);
+
+        assert_eq!(apu.read_byte(Address::NR52_SOUND) & 0b1111, 0);
     }
 
     #[test]

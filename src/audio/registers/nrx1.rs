@@ -40,9 +40,11 @@ impl AudioRegister for NRX1 {
         self.value
     }
 
-    fn clear_because_of_audio_off(&mut self) {
+    fn clear(&mut self) -> WriteEffect {
         // Only the duty is cleared, the length is kept
         self.value &= 0b0011_1111;
+
+        WriteEffect::None
     }
 }
 
@@ -71,7 +73,7 @@ mod tests {
         let mut fixture = NRX1::new_nr11();
         fixture.write(0xFF);
 
-        fixture.clear_because_of_audio_off();
+        fixture.clear();
 
         assert_eq!(fixture.value(), 0b0011_1111);
         assert_eq!(fixture.get_initial_length(), 0b11_1111);

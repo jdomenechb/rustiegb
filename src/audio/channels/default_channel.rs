@@ -81,20 +81,21 @@ impl<
     Y: AudioRegister + TriggerableRegister,
 > Channel for DefaultChannel<T, U, V, X, Y>
 {
-    fn clear(&mut self) {
-        self.nrx0.clear();
-        self.nrx1.clear();
-        self.nrx2.clear();
-        self.nrx3.clear();
-        self.nrx4.clear();
-    }
+    fn clear(&mut self) -> ChannelEvent {
+        let write_effects = [
+            self.nrx0.clear(),
+            self.nrx1.clear(),
+            self.nrx2.clear(),
+            self.nrx3.clear(),
+            self.nrx4.clear(),
+        ];
 
-    fn clear_because_of_audio_off(&mut self) {
-        self.nrx0.clear();
-        self.nrx1.clear_because_of_audio_off();
-        self.nrx2.clear();
-        self.nrx3.clear();
-        self.nrx4.clear();
+        if write_effects.contains(&WriteEffect::DacDisabled) {
+            self.dac = false;
+            return ChannelEvent::ChannelDisabled(self.number);
+        }
+
+        ChannelEvent::None
     }
 
     fn write_byte(
@@ -210,7 +211,9 @@ impl<
 mod tests {
     use super::*;
     use crate::audio::registers::no_register::NoRegister;
+    use crate::audio::registers::nr30::NR30;
     use crate::audio::registers::nr31::NR31;
+    use crate::audio::registers::nr32::NR32;
     use crate::audio::registers::nrx1::NRX1;
     use crate::audio::registers::nrx2::NRX2;
     use crate::audio::registers::nrx3::NRX3;
@@ -233,7 +236,7 @@ mod tests {
         fixture.write_byte(3, 0xFF, &0, false);
         fixture.write_byte(4, 0x07, &0, false);
 
-        fixture.clear_because_of_audio_off();
+        fixture.clear();
 
         assert_eq!(fixture.length_counter, 1);
         assert_eq!(fixture.nrx1.get_initial_length(), 0b11_1111);
@@ -257,9 +260,78 @@ mod tests {
 
         fixture.write_byte(1, 0x10, &0, false);
 
-        fixture.clear_because_of_audio_off();
+        fixture.clear();
 
         assert_eq!(fixture.length_counter, 256 - 0x10);
         assert_eq!(fixture.nrx1.get_initial_length(), 0x10);
+    }
+
+    fn new_square_channel() -> DefaultChannel<NoRegister, NRX1, NRX2, NRX3, NRX4> {
+        DefaultChannel::new(
+            2,
+            NoRegister::default(),
+            NRX1::new_nr21(),
+            NRX2::new_nr22(),
+            NRX3::default(),
+            NRX4::default(),
+            64,
+        )
+    }
+
+    #[test]
+    fn it_disables_the_channel_when_cleared_with_the_dac_on() {
+        let mut fixture = new_square_channel();
+        fixture.write_byte(2, 0xFF, &0, false);
+
+        let event = fixture.clear();
+
+        assert!(matches!(event, ChannelEvent::ChannelDisabled(2)));
+        assert_eq!(fixture.read_byte(2), 0x00);
+    }
+
+    #[test]
+    fn it_does_not_enable_the_channel_on_trigger_after_being_cleared() {
+        let mut fixture = new_square_channel();
+        fixture.write_byte(2, 0xFF, &0, false);
+        fixture.clear();
+
+        let (event, write_effect) = fixture.write_byte(4, 0x80, &0, false);
+
+        assert!(matches!(event, ChannelEvent::None));
+        assert!(write_effect == WriteEffect::Triggered);
+    }
+
+    #[test]
+    fn it_enables_the_channel_on_trigger_when_the_dac_is_turned_on_after_clear() {
+        let mut fixture = new_square_channel();
+        fixture.write_byte(2, 0xFF, &0, false);
+        fixture.clear();
+        fixture.write_byte(2, 0x08, &0, false);
+
+        let (event, _) = fixture.write_byte(4, 0x80, &0, false);
+
+        assert!(matches!(event, ChannelEvent::ChannelEnabled(2)));
+    }
+
+    #[test]
+    fn it_disables_the_wave_channel_when_cleared_with_the_dac_on() {
+        let mut fixture = DefaultChannel::new(
+            3,
+            NR30::default(),
+            NR31::default(),
+            NR32::default(),
+            NRX3::default(),
+            NRX4::default(),
+            256,
+        );
+        fixture.write_byte(0, 0x80, &0, false);
+
+        let event = fixture.clear();
+
+        assert!(matches!(event, ChannelEvent::ChannelDisabled(3)));
+
+        let (event, _) = fixture.write_byte(4, 0x80, &0, false);
+
+        assert!(matches!(event, ChannelEvent::None));
     }
 }

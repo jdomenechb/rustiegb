@@ -43,12 +43,8 @@ pub trait AudioRegister {
         self.set_value(value | Self::WRITE_MASK)
     }
 
-    fn clear(&mut self) {
-        self.set_value(0x0);
-    }
-
-    fn clear_because_of_audio_off(&mut self) {
-        self.clear();
+    fn clear(&mut self) -> WriteEffect {
+        self.set_value(0x0)
     }
 }
 

@@ -30,8 +30,8 @@ impl AudioRegister for NR41 {
         self.value
     }
 
-    fn clear_because_of_audio_off(&mut self) {
-        // Length is kept
+    fn clear(&mut self) -> WriteEffect {
+        WriteEffect::None
     }
 }
 
@@ -66,7 +66,7 @@ mod tests {
         let mut fixture = NR41::default();
         fixture.write(0x12);
 
-        fixture.clear_because_of_audio_off();
+        fixture.clear();
 
         assert_eq!(fixture.get_initial_length(), 0x12);
     }

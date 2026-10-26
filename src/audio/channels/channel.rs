@@ -9,9 +9,7 @@ pub enum ChannelEvent {
 }
 
 pub trait Channel: ReadMemory {
-    fn clear(&mut self);
-
-    fn clear_because_of_audio_off(&mut self);
+    fn clear(&mut self) -> ChannelEvent;
 
     fn write_byte(
         &mut self,
