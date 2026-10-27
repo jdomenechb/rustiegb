@@ -47,7 +47,7 @@ sudo apt update && sudo apt install -y libasound2-dev pkg-config
 - [x] 09: Wave read while on
 - [x] 10: Wave trigger while on
 - [x] 11: Regs after power
-- [ ] 12: Wave write while on
+- [x] 12: Wave write while on
 
 ### OAM Bug
 

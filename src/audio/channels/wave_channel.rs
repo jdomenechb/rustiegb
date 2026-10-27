@@ -78,8 +78,15 @@ impl WaveChannel {
         }
     }
 
-    pub fn write_wave_pattern_byte(&mut self, position: Word, value: Byte) {
-        self.wave_pattern_ram.write_byte(position, value)
+    pub fn write_wave_pattern_byte(&mut self, position: Word, value: Byte, is_channel_on: bool) {
+        if !is_channel_on {
+            return self.wave_pattern_ram.write_byte(position, value);
+        }
+
+        if self.cycles_since_read == CPU_READ_DELAY {
+            self.wave_pattern_ram
+                .write_byte(self.sample_index / 2, value)
+        }
     }
 }
 
@@ -149,7 +156,7 @@ mod tests {
 
     fn fill_wave_ram(fixture: &mut WaveChannel) {
         for i in 0..16 {
-            fixture.write_wave_pattern_byte(i, (i as Byte) * 0x11);
+            fixture.write_wave_pattern_byte(i, (i as Byte) * 0x11, false);
         }
     }
 
@@ -197,6 +204,50 @@ mod tests {
 
         step(&mut fixture, 1);
         assert_eq!(fixture.read_wave_pattern_byte(0x5, true), 0x00);
+    }
+
+    #[test]
+    fn it_writes_wave_ram_directly_when_channel_is_off() {
+        let mut fixture = WaveChannel::new();
+
+        fixture.write_wave_pattern_byte(0x5, 0xAB, false);
+
+        assert_eq!(fixture.wave_pattern_ram.read_byte(0x5), 0xAB);
+    }
+
+    #[test]
+    fn it_ignores_wave_ram_writes_when_channel_is_on_and_no_sample_was_just_read() {
+        let mut fixture = WaveChannel::new();
+        fill_wave_ram(&mut fixture);
+
+        fixture.write_wave_pattern_byte(0x5, 0xAB, true);
+
+        for i in 0..16 {
+            assert_eq!(fixture.wave_pattern_ram.read_byte(i), (i as Byte) * 0x11);
+        }
+    }
+
+    #[test]
+    fn it_writes_to_the_current_sample_byte_only_2_cycles_after_a_sample_read() {
+        let mut fixture = WaveChannel::new();
+        fill_wave_ram(&mut fixture);
+        trigger(&mut fixture, SLOW_NR33, SLOW_TRIGGER_NR34, false);
+
+        // 8 cycles of timer + 4 cycles of DMG trigger delay
+        step(&mut fixture, 12);
+        assert_eq!(fixture.sample_index, 1);
+
+        fixture.write_wave_pattern_byte(0xA, 0xF7, true);
+        assert_eq!(fixture.wave_pattern_ram.read_byte(0), 0x00);
+
+        step(&mut fixture, 1);
+        fixture.write_wave_pattern_byte(0xA, 0xF7, true);
+        assert_eq!(fixture.wave_pattern_ram.read_byte(0), 0x00);
+
+        step(&mut fixture, 1);
+        fixture.write_wave_pattern_byte(0xA, 0xF7, true);
+        assert_eq!(fixture.wave_pattern_ram.read_byte(0), 0xF7);
+        assert_eq!(fixture.wave_pattern_ram.read_byte(0xA), 0xAA);
     }
 
     #[test]

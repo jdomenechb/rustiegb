@@ -198,8 +198,11 @@ impl WriteMemory for Apu {
         }
 
         if (Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END).contains(&position) {
-            self.channel_3
-                .write_wave_pattern_byte(position - Address::WAVE_PATTERN_START, value);
+            self.channel_3.write_wave_pattern_byte(
+                position - Address::WAVE_PATTERN_START,
+                value,
+                self.nr52.is_channel_on(3),
+            );
 
             return;
         }
