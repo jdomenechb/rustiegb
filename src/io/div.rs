@@ -1,25 +1,26 @@
-use crate::Byte;
+use crate::{Byte, Word};
 
 #[derive(Default)]
 #[readonly::make]
 pub struct Div {
-    pub value: Byte,
-    remaining_div_cycles: u16,
+    value: Word,
 }
 
 impl Div {
-    const STEP_CYCLES: u16 = 0x100;
-    pub fn step(&mut self, last_instruction_cycles: u8) {
-        self.remaining_div_cycles += last_instruction_cycles as u16;
-
-        self.value = self
-            .value
-            .wrapping_add((self.remaining_div_cycles / Self::STEP_CYCLES) as u8);
-        self.remaining_div_cycles %= Self::STEP_CYCLES
+    pub fn single_step(&mut self) {
+        self.value = self.value.wrapping_add(1);
     }
 
-    pub fn reset_value(&mut self) {
-        self.value = 0;
+    fn reset_value(&mut self) {
+        self.value = 0x00;
+    }
+
+    pub fn write(&mut self) {
+        self.reset_value()
+    }
+
+    pub fn read(&self) -> Byte {
+        (self.value >> 8) as Byte
     }
 }
 
@@ -27,50 +28,60 @@ impl Div {
 mod tests {
     use super::*;
 
+    fn step(div: &mut Div, cycles: u8) {
+        for _ in 0..cycles {
+            div.single_step();
+        }
+    }
+
     #[test]
     fn it_does_not_increase_in_its_maximum_value() {
         let mut div = Div::default();
-        div.step(0xFF);
+        step(&mut div, 0xFF);
 
-        assert_eq!(div.value, 0);
+        assert_eq!(div.read(), 0);
     }
     #[test]
     fn it_increases_with_maximum_value_plus_1() {
         let mut div = Div::default();
-        div.step(0xFF);
-        div.step(0x01);
+        step(&mut div, 0xFF);
+        step(&mut div, 0x01);
 
-        assert_eq!(div.value, 1);
+        assert_eq!(div.read(), 1);
     }
 
     #[test]
     fn it_keeps_increasing() {
         let mut div = Div::default();
-        div.step(0xFF);
-        div.step(0xFF);
-        div.step(0xFF);
+        step(&mut div, 0xFF);
+        step(&mut div, 0xFF);
+        step(&mut div, 0xFF);
 
-        assert_eq!(div.value, 2);
+        assert_eq!(div.read(), 2);
     }
 
     #[test]
     fn it_resets_value() {
         let mut div = Div::default();
-        div.step(0xFF);
-        div.step(0x01);
+        step(&mut div, 0xFF);
+        step(&mut div, 0x01);
         div.reset_value();
 
-        assert_eq!(div.value, 0);
+        assert_eq!(div.read(), 0);
     }
 
     #[test]
-    fn it_resets_value_but_keeps_counting_cycles_internally() {
+    fn it_resets_value_and_internal_cycles() {
         let mut div = Div::default();
-        div.step(0xFF);
-        div.step(0xFF);
+        step(&mut div, 0xFF);
+        step(&mut div, 0xFF);
         div.reset_value();
-        div.step(0xFF);
+        step(&mut div, 0xFF);
 
-        assert_eq!(div.value, 1);
+        assert_eq!(div.read(), 0);
+
+        step(&mut div, 0x01);
+
+        assert_eq!(div.read(), 1);
     }
 }

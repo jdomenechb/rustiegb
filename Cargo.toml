@@ -7,14 +7,15 @@ edition = "2024"
 [dependencies]
 piston_window = "0.148"
 clap = "4.6"
-gfx_device_gl = "0.16"
 image = "0.25"
 readonly = "0.2"
 cpal = "0.18"
 anyhow = "1.0"
 parking_lot = { version = "0.13" }
-nix = "0.31"
 prettytable-rs = "0.10"
+
+[lints.clippy]
+too_many_arguments = "allow"
 
 [dev-dependencies]
 test-case = "3.4"

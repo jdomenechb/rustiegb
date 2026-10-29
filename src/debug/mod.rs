@@ -4,10 +4,8 @@ use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 
 // CPU
-pub const CPU_PC_WATCHPOINTS: [Word; 1] = [
-    //0xC162, // Power down for a moment, wreg NR52,$00
-    //0xC1AD, // Test 2,"Powering off should clear NR12" - wreg NR14,$80
-    0xC1E2, // Test 3,"Powering off should clear NR13" - wreg NR10,$11
+pub const CPU_PC_WATCHPOINTS: [Word; 0] = [
+    //0xC203
 ];
 
 // I/O
@@ -15,14 +13,17 @@ pub const IO_READ_WATCHPOINTS: [Word; 0] = [];
 pub const IO_WRITE_WATCHPOINTS: [Word; 0] = [
     // Address::NR52_SOUND,
     // Address::NR14_SOUND_1_FR_HI,
-    // Address::NR10_SOUND_1_SWEEP,
-    //Address::NR24_SOUND_2_FR_HI,
-    //Address::NR34_SOUND_3_FR_HI,
-    //Address::NR44_SOUND_4_CONTROL,
+    // Address::NR24_SOUND_2_FR_HI,
+    // Address::NR34_SOUND_3_FR_HI,
+    // Address::NR44_SOUND_4_CONTROL,
+    // Address::NR12_SOUND_1_ENVELOPE,
+    // Address::NR22_SOUND_2_ENVELOPE,
+    // Address::NR30_SOUND_3_ON_OFF,
+    // Address::NR44_SOUND_4_CONTROL,
 ];
 
 pub trait Debuggable {
-    fn get_debug_values(&self) -> BTreeMap<&str, String>;
+    fn get_debug_values(&self) -> BTreeMap<&'static str, String>;
 }
 
 pub struct OutputDebug {

@@ -7,6 +7,7 @@ this emulator only features the basics to emulate GB and focus in learning to wo
 functionalities, speed or improvements.
 
 ## Dev environment set up
+
 ### Dependencies
 
 ```
@@ -27,7 +28,7 @@ sudo apt update && sudo apt install -y libasound2-dev pkg-config
 - [x] 08: misc instrs
 - [x] 09: op r,r
 - [x] 10: bit ops
-- [x] 11: op a,(hl)
+- [x] 11: op a, (hl)
 
 ### Instruction timing
 
@@ -41,12 +42,12 @@ sudo apt update && sudo apt install -y libasound2-dev pkg-config
 - [x] 04: Sweep
 - [x] 05: Sweep details
 - [x] 06: Overflow on trigger
-- [x] 07: Len Sweep period sync
-- [ ] 08: Len CTR during power
-- [ ] 09: Wave read while on
-- [ ] 10: Wave trigger while on
-- [ ] 11: Regs after power
-- [ ] 12: Wave write while on
+- [X] 07: Len Sweep period sync
+- [x] 08: Len CTR during power
+- [x] 09: Wave read while on
+- [x] 10: Wave trigger while on
+- [x] 11: Regs after power
+- [x] 12: Wave write while on
 
 ### OAM Bug
 

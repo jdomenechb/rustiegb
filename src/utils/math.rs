@@ -12,8 +12,16 @@ pub fn word_to_two_bytes(value: Word) -> (Byte, Byte) {
     (high, low)
 }
 
-pub fn set_bit(base: Byte, position: u8, value: bool) -> u8 {
+pub fn set_bit(base: &Byte, position: u8, value: bool) -> Byte {
     let mask = 1 << position;
 
     if value { base | mask } else { base & !mask }
+}
+
+/// Returns true if the bit at position is set.
+/// position is bit 7-0 in a byte.
+pub fn is_bit_set(base: &Byte, position: u8) -> bool {
+    let mask = 1 << position;
+
+    base & mask == mask
 }

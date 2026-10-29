@@ -14,10 +14,11 @@ use crate::io::sio_control::SioControl;
 use crate::io::stat::{STATMode, Stat};
 use crate::io::tima::Tima;
 use crate::io::timer_control::TimerControl;
-use crate::io::wave_pattern_ram::WavePatternRam;
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
+use crate::utils::math::is_bit_set;
 use crate::{Byte, Word};
 use std::collections::BTreeMap;
+use std::sync::{Arc, RwLock};
 
 pub struct IORegisters {
     pub p1: Joypad,
@@ -29,10 +30,8 @@ pub struct IORegisters {
     pub timer_control: TimerControl,
     pub interrupt_flag: InterruptFlag,
 
-    pub apu: Apu,
+    pub apu: Arc<RwLock<Apu>>,
 
-    // Wave pattern ram (FF30 - FF3F)
-    pub wave_pattern_ram: WavePatternRam,
     pub lcdc: Lcdc,
     pub stat: Stat,
     pub scy: Byte,
@@ -52,30 +51,37 @@ pub struct IORegisters {
 }
 
 impl IORegisters {
-    pub fn step(&mut self, last_instruction_cycles: u8) -> Option<Word> {
+    pub fn single_step(&mut self) -> Option<Word> {
         let mut to_return = None;
 
-        if self.dma.step(last_instruction_cycles) {
+        if self.dma.single_step() {
             to_return = Some(Word::from(&self.dma));
         }
 
-        self.div.step(last_instruction_cycles);
+        let old_div_value = self.div.read();
+
+        {
+            self.div.single_step();
+            self.apu.write().unwrap().single_step();
+        }
+
+        let is_div_apu = is_bit_set(&old_div_value, 4) && !is_bit_set(&self.div.read(), 4);
+
+        if is_div_apu {
+            self.apu.write().unwrap().tick();
+        }
 
         if !self.timer_control.started {
             self.tima.reset_cycles();
             return to_return;
         }
 
-        let tima_cycles_overflowed = self
-            .tima
-            .step(last_instruction_cycles, self.timer_control.get_divider());
+        let tima_cycles_overflowed = self.tima.single_step(self.timer_control.get_divider());
 
         if tima_cycles_overflowed {
             self.interrupt_flag.set_timer_overflow(true);
             self.tima.value = self.tma;
         }
-
-        self.apu.step();
 
         to_return
     }
@@ -133,8 +139,8 @@ impl IORegisters {
 }
 
 impl Debuggable for IORegisters {
-    fn get_debug_values(&self) -> BTreeMap<&str, String> {
-        self.apu.get_debug_values()
+    fn get_debug_values(&self) -> BTreeMap<&'static str, String> {
+        self.apu.read().unwrap().get_debug_values()
     }
 }
 
@@ -150,9 +156,8 @@ impl Default for IORegisters {
             timer_control: TimerControl::default(),
             interrupt_flag: InterruptFlag::new(),
 
-            apu: Apu::default(),
+            apu: Arc::new(RwLock::new(Apu::default())),
 
-            wave_pattern_ram: WavePatternRam::default(),
             lcdc: Lcdc::default(),
             stat: Stat::default(),
             scy: 0x00,
@@ -184,15 +189,15 @@ impl ReadMemory for IORegisters {
             Address::P1_JOYPAD => self.p1.to_byte(),
             Address::SB_SERIAL_TRANSFER_DATA => self.serial_transfer_data,
             Address::SC_SIO_CONTROL => self.sio_control.value,
-            Address::DIV_DIVIDER_REGISTER => self.div.value,
+            Address::DIV_DIVIDER_REGISTER => self.div.read(),
             Address::TIMA_TIMER_COUNTER => self.tima.value,
             Address::TMA_TIMER_MODULO => self.tma,
             Address::IF_INTERRUPT_FLAG => (&self.interrupt_flag).into(),
 
-            Address::APU_START..=Address::APU_END => self.apu.read_byte(position),
-            Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => self
-                .wave_pattern_ram
-                .read_byte(position - Address::WAVE_PATTERN_START),
+            Address::APU_START..=Address::APU_END
+            | Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => {
+                self.apu.read().unwrap().read_byte(position)
+            }
             Address::LCDC => (&self.lcdc).into(),
             Address::STAT => (&self.stat).into(),
             Address::SCY_SCROLL_Y => self.scy,
@@ -231,7 +236,7 @@ impl WriteMemory for IORegisters {
             Address::UNUSED_FF03 => {
                 println!("Attempt to write at an unused RAM position {position:X}",)
             }
-            Address::DIV_DIVIDER_REGISTER => self.div.reset_value(),
+            Address::DIV_DIVIDER_REGISTER => self.div.write(),
             Address::TIMA_TIMER_COUNTER => self.tima.value = value,
             Address::TMA_TIMER_MODULO => self.tma = value,
             Address::TAC_TIMER_CONTROL => self.timer_control.update(value),
@@ -239,10 +244,9 @@ impl WriteMemory for IORegisters {
                 println!("Attempt to write at an unused RAM position {position:X}",)
             }
             Address::IF_INTERRUPT_FLAG => self.interrupt_flag.update(value),
-            Address::APU_START..=Address::APU_END => self.apu.write_byte(position, value),
-            0xFF30..=0xFF3F => {
-                self.wave_pattern_ram.write_byte(position - 0xFF30, value);
-                self.apu.audio_3_reg_written.wave_pattern = true;
+            Address::APU_START..=Address::APU_END
+            | Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => {
+                self.apu.write().unwrap().write_byte(position, value)
             }
             Address::LCDC => self.lcdc.update(value),
             Address::STAT => self.stat.update(value),
@@ -275,19 +279,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_when_sound_is_turned_off_wave_pattern_register_is_writable() {
-        let mut io_registers = IORegisters::default();
-
-        io_registers.write_byte(Address::NR52_SOUND, 0);
-
-        for position in Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END {
-            io_registers.write_byte(position, 0xFF);
-            assert_eq!(0xFF, io_registers.read_byte(position));
-        }
-    }
-
-    #[test]
-    fn test_correct_data_when_writing_audio_registers() {
+    fn test_correct_data_when_writing_unused_audio_registers() {
         let mut io_registers = IORegisters::default();
 
         // Unused registers
@@ -298,19 +290,6 @@ mod tests {
             assert_eq!(
                 io_registers.read_byte(position),
                 0xFF,
-                "Wrong data when writing register {:X}",
-                position
-            );
-        }
-
-        // WAVE
-        for position in 0xFF30..0xFF40 {
-            io_registers.write_byte(position, 0xFF);
-            io_registers.write_byte(position, 0);
-
-            assert_eq!(
-                io_registers.read_byte(position),
-                0,
                 "Wrong data when writing register {:X}",
                 position
             );

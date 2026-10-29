@@ -1,13 +1,14 @@
 use std::cmp::{max, min};
 use std::sync::Arc;
 
-use image::{ImageBuffer, Rgba, RgbaImage};
+use image::{ImageBuffer, Rgba};
 use parking_lot::RwLock;
 
 use crate::gpu::color::Color;
 use crate::io::registers::IORegisters;
 use crate::io::stat::STATMode;
 use crate::memory::Memory;
+use crate::memory::memory_sector::{ReadMemory, ReadWordMemory};
 use crate::memory::oam_entry::OamEntry;
 use crate::utils::math::word_to_two_bytes;
 use crate::{Byte, Word};
@@ -24,6 +25,7 @@ pub struct Gpu {
 
     memory: Arc<RwLock<Memory>>,
     io_registers: Arc<RwLock<IORegisters>>,
+    canvas: Arc<RwLock<ImageBuffer<Rgba<u8>, Vec<u8>>>>,
 }
 
 impl Gpu {
@@ -35,17 +37,22 @@ impl Gpu {
     const BACKGROUND_MAP_TILE_SIZE_Y: u16 = 32;
     const PIXELS_PER_TILE: u16 = 8;
 
-    pub fn new(memory: Arc<RwLock<Memory>>, io_registers: Arc<RwLock<IORegisters>>) -> Gpu {
+    pub fn new(
+        memory: Arc<RwLock<Memory>>,
+        io_registers: Arc<RwLock<IORegisters>>,
+        canvas: Arc<RwLock<ImageBuffer<Rgba<u8>, Vec<u8>>>>,
+    ) -> Gpu {
         Gpu {
             cycles_accumulated: 0,
             sprites_to_be_drawn_with_priority: Vec::with_capacity(10),
             sprites_to_be_drawn_without_priority: Vec::with_capacity(10),
             memory,
             io_registers,
+            canvas,
         }
     }
 
-    pub fn step(&mut self, last_instruction_cycles: u8, canvas: &mut RgbaImage) {
+    pub fn single_step(&mut self) {
         let mode;
         let lcdc;
 
@@ -64,7 +71,7 @@ impl Gpu {
             return;
         }
 
-        self.cycles_accumulated += last_instruction_cycles as u16;
+        self.cycles_accumulated += 1;
 
         match mode {
             // H-blank mode
@@ -77,7 +84,7 @@ impl Gpu {
             STATMode::SearchOamRam => self.search_oam_ram(),
 
             // Transferring data to LCD Driver mode
-            STATMode::LCDTransfer => self.lcd_transfer(canvas),
+            STATMode::LCDTransfer => self.lcd_transfer(),
         }
     }
 
@@ -163,7 +170,7 @@ impl Gpu {
             .sort_by_key(|a| a.x);
     }
 
-    fn lcd_transfer(&mut self, canvas: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
+    fn lcd_transfer(&mut self) {
         if self.cycles_accumulated < 172 {
             return;
         }
@@ -248,12 +255,15 @@ impl Gpu {
             );
         }
 
+        let mut canvas = self.canvas.write();
+
         for screen_x in 0..(Gpu::PIXEL_WIDTH as u16) {
             let mut pixel_to_write = *screen_row_no_priority.get(screen_x as usize).unwrap();
 
             if let Some(ptw) = pixel_to_write {
-                canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
-
+                {
+                    canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
+                }
                 continue;
             }
 
@@ -334,7 +344,9 @@ impl Gpu {
             }
 
             if let Some(ptw) = pixel_to_write {
-                canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
+                {
+                    canvas.put_pixel(screen_x as u32, screen_y as u32, Rgba(ptw));
+                }
             }
         }
     }
@@ -427,5 +439,129 @@ impl Gpu {
 
             screen_x = sprite_end;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_fixture(lcd_on: bool) -> (Gpu, Arc<RwLock<IORegisters>>) {
+        let memory = Arc::new(RwLock::new(Memory::default()));
+        let io_registers = memory.read().io_registers.clone();
+        let canvas = Arc::new(RwLock::new(ImageBuffer::new(
+            Gpu::PIXEL_WIDTH as u32,
+            Gpu::PIXEL_HEIGHT as u32,
+        )));
+
+        {
+            let mut io_registers = io_registers.write();
+            io_registers.lcdc.update(if lcd_on { 0x80 } else { 0x00 });
+            io_registers.stat.set_mode(STATMode::SearchOamRam);
+        }
+
+        (Gpu::new(memory, io_registers.clone(), canvas), io_registers)
+    }
+
+    fn step(gpu: &mut Gpu, cycles: u32) {
+        for _ in 0..cycles {
+            gpu.single_step();
+        }
+    }
+
+    fn mode(io_registers: &Arc<RwLock<IORegisters>>) -> STATMode {
+        io_registers.read().stat.mode()
+    }
+
+    fn ly(io_registers: &Arc<RwLock<IORegisters>>) -> Byte {
+        io_registers.read().ly.value
+    }
+
+    #[test]
+    fn it_does_nothing_and_resets_ly_when_lcd_is_off() {
+        let (mut fixture, io_registers) = create_fixture(false);
+        io_registers.write().ly_increment();
+        fixture.cycles_accumulated = 50;
+
+        step(&mut fixture, 1000);
+
+        assert_eq!(ly(&io_registers), 0);
+        assert_eq!(fixture.cycles_accumulated, 0);
+        assert!(matches!(mode(&io_registers), STATMode::SearchOamRam));
+    }
+
+    #[test]
+    fn it_goes_through_the_modes_of_a_scanline() {
+        let (mut fixture, io_registers) = create_fixture(true);
+
+        step(&mut fixture, 79);
+        assert!(matches!(mode(&io_registers), STATMode::SearchOamRam));
+        step(&mut fixture, 1);
+        assert!(matches!(mode(&io_registers), STATMode::LCDTransfer));
+
+        step(&mut fixture, 171);
+        assert!(matches!(mode(&io_registers), STATMode::LCDTransfer));
+        step(&mut fixture, 1);
+        assert!(matches!(mode(&io_registers), STATMode::HBlank));
+
+        step(&mut fixture, 203);
+        assert!(matches!(mode(&io_registers), STATMode::HBlank));
+        assert_eq!(ly(&io_registers), 0);
+        step(&mut fixture, 1);
+        assert!(matches!(mode(&io_registers), STATMode::SearchOamRam));
+        assert_eq!(ly(&io_registers), 1);
+    }
+
+    #[test]
+    fn it_takes_456_cycles_per_scanline() {
+        let (mut fixture, io_registers) = create_fixture(true);
+
+        step(&mut fixture, 456 * 10);
+
+        assert_eq!(ly(&io_registers), 10);
+    }
+
+    #[test]
+    fn it_enters_vblank_and_requests_the_interrupt_at_the_end_of_the_screen() {
+        let (mut fixture, io_registers) = create_fixture(true);
+
+        step(&mut fixture, 456 * 143);
+
+        assert_eq!(ly(&io_registers), 143);
+        assert!(matches!(mode(&io_registers), STATMode::VBlank));
+        assert!(io_registers.read().interrupt_flag.vblank);
+    }
+
+    #[test]
+    fn it_does_not_request_vblank_before_the_end_of_the_screen() {
+        let (mut fixture, io_registers) = create_fixture(true);
+
+        step(&mut fixture, 456 * 142);
+
+        assert!(!io_registers.read().interrupt_flag.vblank);
+    }
+
+    #[test]
+    fn it_leaves_vblank_back_to_the_first_line() {
+        let (mut fixture, io_registers) = create_fixture(true);
+
+        // 144 visible lines + 10 vblank lines
+        step(&mut fixture, 456 * 154);
+
+        assert_eq!(ly(&io_registers), 0);
+        assert!(matches!(mode(&io_registers), STATMode::SearchOamRam));
+    }
+
+    #[test]
+    fn it_draws_the_scanline_into_the_shared_canvas() {
+        let (mut fixture, io_registers) = create_fixture(true);
+        io_registers.write().lcdc.update(0x91);
+        io_registers.write().bgp = 0xFF;
+
+        step(&mut fixture, 80 + 172);
+
+        let canvas = fixture.canvas.read();
+        let darkest = *canvas.get_pixel(0, 0);
+        assert_ne!(darkest, Rgba([0, 0, 0, 0]));
     }
 }

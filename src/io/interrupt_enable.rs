@@ -17,22 +17,22 @@ pub struct InterruptEnable {
 impl InterruptEnable {
     pub fn set_vblank(&mut self, value: bool) {
         self.vblank = value;
-        self.value = set_bit(self.value, 0, value);
+        self.value = set_bit(&self.value, 0, value);
     }
 
     pub fn set_lcd_stat(&mut self, value: bool) {
         self.lcd_stat = value;
-        self.value = set_bit(self.value, 1, value);
+        self.value = set_bit(&self.value, 1, value);
     }
 
     pub fn set_timer_overflow(&mut self, value: bool) {
         self.timer_overflow = value;
-        self.value = set_bit(self.value, 2, value);
+        self.value = set_bit(&self.value, 2, value);
     }
 
     pub fn set_p10_p13_transition(&mut self, value: bool) {
         self.p10_13_transition = value;
-        self.value = set_bit(self.value, 4, value);
+        self.value = set_bit(&self.value, 4, value);
     }
 
     pub fn update(&mut self, value: Byte) {

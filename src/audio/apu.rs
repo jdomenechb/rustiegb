@@ -1,215 +1,155 @@
+use crate::audio::channels::channel::{Channel, ChannelEvent, ChannelSignal};
+use crate::audio::channels::noise_channel::NoiseChannel;
+use crate::audio::channels::pulse_channel::PulseChannel;
+use crate::audio::channels::sweep_channel::SweepChannel;
+use crate::audio::channels::wave_channel::WaveChannel;
+use crate::audio::registers::nr52::NR52;
+use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::bus::address::Address;
 use crate::debug::Debuggable;
-use crate::io::audio_registers::nr52::NR52;
-use crate::io::audio_registers::nrxx::{NRxx, NRxxProperties};
-use crate::io::audio_registers::{AudioRegWritten, AudioRegisters};
 use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 use std::collections::BTreeMap;
 
+#[derive(Debug)]
+pub struct OutputData {
+    pub audio_unit_on: bool,
+    pub is_on: bool,
+    pub is_dac_on: bool,
+    pub signal: ChannelSignal,
+}
+
 pub struct Apu {
-    nr10: NRxx,
-    nr11: NRxx,
-    nr12: NRxx,
-    nr13: NRxx,
-    nr14: NRxx,
-
-    nr21: NRxx,
-    nr22: NRxx,
-    nr23: NRxx,
-    nr24: NRxx,
-
-    nr30: NRxx,
-    nr31: NRxx,
-    nr32: NRxx,
-    nr33: NRxx,
-    nr34: NRxx,
-
-    nr41: NRxx,
-    nr42: NRxx,
-    nr43: NRxx,
-    nr44: NRxx,
+    channel_1: SweepChannel,
+    channel_2: PulseChannel,
+    channel_3: WaveChannel,
+    channel_4: NoiseChannel,
 
     nr50: Byte,
     nr51: Byte,
-    pub nr52: NR52,
+    nr52: NR52,
 
-    // TO DELETE
-
-    // --- OTHER - Out of scope of register
-    // Audio
-    pub audio_1_reg_written: AudioRegWritten,
-    pub audio_2_reg_written: AudioRegWritten,
-    pub audio_3_reg_written: AudioRegWritten,
-    pub audio_4_reg_written: AudioRegWritten,
+    div_apu: Byte,
 }
 
 impl Apu {
-    pub fn step(&mut self) {}
-
-    pub fn audio_reg_have_been_written(
-        &mut self,
-    ) -> (
-        AudioRegWritten,
-        AudioRegWritten,
-        AudioRegWritten,
-        AudioRegWritten,
-    ) {
-        let to_return = (
-            self.audio_1_reg_written.clone(),
-            self.audio_2_reg_written.clone(),
-            self.audio_3_reg_written.clone(),
-            self.audio_4_reg_written.clone(),
-        );
-
-        self.audio_1_reg_written = AudioRegWritten::default();
-        self.audio_2_reg_written = AudioRegWritten::default();
-        self.audio_3_reg_written = AudioRegWritten::default();
-        self.audio_4_reg_written = AudioRegWritten::default();
-
-        to_return
+    pub fn single_step(&mut self) {
+        self.channel_1.single_step();
+        self.channel_2.single_step();
+        self.channel_3.single_step();
+        self.channel_4.single_step();
     }
 
-    pub fn update_audio_1_frequency(&mut self, frequency: Word) {
-        self.nr13.update_low_frequency(frequency);
-        self.nr14.update_high_frequency(frequency)
+    /// Ticks every 512 Hz
+    pub fn tick(&mut self) {
+        // Ticks every 256 Hz
+        let length_step = self.div_apu.is_multiple_of(2) && self.nr52.is_on();
+
+        if length_step {
+            let channel_event = self.channel_1.tick_length();
+            self.process_channel_event(channel_event);
+
+            let channel_event = self.channel_2.tick_length();
+            self.process_channel_event(channel_event);
+
+            let channel_event = self.channel_3.tick_length();
+            self.process_channel_event(channel_event);
+
+            let channel_event = self.channel_4.tick_length();
+            self.process_channel_event(channel_event);
+        }
+
+        // Ticks every 128 Hz
+        let sweep_step = matches!(self.div_apu, 2 | 6);
+
+        if sweep_step {
+            let channel_event = self.channel_1.tick_sweep();
+            self.process_channel_event(channel_event);
+        }
+
+        // Ticks every 64 Hz
+        let envelope_step = self.div_apu == 7;
+
+        if envelope_step {
+            self.channel_1.tick_envelope();
+            self.channel_2.tick_envelope();
+            self.channel_3.tick_envelope();
+            self.channel_4.tick_envelope();
+        }
+
+        self.div_apu = (self.div_apu + 1) % 8;
     }
 
-    pub fn read_audio_registers(&self, channel: u8) -> AudioRegisters {
-        match channel {
-            1 => AudioRegisters::new(
-                self.nr14.value,
-                self.nr13.value,
-                self.nr12.value,
-                self.nr11.value,
-                Some(self.nr10.value),
-            ),
-            2 => AudioRegisters::new(
-                self.nr24.value,
-                self.nr23.value,
-                self.nr22.value,
-                self.nr21.value,
-                None,
-            ),
-            3 => AudioRegisters::new(
-                self.nr34.value,
-                self.nr33.value,
-                self.nr32.value,
-                self.nr31.value,
-                Some(self.nr30.value),
-            ),
-            4 => AudioRegisters::new(
-                self.nr44.value,
-                self.nr43.value,
-                self.nr42.value,
-                self.nr41.value,
-                None,
-            ),
-            _ => panic!("Invalid channel provided"),
+    /// Length registers can be written even when audio is off
+    fn is_length_register(position: Word) -> bool {
+        matches!(
+            position,
+            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY
+                | Address::NR21_SOUND_2_WAVE_PATTERN_DUTY
+                | Address::NR31_SOUND_3_LENGTH
+                | Address::NR41_SOUND_4_LENGTH
+        )
+    }
+
+    fn clear(&mut self) {
+        let events = [
+            self.channel_1.clear(),
+            self.channel_2.clear(),
+            self.channel_3.clear(),
+            self.channel_4.clear(),
+        ];
+
+        for event in events {
+            self.process_channel_event(event);
+        }
+
+        self.nr50 = 0;
+        self.nr51 = 0;
+    }
+
+    fn process_channel_event(&mut self, channel_event: ChannelEvent) {
+        match channel_event {
+            ChannelEvent::ChannelEnabled(channel) => self.nr52.set_ro_channel_flag_active(channel),
+            ChannelEvent::ChannelDisabled(channel) => {
+                self.nr52.set_ro_channel_flag_inactive(channel)
+            }
+            ChannelEvent::None => (),
         }
     }
 
-    fn should_channel_be_turned_on(&self, channel: u8) -> bool {
-        let (nrx4, nrx2) = match channel {
-            1 => (self.nr14.value, self.nr12.value),
-            2 => (self.nr24.value, self.nr22.value),
-            3 => (self.nr34.value, self.nr32.value),
-            4 => (self.nr44.value, self.nr42.value),
-            _ => panic!("Invalid channel given"),
+    pub fn get_output_data(&self, channel: u8) -> OutputData {
+        let channel_selected: &dyn Channel = match channel {
+            1 => &self.channel_1,
+            2 => &self.channel_2,
+            3 => &self.channel_3,
+            4 => &self.channel_4,
+            _ => unreachable!(),
         };
 
-        (nrx4 & 0b1000_0000) == 0b1000_0000 && (nrx2 & 0b1111_1000) != 0b0000_0000
+        OutputData {
+            audio_unit_on: self.nr52.is_on(),
+            is_on: self.nr52.is_channel_on(channel),
+            is_dac_on: channel_selected.is_dac_on(),
+            signal: channel_selected.output_signal(),
+        }
     }
 }
 
 impl Default for Apu {
     fn default() -> Self {
         Self {
-            nr10: NRxx::new_from_properties(
-                0x80,
-                NRxxProperties::default().with_used_bits(0b0111_1111),
-            ),
-            nr11: NRxx::new_from_properties(
-                0xBF,
-                NRxxProperties::default().with_only_writable_bits(0b0011_1111),
-            ),
-            nr12: NRxx::new(0xF3),
-            nr13: NRxx::new_from_properties(
-                0xFF,
-                NRxxProperties::default().with_only_writable_bits(0xFF),
-            ),
-            nr14: NRxx::new_from_properties(
-                0xBF,
-                NRxxProperties::default()
-                    .with_used_bits(0b1100_0111)
-                    .with_only_writable_bits(0b1011_1111)
-                    .with_avoid_reset_on_bits(0b1000_0000),
-            ),
+            channel_1: SweepChannel::new(),
 
-            nr21: NRxx::new_from_properties(
-                0x3F,
-                NRxxProperties::default().with_only_writable_bits(0x3F),
-            ),
-            nr22: NRxx::new(0x00),
-            nr23: NRxx::new_from_properties(
-                0xFF,
-                NRxxProperties::default().with_only_writable_bits(0xFF),
-            ),
-            nr24: NRxx::new_from_properties(
-                0xBF,
-                NRxxProperties::default()
-                    .with_used_bits(0b1100_0111)
-                    .with_only_writable_bits(0xBF)
-                    .with_avoid_reset_on_bits(0b1000_0000),
-            ),
+            channel_2: PulseChannel::new(),
 
-            nr30: NRxx::new_from_properties(
-                0x7F,
-                NRxxProperties::default().with_used_bits(0b1000_0000),
-            ),
-            nr31: NRxx::new_from_properties(
-                0xFF,
-                NRxxProperties::default().with_only_writable_bits(0xFF),
-            ),
-            nr32: NRxx::new_from_properties(
-                0x9F,
-                NRxxProperties::default().with_used_bits(0b0110_0000),
-            ),
-            nr33: NRxx::new_from_properties(
-                0xFF,
-                NRxxProperties::default().with_only_writable_bits(0xFF),
-            ),
-            nr34: NRxx::new_from_properties(
-                0xBF,
-                NRxxProperties::default()
-                    .with_used_bits(0b1100_0111)
-                    .with_only_writable_bits(0xBF)
-                    .with_avoid_reset_on_bits(0b1000_0000),
-            ),
+            channel_3: WaveChannel::new(),
 
-            nr41: NRxx::new_from_properties(
-                0xFF,
-                NRxxProperties::default()
-                    .with_used_bits(0b0011_1111)
-                    .with_only_writable_bits(0xFF),
-            ),
-            nr42: NRxx::new(0x00),
-            nr43: NRxx::new(0x00),
-            nr44: NRxx::new_from_properties(
-                0xBF,
-                NRxxProperties::default()
-                    .with_used_bits(0b1100_0000)
-                    .with_only_writable_bits(0b1000_0000)
-                    .with_avoid_reset_on_bits(0b1000_0000),
-            ),
+            channel_4: NoiseChannel::new(),
 
             nr50: 0x77,
             nr51: 0xf3,
             nr52: NR52::default(),
-            audio_1_reg_written: AudioRegWritten::default(),
-            audio_2_reg_written: AudioRegWritten::default(),
-            audio_3_reg_written: AudioRegWritten::default(),
-            audio_4_reg_written: AudioRegWritten::default(),
+            div_apu: 0,
         }
     }
 }
@@ -217,33 +157,32 @@ impl Default for Apu {
 impl ReadMemory for Apu {
     fn read_byte(&self, position: Word) -> Byte {
         match position {
-            Address::NR10_SOUND_1_SWEEP => self.nr10.read(),
-            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => self.nr11.read(),
-            Address::NR12_SOUND_1_ENVELOPE => self.nr12.read(),
-            Address::NR13_SOUND_1_FR_LO => self.nr13.read(),
-            Address::NR14_SOUND_1_FR_HI => self.nr14.read(),
+            Address::NR10_SOUND_1_SWEEP..=Address::NR14_SOUND_1_FR_HI => self
+                .channel_1
+                .read_byte(position - Address::NR10_SOUND_1_SWEEP),
 
-            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => self.nr21.read(),
-            Address::NR22_SOUND_2_ENVELOPE => self.nr22.read(),
-            Address::NR23_SOUND_2_FR_LO => self.nr23.read(),
-            Address::NR24_SOUND_2_FR_HI => self.nr24.read(),
+            Address::NR20_SOUND_2_UNUSED..=Address::NR24_SOUND_2_FR_HI => self
+                .channel_2
+                .read_byte(position - Address::NR20_SOUND_2_UNUSED),
 
-            Address::NR30_SOUND_3_ON_OFF => self.nr30.read(),
-            Address::NR31_SOUND_3_LENGTH => self.nr31.read(),
-            Address::NR32_SOUND_3_OUTPUT_LEVEL => self.nr32.read(),
-            Address::NR33_SOUND_3_FR_LO => self.nr33.read(),
-            Address::NR34_SOUND_3_FR_HI => self.nr34.read(),
+            Address::NR30_SOUND_3_ON_OFF..=Address::NR34_SOUND_3_FR_HI => self
+                .channel_3
+                .read_byte(position - Address::NR30_SOUND_3_ON_OFF),
 
-            Address::NR40_SOUND_4_UNUSED => 0xFF,
-            Address::NR41_SOUND_4_LENGTH => self.nr41.read(),
-            Address::NR42_SOUND_4_ENVELOPE => self.nr42.read(),
-            Address::NR43_SOUND_4_FR_RANDOMNESS => self.nr43.read(),
-            Address::NR44_SOUND_4_CONTROL => self.nr44.read(),
+            Address::NR40_SOUND_4_UNUSED..=Address::NR44_SOUND_4_CONTROL => self
+                .channel_4
+                .read_byte(position - Address::NR40_SOUND_4_UNUSED),
 
             Address::NR50 => self.nr50,
             Address::NR51 => self.nr51,
-            Address::NR52_SOUND => self.nr52.value,
+            Address::NR52_SOUND => self.nr52.read(),
 
+            Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => {
+                self.channel_3.read_wave_pattern_byte(
+                    position - Address::WAVE_PATTERN_START,
+                    self.nr52.is_channel_on(3),
+                )
+            }
             _ => {
                 println!("Read address {position:X} not supported for APU");
                 0xFF
@@ -254,209 +193,118 @@ impl ReadMemory for Apu {
 
 impl WriteMemory for Apu {
     fn write_byte(&mut self, position: Word, value: Byte) {
-        match position {
-            Address::NR10_SOUND_1_SWEEP => {
-                if self.nr52.is_on() {
-                    self.nr10.update(value);
-                    self.audio_1_reg_written.sweep_or_wave_onoff = true;
-                }
-            }
-            Address::NR11_SOUND_1_WAVE_PATTERN_DUTY => {
-                if self.nr52.is_on() {
-                    self.nr11.update(value);
-                    self.audio_1_reg_written.length = true;
-                }
-            }
-            Address::NR12_SOUND_1_ENVELOPE => {
-                if self.nr52.is_on() {
-                    self.nr12.update(value);
-                    self.audio_1_reg_written.envelope_or_wave_out_lvl = true;
-                }
-            }
-            Address::NR13_SOUND_1_FR_LO => {
-                if self.nr52.is_on() {
-                    self.nr13.update(value);
-                    self.audio_1_reg_written.frequency_or_poly_counter = true;
-                }
-            }
-            Address::NR14_SOUND_1_FR_HI => {
-                if !self.nr52.is_on() {
-                    return;
-                }
+        if position == Address::NR52_SOUND {
+            let write_effect = self.nr52.write(value);
 
-                self.audio_1_reg_written.control = true;
+            match write_effect {
+                WriteEffect::AudioOff => self.clear(),
+                WriteEffect::AudioOn => self.div_apu = 0,
+                WriteEffect::None => (),
+                _ => unreachable!("WriteEffect not supported for NR52"),
+            }
 
-                self.nr14.update(value);
+            return;
+        }
 
-                if self.should_channel_be_turned_on(1) {
-                    self.nr52.set_ro_channel_flag_active(1);
-                }
-            }
-            Address::NR21_SOUND_2_WAVE_PATTERN_DUTY => {
-                if self.nr52.is_on() {
-                    self.nr21.update(value);
-                    self.audio_2_reg_written.length = true;
-                }
-            }
-            Address::NR22_SOUND_2_ENVELOPE => {
-                if self.nr52.is_on() {
-                    self.nr22.update(value);
-                    self.audio_2_reg_written.envelope_or_wave_out_lvl = true;
-                }
-            }
-            Address::NR23_SOUND_2_FR_LO => {
-                if self.nr52.is_on() {
-                    self.nr23.update(value);
-                    self.audio_2_reg_written.frequency_or_poly_counter = true;
-                }
-            }
-            Address::NR24_SOUND_2_FR_HI => {
-                if !self.nr52.is_on() {
-                    return;
-                }
+        if (Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END).contains(&position) {
+            self.channel_3.write_wave_pattern_byte(
+                position - Address::WAVE_PATTERN_START,
+                value,
+                self.nr52.is_channel_on(3),
+            );
 
-                self.audio_2_reg_written.control = true;
+            return;
+        }
 
-                if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_ro_channel_flag_active(2);
-                }
+        let audio_is_off = !self.nr52.is_on();
 
-                self.nr24.update(value);
-            }
-            Address::NR30_SOUND_3_ON_OFF => {
-                if self.nr52.is_on() {
-                    self.nr30.update(value);
-                    self.audio_3_reg_written.sweep_or_wave_onoff = true;
-                }
-            }
-            Address::NR31_SOUND_3_LENGTH => {
-                if self.nr52.is_on() {
-                    self.nr31.update(value);
-                    self.audio_3_reg_written.length = true;
-                }
-            }
-            Address::NR32_SOUND_3_OUTPUT_LEVEL => {
-                if self.nr52.is_on() {
-                    self.nr32.update(value);
-                }
-            }
-            Address::NR33_SOUND_3_FR_LO => {
-                if self.nr52.is_on() {
-                    self.nr33.update(value);
-                    self.audio_3_reg_written.frequency_or_poly_counter = true;
-                }
-            }
-            Address::NR34_SOUND_3_FR_HI => {
-                if !self.nr52.is_on() {
-                    return;
-                }
+        if audio_is_off && !Self::is_length_register(position) {
+            return;
+        }
 
-                self.audio_3_reg_written.control = true;
+        let value = if audio_is_off
+            && !matches!(
+                position,
+                Address::NR31_SOUND_3_LENGTH | Address::NR41_SOUND_4_LENGTH
+            ) {
+            value & 0b0011_1111
+        } else {
+            value
+        };
 
-                if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_ro_channel_flag_active(3);
-                }
+        let channel_event = match position {
+            Address::NR10_SOUND_1_SWEEP..=Address::NR14_SOUND_1_FR_HI => {
+                self.channel_1
+                    .write_byte(
+                        position - Address::NR10_SOUND_1_SWEEP,
+                        value,
+                        &self.div_apu,
+                        self.nr52.is_channel_on(1),
+                    )
+                    .0
+            }
 
-                self.nr34.update(value);
+            Address::NR20_SOUND_2_UNUSED..=Address::NR24_SOUND_2_FR_HI => {
+                self.channel_2
+                    .write_byte(
+                        position - Address::NR20_SOUND_2_UNUSED,
+                        value,
+                        &self.div_apu,
+                        self.nr52.is_channel_on(2),
+                    )
+                    .0
             }
-            Address::NR41_SOUND_4_LENGTH => {
-                if self.nr52.is_on() {
-                    self.nr41.update(value);
-                    self.audio_4_reg_written.length = true;
-                }
-            }
-            Address::NR42_SOUND_4_ENVELOPE => {
-                if self.nr52.is_on() {
-                    self.nr42.update(value);
-                    self.audio_4_reg_written.envelope_or_wave_out_lvl = true;
-                }
-            }
-            Address::NR43_SOUND_4_FR_RANDOMNESS => {
-                if self.nr52.is_on() {
-                    self.nr43.update(value);
-                    self.audio_4_reg_written.frequency_or_poly_counter = true;
-                }
-            }
-            Address::NR44_SOUND_4_CONTROL => {
-                if !self.nr52.is_on() {
-                    return;
-                }
 
-                self.audio_4_reg_written.control = true;
-
-                if value & 0b10000000 == 0b10000000 {
-                    self.nr52.set_ro_channel_flag_active(4);
-                }
-
-                self.nr44.update(value);
+            Address::NR30_SOUND_3_ON_OFF..=Address::NR34_SOUND_3_FR_HI => {
+                self.channel_3
+                    .write_byte(
+                        position - Address::NR30_SOUND_3_ON_OFF,
+                        value,
+                        &self.div_apu,
+                        self.nr52.is_channel_on(3),
+                    )
+                    .0
             }
+
+            Address::NR40_SOUND_4_UNUSED..=Address::NR44_SOUND_4_CONTROL => {
+                self.channel_4
+                    .write_byte(
+                        position - Address::NR40_SOUND_4_UNUSED,
+                        value,
+                        &self.div_apu,
+                        self.nr52.is_channel_on(4),
+                    )
+                    .0
+            }
+
             Address::NR50 => {
-                if self.nr52.is_on() {
-                    self.nr50 = value;
-                }
+                self.nr50 = value;
+                ChannelEvent::None
             }
             Address::NR51 => {
-                if self.nr52.is_on() {
-                    self.nr51 = value;
-                }
+                self.nr51 = value;
+                ChannelEvent::None
             }
-            Address::NR52_SOUND => {
-                self.nr52.update(value);
 
-                if self.nr52.is_on() {
-                    self.nr50 = 0;
-                    self.nr51 = 0;
-                } else {
-                    self.nr10.reset();
-                    self.nr11.reset();
-                    self.nr12.reset();
-                    self.nr13.reset();
-                    self.nr14.reset();
-
-                    // NR20 is not used
-                    self.nr21.reset();
-                    self.nr22.reset();
-                    self.nr23.reset();
-                    self.nr24.reset();
-
-                    self.nr30.reset();
-                    self.nr31.reset();
-                    self.nr32.reset();
-                    self.nr33.reset();
-                    self.nr34.reset();
-
-                    self.nr41.reset();
-                    self.nr42.reset();
-                    self.nr43.reset();
-                    self.nr44.reset();
-
-                    self.nr52.set_ro_channel_flag_inactive(1);
-                    self.nr52.set_ro_channel_flag_inactive(2);
-                    self.nr52.set_ro_channel_flag_inactive(3);
-                    self.nr52.set_ro_channel_flag_inactive(4);
-                }
-            }
-            Address::NR20_SOUND_2_UNUSED => {
-                // Ignored, not used
-            }
-            Address::NR40_SOUND_4_UNUSED => {
-                // Ignored, not used
-            }
             _ => panic!("Write address {position:X} not supported for APU"),
-        }
+        };
+
+        self.process_channel_event(channel_event);
     }
 }
 
 impl Debuggable for Apu {
-    fn get_debug_values(&self) -> BTreeMap<&str, String> {
+    fn get_debug_values(&self) -> BTreeMap<&'static str, String> {
         BTreeMap::from([
-            ("NR12", format!("{:X}", self.nr12.value)),
-            ("NR13", format!("{:X}", self.nr13.value)),
-            ("NR14", format!("{:X}", self.nr14.value)),
-            ("NR24", format!("{:X}", self.nr24.value)),
-            ("NR34", format!("{:X}", self.nr34.value)),
-            ("NR44", format!("{:X}", self.nr44.value)),
-            ("NR52", format!("{:X}", self.nr52.value)),
+            // ("NR12", format!("{:X}", self.nr12.value())),
+            // ("NR22", format!("{:X}", self.nr22.value())),
+            // ("NR30", format!("{:X}", self.nr30.value())),
+            // ("NR42", format!("{:X}", self.nr42.value())),
+            // ("NR14", format!("{:X}", self.nr14.value())),
+            // ("NR24", format!("{:X}", self.nr24.value())),
+            // ("NR34", format!("{:X}", self.nr34.value())),
+            // ("NR44", format!("{:X}", self.nr44.value())),
+            // ("NR52", format!("{:X}", self.nr52.value())),
         ])
     }
 }
@@ -548,6 +396,258 @@ mod tests {
         }
 
         check_basic_audio_registers_are_reset(&mut apu);
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_length_registers_are_writable_and_kept() {
+        let items = [
+            (
+                1,
+                Address::NR11_SOUND_1_WAVE_PATTERN_DUTY,
+                Address::NR12_SOUND_1_ENVELOPE,
+                0xF8,
+            ),
+            (
+                2,
+                Address::NR21_SOUND_2_WAVE_PATTERN_DUTY,
+                Address::NR22_SOUND_2_ENVELOPE,
+                0xF8,
+            ),
+            (
+                3,
+                Address::NR31_SOUND_3_LENGTH,
+                Address::NR30_SOUND_3_ON_OFF,
+                0x80,
+            ),
+            (
+                4,
+                Address::NR41_SOUND_4_LENGTH,
+                Address::NR42_SOUND_4_ENVELOPE,
+                0xF8,
+            ),
+        ];
+
+        for (channel, length_address, dac_address, dac_value) in items {
+            let mut apu = Apu::default();
+            apu.write_byte(Address::NR52_SOUND, 0);
+
+            // Length counter is left with only 1 tick to go
+            apu.write_byte(length_address, 0xFF);
+
+            apu.write_byte(Address::NR52_SOUND, 0x80);
+            apu.write_byte(dac_address, dac_value);
+            apu.write_byte(get_trigger_address(channel), 0b1100_0000);
+
+            let channel_flag = 1 << (channel - 1);
+            let is_active = |apu: &Apu| apu.read_byte(Address::NR52_SOUND) & channel_flag != 0;
+
+            assert!(is_active(&apu), "Channel {channel} should be active");
+
+            apu.tick();
+
+            assert!(
+                !is_active(&apu),
+                "Channel {channel} should have run out of length"
+            );
+        }
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_length_is_not_clocked() {
+        let mut apu = Apu::default();
+
+        apu.write_byte(Address::NR41_SOUND_4_LENGTH, 0xFF);
+        apu.write_byte(Address::NR42_SOUND_4_ENVELOPE, 0xF8);
+        apu.write_byte(Address::NR44_SOUND_4_CONTROL, 0b1100_0000);
+        apu.write_byte(Address::NR52_SOUND, 0);
+
+        for _ in 0..16 {
+            apu.tick();
+        }
+
+        apu.write_byte(Address::NR52_SOUND, 0x80);
+        apu.write_byte(Address::NR42_SOUND_4_ENVELOPE, 0xF8);
+        apu.write_byte(Address::NR44_SOUND_4_CONTROL, 0b1100_0000);
+
+        assert_eq!(apu.read_byte(Address::NR52_SOUND) & 0b1000, 0b1000);
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_the_dac_of_every_channel_is_off() {
+        let items = [
+            (
+                1,
+                Address::NR12_SOUND_1_ENVELOPE,
+                0xFF,
+                Address::NR14_SOUND_1_FR_HI,
+            ),
+            (
+                2,
+                Address::NR22_SOUND_2_ENVELOPE,
+                0xFF,
+                Address::NR24_SOUND_2_FR_HI,
+            ),
+            (
+                3,
+                Address::NR30_SOUND_3_ON_OFF,
+                0x80,
+                Address::NR34_SOUND_3_FR_HI,
+            ),
+            (
+                4,
+                Address::NR42_SOUND_4_ENVELOPE,
+                0xFF,
+                Address::NR44_SOUND_4_CONTROL,
+            ),
+        ];
+
+        for (channel, dac_address, dac_value, trigger_address) in items {
+            let mut apu = Apu::default();
+            apu.write_byte(dac_address, dac_value);
+
+            apu.write_byte(Address::NR52_SOUND, 0);
+            apu.write_byte(dac_address, dac_value);
+            apu.write_byte(Address::NR52_SOUND, 0x80);
+            apu.write_byte(trigger_address, 0x80);
+
+            let channel_flag = 1 << (channel - 1);
+
+            assert_eq!(
+                apu.read_byte(Address::NR52_SOUND) & channel_flag,
+                0,
+                "Channel {channel} should not be activated by a trigger after power cycle"
+            );
+        }
+    }
+
+    #[test]
+    fn test_channel_flags_are_cleared_when_sound_is_turned_off() {
+        let mut apu = Apu::default();
+        apu.write_byte(Address::NR12_SOUND_1_ENVELOPE, 0xF8);
+        apu.write_byte(Address::NR14_SOUND_1_FR_HI, 0x80);
+        assert_eq!(apu.read_byte(Address::NR52_SOUND) & 0b1, 0b1);
+
+        apu.write_byte(Address::NR52_SOUND, 0);
+        apu.write_byte(Address::NR52_SOUND, 0x80);
+
+        assert_eq!(apu.read_byte(Address::NR52_SOUND) & 0b1111, 0);
+    }
+
+    #[test]
+    fn test_wave_pattern_reads_0xff_while_channel_3_is_on() {
+        let mut apu = Apu::default();
+        apu.write_byte(Address::WAVE_PATTERN_START, 0x12);
+        assert_eq!(apu.read_byte(Address::WAVE_PATTERN_START), 0x12);
+
+        apu.write_byte(Address::NR30_SOUND_3_ON_OFF, 0x80);
+        apu.write_byte(Address::NR34_SOUND_3_FR_HI, 0x80);
+
+        assert_eq!(apu.read_byte(Address::WAVE_PATTERN_START), 0xFF);
+
+        apu.write_byte(Address::NR30_SOUND_3_ON_OFF, 0x00);
+
+        assert_eq!(apu.read_byte(Address::WAVE_PATTERN_START), 0x12);
+    }
+
+    #[test]
+    fn test_single_step_does_not_panic_and_advances_wave_channel() {
+        let mut apu = Apu::default();
+        apu.write_byte(Address::NR30_SOUND_3_ON_OFF, 0x80);
+        apu.write_byte(Address::NR33_SOUND_3_FR_LO, 0xFF);
+        apu.write_byte(Address::NR34_SOUND_3_FR_HI, 0x87);
+
+        for _ in 0..8 {
+            apu.single_step();
+        }
+
+        assert_eq!(apu.read_byte(Address::NR52_SOUND) & 0b100, 0b100);
+    }
+
+    #[test]
+    fn test_when_sound_is_turned_off_wave_pattern_register_is_writable() {
+        let mut apu = Apu::default();
+
+        apu.write_byte(Address::NR52_SOUND, 0);
+
+        for position in Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END {
+            apu.write_byte(position, 0xFF);
+            assert_eq!(0xFF, apu.read_byte(position));
+        }
+    }
+
+    #[test]
+    fn test_correct_data_when_writing_wave_registers() {
+        let mut apu = Apu::default();
+
+        // WAVE
+        for position in Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END {
+            apu.write_byte(position, 0xFF);
+            apu.write_byte(position, 0);
+
+            assert_eq!(
+                apu.read_byte(position),
+                0,
+                "Wrong data when writing register {:X}",
+                position
+            );
+        }
+    }
+
+    #[test]
+    fn test_when_channel_is_triggered_nr52_channel_flag_is_set() {
+        let mut apu = Apu::default();
+
+        for channel in 1..=4 {
+            let address = get_trigger_address(channel);
+
+            let dac_value = if channel == 3 {
+                0b1000_0000
+            } else {
+                0b1111_1000
+            };
+            apu.write_byte(get_dac_address(channel), dac_value);
+            apu.write_byte(address, 0b1000_0000);
+
+            let flag = (apu.read_byte(Address::NR52_SOUND) >> (channel - 1) & 0b1) == 1;
+            assert!(flag, "Channel {} should be active", channel);
+        }
+    }
+
+    #[test]
+    fn test_when_dac_is_turned_off_channel_flag_is_set_off() {
+        let mut apu = Apu::default();
+
+        for channel in 1..=4 {
+            let trigger_address = get_trigger_address(channel);
+            apu.write_byte(trigger_address, 0b1000_0000);
+
+            let dac_address = get_dac_address(channel);
+
+            apu.write_byte(dac_address, 0);
+
+            let flag = (apu.read_byte(Address::NR52_SOUND) >> (channel - 1) & 0b1) == 0;
+            assert!(flag, "Channel {} should not be active", channel);
+        }
+    }
+
+    fn get_trigger_address(channel: u8) -> Word {
+        match channel {
+            1 => Address::NR14_SOUND_1_FR_HI,
+            2 => Address::NR24_SOUND_2_FR_HI,
+            3 => Address::NR34_SOUND_3_FR_HI,
+            4 => Address::NR44_SOUND_4_CONTROL,
+            _ => unreachable!(),
+        }
+    }
+
+    fn get_dac_address(channel: u8) -> Word {
+        match channel {
+            1 => Address::NR12_SOUND_1_ENVELOPE,
+            2 => Address::NR22_SOUND_2_ENVELOPE,
+            3 => Address::NR30_SOUND_3_ON_OFF,
+            4 => Address::NR42_SOUND_4_ENVELOPE,
+            _ => unreachable!(),
+        }
     }
 
     // TODO: Implement DIV-APU

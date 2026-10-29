@@ -8,6 +8,14 @@ pub trait WriteMemory {
     fn write_byte(&mut self, position: Word, value: Byte);
 }
 
+pub trait ReadWordMemory {
+    fn read_word(&self, position: Word) -> Word;
+}
+
+pub trait WriteWordMemory {
+    fn write_word(&mut self, position: Word, value: Word);
+}
+
 #[readonly::make]
 #[derive(Clone)]
 pub struct MemorySector {

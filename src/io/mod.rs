@@ -1,4 +1,3 @@
-pub mod audio_registers;
 mod div;
 mod dma;
 mod interrupt_enable;

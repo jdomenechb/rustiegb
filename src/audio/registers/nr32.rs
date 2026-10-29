@@ -1,0 +1,80 @@
+use crate::Byte;
+use crate::audio::registers::{AudioRegister, WriteEffect};
+
+/// Output level
+/// ```
+/// 7
+/// 6 - RW - Output level
+/// 5 - RW - Output level
+/// 4
+/// 3
+/// 2
+/// 1
+/// 0
+/// ```
+pub struct NR32 {
+    value: Byte,
+}
+
+impl NR32 {
+    pub fn output_level(&self) -> f32 {
+        match (self.value >> 5) & 0b11 {
+            0b00 => 0.0,
+            0b01 => 1.0,
+            0b10 => 0.5,
+            0b11 => 0.25,
+            _ => unreachable!("Unrecognized output level"),
+        }
+    }
+}
+
+impl AudioRegister for NR32 {
+    const READ_MASK: Byte = 0b1001_1111;
+    const WRITE_MASK: Byte = 0b1001_1111;
+
+    fn set_value(&mut self, value: Byte) -> WriteEffect {
+        self.value = value;
+
+        WriteEffect::None
+    }
+
+    fn value(&self) -> Byte {
+        self.value
+    }
+}
+
+impl Default for NR32 {
+    fn default() -> Self {
+        Self { value: 0x9F }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_can_read_and_write_the_value() {
+        let mut fixture = NR32::default();
+        fixture.write(0xFF);
+        assert_eq!(fixture.read(), 0xFF);
+
+        fixture.write(0x00);
+        assert_eq!(fixture.read(), 0b1001_1111);
+    }
+
+    #[test]
+    fn it_reports_the_output_level() {
+        let mut fixture = NR32::default();
+
+        for (value, expected) in [
+            (0b0000_0000, 0.0),
+            (0b0010_0000, 1.0),
+            (0b0100_0000, 0.5),
+            (0b0110_0000, 0.25),
+        ] {
+            fixture.write(value);
+            assert_eq!(fixture.output_level(), expected);
+        }
+    }
+}

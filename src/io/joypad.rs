@@ -80,6 +80,11 @@ impl JoypadHandler {
     }
 
     pub fn release(&self, key: Key) {
+        if key == Key::Space {
+            self.runtime_config.write().user_speed_multiplier = 1;
+            return;
+        }
+
         let mut io_registers = self.io_registers.write();
         match key {
             Key::X => io_registers.p1.a = false,
@@ -90,7 +95,6 @@ impl JoypadHandler {
             Key::Right => io_registers.p1.right = false,
             Key::Up => io_registers.p1.up = false,
             Key::Down => io_registers.p1.down = false,
-            Key::Space => self.runtime_config.write().user_speed_multiplier = 1,
             _ => {}
         }
     }
