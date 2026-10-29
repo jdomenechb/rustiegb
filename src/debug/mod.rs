@@ -23,7 +23,7 @@ pub const IO_WRITE_WATCHPOINTS: [Word; 0] = [
 ];
 
 pub trait Debuggable {
-    fn get_debug_values(&self) -> BTreeMap<&str, String>;
+    fn get_debug_values(&self) -> BTreeMap<&'static str, String>;
 }
 
 pub struct OutputDebug {

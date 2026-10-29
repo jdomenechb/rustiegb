@@ -18,6 +18,7 @@ use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::utils::math::is_bit_set;
 use crate::{Byte, Word};
 use std::collections::BTreeMap;
+use std::sync::{Arc, RwLock};
 
 pub struct IORegisters {
     pub p1: Joypad,
@@ -29,7 +30,7 @@ pub struct IORegisters {
     pub timer_control: TimerControl,
     pub interrupt_flag: InterruptFlag,
 
-    pub apu: Apu,
+    pub apu: Arc<RwLock<Apu>>,
 
     pub lcdc: Lcdc,
     pub stat: Stat,
@@ -58,13 +59,16 @@ impl IORegisters {
         }
 
         let old_div_value = self.div.read();
-        self.div.single_step();
-        self.apu.single_step();
+
+        {
+            self.div.single_step();
+            self.apu.write().unwrap().single_step();
+        }
 
         let is_div_apu = is_bit_set(&old_div_value, 4) && !is_bit_set(&self.div.read(), 4);
 
         if is_div_apu {
-            self.apu.tick();
+            self.apu.write().unwrap().tick();
         }
 
         if !self.timer_control.started {
@@ -132,11 +136,15 @@ impl IORegisters {
     pub fn ly_reset_wo_interrupt(&mut self) {
         self.ly.reset();
     }
+
+    pub fn get_apu(&self) -> Arc<RwLock<Apu>> {
+        self.apu.clone()
+    }
 }
 
 impl Debuggable for IORegisters {
-    fn get_debug_values(&self) -> BTreeMap<&str, String> {
-        self.apu.get_debug_values()
+    fn get_debug_values(&self) -> BTreeMap<&'static str, String> {
+        self.apu.read().unwrap().get_debug_values()
     }
 }
 
@@ -152,7 +160,7 @@ impl Default for IORegisters {
             timer_control: TimerControl::default(),
             interrupt_flag: InterruptFlag::new(),
 
-            apu: Apu::default(),
+            apu: Arc::new(RwLock::new(Apu::default())),
 
             lcdc: Lcdc::default(),
             stat: Stat::default(),
@@ -192,7 +200,7 @@ impl ReadMemory for IORegisters {
 
             Address::APU_START..=Address::APU_END
             | Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => {
-                self.apu.read_byte(position)
+                self.apu.read().unwrap().read_byte(position)
             }
             Address::LCDC => (&self.lcdc).into(),
             Address::STAT => (&self.stat).into(),
@@ -242,7 +250,7 @@ impl WriteMemory for IORegisters {
             Address::IF_INTERRUPT_FLAG => self.interrupt_flag.update(value),
             Address::APU_START..=Address::APU_END
             | Address::WAVE_PATTERN_START..=Address::WAVE_PATTERN_END => {
-                self.apu.write_byte(position, value)
+                self.apu.write().unwrap().write_byte(position, value)
             }
             Address::LCDC => self.lcdc.update(value),
             Address::STAT => self.stat.update(value),

@@ -8,6 +8,14 @@ pub enum ChannelEvent {
     ChannelDisabled(u8),
 }
 
+#[derive(Debug)]
+pub enum ChannelSignal {
+    Sweep { frequency: f32, wave_duty: f32 },
+    Pulse { frequency: f32, wave_duty: f32 },
+    Wave { frequency: f32 },
+    Noise {},
+}
+
 pub trait Channel: ReadMemory {
     fn clear(&mut self) -> ChannelEvent;
 
@@ -22,4 +30,8 @@ pub trait Channel: ReadMemory {
     fn tick_length(&mut self) -> ChannelEvent;
 
     fn single_step(&mut self);
+
+    fn is_dac_on(&self) -> bool;
+
+    fn output_signal(&self) -> ChannelSignal;
 }

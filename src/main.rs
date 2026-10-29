@@ -15,6 +15,7 @@ mod io;
 mod memory;
 mod utils;
 
+use crate::audio::output::CpalAudioOutput;
 use crate::bus::cpu_memory_bus::CpuMemoryBus;
 use crate::cartridge::Cartridge;
 use crate::configuration::{Configuration, RuntimeConfig};
@@ -62,6 +63,7 @@ fn main() {
 
     // --- Setting up GB components
     let io_registers = Arc::new(RwLock::new(IORegisters::default()));
+    let apu = { io_registers.read().apu.clone() };
     let memory = Arc::new(RwLock::new(Memory::new(
         io_registers.clone(),
         cartridge,
@@ -93,9 +95,7 @@ fn main() {
             configuration.bootstrap_path.is_some(),
         );
 
-        //let audio_unit_output = CpalAudioUnitOutput::new();
-
-        //let mut audio_unit = AudioUnit::new(audio_unit_output, io_registers_thread.clone());
+        let audio_output = CpalAudioOutput::play(apu);
 
         let frame_duration =
             Duration::from_secs_f64(Cpu::AVAILABLE_CCYCLES_PER_FRAME as f64 / GB_CLOCK_HZ);
@@ -134,8 +134,6 @@ fn main() {
                 }
 
                 let muted = { runtime_config_thread.read().muted };
-
-                //audio_unit.step(last_instruction_cycles, muted);
             }
         }
     });

@@ -1,4 +1,4 @@
-use crate::audio::channels::channel::{Channel, ChannelEvent};
+use crate::audio::channels::channel::{Channel, ChannelEvent, ChannelSignal};
 use crate::audio::registers::{
     AudioRegister, InitialLengthRegister, TriggerableRegister, WriteEffect,
 };
@@ -55,6 +55,10 @@ impl<
 
     pub fn get_nrx0(&self) -> &T {
         &self.nrx0
+    }
+
+    pub fn get_nrx1(&self) -> &U {
+        &self.nrx1
     }
 
     fn is_length_enabled(&self) -> bool {
@@ -185,6 +189,14 @@ impl<
     }
 
     fn single_step(&mut self) {}
+
+    fn is_dac_on(&self) -> bool {
+        self.dac
+    }
+
+    fn output_signal(&self) -> ChannelSignal {
+        !unimplemented!()
+    }
 }
 
 impl<

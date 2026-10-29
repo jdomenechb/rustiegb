@@ -1,5 +1,6 @@
-use crate::audio::channels::channel::{Channel, ChannelEvent};
+use crate::audio::channels::channel::{Channel, ChannelEvent, ChannelSignal};
 use crate::audio::channels::default_channel::DefaultChannel;
+use crate::audio::channels::pulse_channel::PulseChannel;
 use crate::audio::channels::sweep_channel::SweepChannel;
 use crate::audio::channels::wave_channel::WaveChannel;
 use crate::audio::registers::no_register::NoRegister;
@@ -7,10 +8,7 @@ use crate::audio::registers::nr41::NR41;
 use crate::audio::registers::nr43::NR43;
 use crate::audio::registers::nr44::NR44;
 use crate::audio::registers::nr52::NR52;
-use crate::audio::registers::nrx1::NRX1;
 use crate::audio::registers::nrx2::NRX2;
-use crate::audio::registers::nrx3::NRX3;
-use crate::audio::registers::nrx4::NRX4;
 use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::bus::address::Address;
 use crate::debug::Debuggable;
@@ -18,9 +16,18 @@ use crate::memory::memory_sector::{ReadMemory, WriteMemory};
 use crate::{Byte, Word};
 use std::collections::BTreeMap;
 
+#[derive(Debug)]
+pub struct OutputData {
+    pub audio_unit_on: bool,
+    pub channel: u8,
+    pub is_on: bool,
+    pub is_dac_on: bool,
+    pub signal: ChannelSignal,
+}
+
 pub struct Apu {
     channel_1: SweepChannel,
-    channel_2: DefaultChannel<NoRegister, NRX1, NRX2, NRX3, NRX4>,
+    channel_2: PulseChannel,
     channel_3: WaveChannel,
     channel_4: DefaultChannel<NoRegister, NR41, NRX2, NR43, NR44>,
 
@@ -108,6 +115,24 @@ impl Apu {
             ChannelEvent::None => (),
         }
     }
+
+    pub fn get_output_data(&self, channel: u8) -> OutputData {
+        let channel_selected: &dyn Channel = match channel {
+            1 => &self.channel_1,
+            2 => &self.channel_2,
+            3 => &self.channel_3,
+            4 => &self.channel_4,
+            _ => unreachable!(),
+        };
+
+        OutputData {
+            audio_unit_on: self.nr52.is_on(),
+            channel,
+            is_on: self.nr52.is_on(),
+            is_dac_on: channel_selected.is_dac_on(),
+            signal: channel_selected.output_signal(),
+        }
+    }
 }
 
 impl Default for Apu {
@@ -115,15 +140,7 @@ impl Default for Apu {
         Self {
             channel_1: SweepChannel::new(),
 
-            channel_2: DefaultChannel::new(
-                2,
-                NoRegister::default(),
-                NRX1::new_nr21(),
-                NRX2::new_nr22(),
-                NRX3::default(),
-                NRX4::default(),
-                64,
-            ),
+            channel_2: PulseChannel::new(),
 
             channel_3: WaveChannel::new(),
 
@@ -285,7 +302,7 @@ impl WriteMemory for Apu {
 }
 
 impl Debuggable for Apu {
-    fn get_debug_values(&self) -> BTreeMap<&str, String> {
+    fn get_debug_values(&self) -> BTreeMap<&'static str, String> {
         BTreeMap::from([
             // ("NR12", format!("{:X}", self.nr12.value())),
             // ("NR22", format!("{:X}", self.nr22.value())),

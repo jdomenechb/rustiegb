@@ -24,6 +24,16 @@ impl NRX1 {
     pub fn new_nr21() -> Self {
         Self { value: 0x3F }
     }
+
+    pub fn output_wave_duty(&self) -> f32 {
+        match self.value >> 6 {
+            0b00 => 0.125,
+            0b01 => 0.25,
+            0b10 => 0.50,
+            0b11 => 0.75,
+            _ => unreachable!("Unrecognized wave duty type"),
+        }
+    }
 }
 
 impl AudioRegister for NRX1 {

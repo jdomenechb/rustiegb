@@ -1,4 +1,4 @@
-use crate::audio::channels::channel::{Channel, ChannelEvent};
+use crate::audio::channels::channel::{Channel, ChannelEvent, ChannelSignal};
 use crate::audio::channels::default_channel::DefaultChannel;
 use crate::audio::registers::WriteEffect;
 use crate::audio::registers::nr30::NR30;
@@ -139,6 +139,14 @@ impl Channel for WaveChannel {
             self.cycles_since_read = 0;
             self.last_read_index = self.sample_index;
         }
+    }
+
+    fn is_dac_on(&self) -> bool {
+        self.channel.is_dac_on()
+    }
+
+    fn output_signal(&self) -> ChannelSignal {
+        unimplemented!()
     }
 }
 

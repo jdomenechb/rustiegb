@@ -1,4 +1,4 @@
-use crate::audio::channels::channel::{Channel, ChannelEvent};
+use crate::audio::channels::channel::{Channel, ChannelEvent, ChannelSignal};
 use crate::audio::channels::default_channel::DefaultChannel;
 use crate::audio::registers::WriteEffect;
 use crate::audio::registers::nr10::{NR10, SweepDirection};
@@ -185,5 +185,20 @@ impl Channel for SweepChannel {
         self.channel.tick_length()
     }
 
-    fn single_step(&mut self) {}
+    fn single_step(&mut self) {
+        self.channel.single_step();
+    }
+
+    fn is_dac_on(&self) -> bool {
+        self.channel.is_dac_on()
+    }
+
+    fn output_signal(&self) -> ChannelSignal {
+        let frequency = 131072.0 / (2048.0 - self.sweep_frequency_shadow_register as f32);
+
+        ChannelSignal::Sweep {
+            frequency,
+            wave_duty: self.channel.get_nrx1().output_wave_duty(),
+        }
+    }
 }
