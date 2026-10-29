@@ -35,7 +35,16 @@ impl<
     Y: AudioRegister + TriggerableRegister,
 > DefaultChannel<T, U, V, X, Y>
 {
-    pub fn new(number: u8, nrx0: T, nrx1: U, nrx2: V, nrx3: X, nrx4: Y, max_length: Word) -> Self {
+    pub fn new(
+        number: u8,
+        nrx0: T,
+        nrx1: U,
+        nrx2: V,
+        nrx3: X,
+        nrx4: Y,
+        max_length: Word,
+        is_dac_enabled: bool,
+    ) -> Self {
         Self {
             number,
             nrx0,
@@ -45,7 +54,7 @@ impl<
             nrx4,
             length_counter: 0,
             max_length,
-            dac: true,
+            dac: is_dac_enabled,
         }
     }
 
@@ -59,6 +68,10 @@ impl<
 
     pub fn get_nrx1(&self) -> &U {
         &self.nrx1
+    }
+
+    pub fn get_nrx2(&self) -> &V {
+        &self.nrx2
     }
 
     fn is_length_enabled(&self) -> bool {
@@ -241,6 +254,7 @@ mod tests {
             NRX3::default(),
             NRX4::default(),
             64,
+            false,
         );
 
         fixture.write_byte(1, 0xFF, &0, false);
@@ -268,6 +282,7 @@ mod tests {
             NRX3::default(),
             NRX4::default(),
             256,
+            false,
         );
 
         fixture.write_byte(1, 0x10, &0, false);
@@ -287,6 +302,7 @@ mod tests {
             NRX3::default(),
             NRX4::default(),
             64,
+            false,
         )
     }
 
@@ -335,6 +351,7 @@ mod tests {
             NRX3::default(),
             NRX4::default(),
             256,
+            false,
         );
         fixture.write_byte(0, 0x80, &0, false);
 

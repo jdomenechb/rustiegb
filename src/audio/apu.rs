@@ -76,6 +76,13 @@ impl Apu {
         // Ticks every 64 Hz
         let envelope_step = self.div_apu == 7;
 
+        if envelope_step {
+            self.channel_1.tick_envelope();
+            self.channel_2.tick_envelope();
+            self.channel_3.tick_envelope();
+            self.channel_4.tick_envelope();
+        }
+
         self.div_apu = (self.div_apu + 1) % 8;
     }
 
@@ -128,7 +135,7 @@ impl Apu {
         OutputData {
             audio_unit_on: self.nr52.is_on(),
             channel,
-            is_on: self.nr52.is_on(),
+            is_on: self.nr52.is_channel_on(channel),
             is_dac_on: channel_selected.is_dac_on(),
             signal: channel_selected.output_signal(),
         }
@@ -152,6 +159,7 @@ impl Default for Apu {
                 NR43::default(),
                 NR44::default(),
                 64,
+                false,
             ),
 
             nr50: 0x77,

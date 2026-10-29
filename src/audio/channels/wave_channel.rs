@@ -37,6 +37,7 @@ impl WaveChannel {
                 NRX3::default(),
                 NRX4::default(),
                 256,
+                false,
             ),
             wave_pattern_ram: WavePatternRam::default(),
             frequency_timer: 0,

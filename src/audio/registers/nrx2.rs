@@ -25,6 +25,18 @@ impl NRX2 {
         Self { value: 0x00 }
     }
 
+    pub fn initial_volume(&self) -> Byte {
+        self.value >> 4
+    }
+
+    pub fn is_increasing(&self) -> bool {
+        self.value & 0b1000 != 0
+    }
+
+    pub fn pace(&self) -> Byte {
+        self.value & 0b111
+    }
+
     pub fn new_nr42() -> Self {
         Self { value: 0x00 }
     }

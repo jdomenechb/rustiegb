@@ -17,6 +17,7 @@ impl PulseGenerator {
         let ChannelSignal::Pulse {
             frequency,
             wave_duty,
+            volume,
         } = output_data.signal
         else {
             return 0.0;
@@ -45,8 +46,6 @@ impl PulseGenerator {
             high_part_return
         };
 
-        wave - 1.0
-
-        //wave * (volume_envelope as f32 / 7.5) - 1.0
+        (wave * 2.0 - 1.0) * volume
     }
 }

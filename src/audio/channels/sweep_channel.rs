@@ -1,5 +1,6 @@
 use crate::audio::channels::channel::{Channel, ChannelEvent, ChannelSignal};
 use crate::audio::channels::default_channel::DefaultChannel;
+use crate::audio::channels::envelope::Envelope;
 use crate::audio::registers::WriteEffect;
 use crate::audio::registers::nr10::{NR10, SweepDirection};
 use crate::audio::registers::nrx1::NRX1;
@@ -11,6 +12,7 @@ use crate::{Byte, Word};
 
 pub struct SweepChannel {
     channel: DefaultChannel<NR10, NRX1, NRX2, NRX3, NRX4>,
+    envelope: Envelope,
 
     sweep_enabled: bool,
     sweep_ticks_left: Byte,
@@ -29,7 +31,9 @@ impl SweepChannel {
                 NRX3::default(),
                 NRX4::default(),
                 64,
+                true,
             ),
+            envelope: Envelope::new(0xF),
             sweep_enabled: false,
             sweep_ticks_left: 0,
             sweep_frequency_shadow_register: 0,
@@ -148,6 +152,7 @@ impl ReadMemory for SweepChannel {
 
 impl Channel for SweepChannel {
     fn clear(&mut self) -> ChannelEvent {
+        self.envelope.clear();
         self.channel.clear()
     }
 
@@ -163,7 +168,10 @@ impl Channel for SweepChannel {
                 .write_byte(position, value, div_apu, is_channel_on);
 
         let new_channel_event = match write_effect {
-            WriteEffect::Triggered => self.process_triggered_write_effect(channel_event),
+            WriteEffect::Triggered => {
+                self.envelope.trigger(self.channel.get_nrx2());
+                self.process_triggered_write_effect(channel_event)
+            }
             WriteEffect::SweepDirectionFromSubToAdd => {
                 if self.at_least_one_sweep_negate_has_been_calculated_since_last_trigger {
                     ChannelEvent::ChannelDisabled(self.channel.get_number())
@@ -189,6 +197,10 @@ impl Channel for SweepChannel {
         self.channel.single_step();
     }
 
+    fn tick_envelope(&mut self) {
+        self.envelope.tick(self.channel.get_nrx2());
+    }
+
     fn is_dac_on(&self) -> bool {
         self.channel.is_dac_on()
     }
@@ -199,6 +211,7 @@ impl Channel for SweepChannel {
         ChannelSignal::Sweep {
             frequency,
             wave_duty: self.channel.get_nrx1().output_wave_duty(),
+            volume: self.envelope.output_volume(),
         }
     }
 }

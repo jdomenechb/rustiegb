@@ -1,5 +1,6 @@
 use crate::audio::channels::channel::{Channel, ChannelEvent, ChannelSignal};
 use crate::audio::channels::default_channel::DefaultChannel;
+use crate::audio::channels::envelope::Envelope;
 use crate::audio::registers::WriteEffect;
 use crate::audio::registers::no_register::NoRegister;
 use crate::audio::registers::nrx1::NRX1;
@@ -11,6 +12,7 @@ use crate::{Byte, Word};
 
 pub struct PulseChannel {
     channel: DefaultChannel<NoRegister, NRX1, NRX2, NRX3, NRX4>,
+    envelope: Envelope,
 }
 
 impl PulseChannel {
@@ -24,7 +26,9 @@ impl PulseChannel {
                 NRX3::default(),
                 NRX4::default(),
                 64,
+                false,
             ),
+            envelope: Envelope::new(0),
         }
     }
 }
@@ -37,6 +41,7 @@ impl ReadMemory for PulseChannel {
 
 impl Channel for PulseChannel {
     fn clear(&mut self) -> ChannelEvent {
+        self.envelope.clear();
         self.channel.clear()
     }
 
@@ -47,8 +52,15 @@ impl Channel for PulseChannel {
         div_apu: &Byte,
         is_channel_on: bool,
     ) -> (ChannelEvent, WriteEffect) {
-        self.channel
-            .write_byte(position, value, div_apu, is_channel_on)
+        let (channel_event, write_effect) =
+            self.channel
+                .write_byte(position, value, div_apu, is_channel_on);
+
+        if write_effect == WriteEffect::Triggered {
+            self.envelope.trigger(self.channel.get_nrx2());
+        }
+
+        (channel_event, write_effect)
     }
 
     fn tick_length(&mut self) -> ChannelEvent {
@@ -57,6 +69,10 @@ impl Channel for PulseChannel {
 
     fn single_step(&mut self) {
         self.channel.single_step()
+    }
+
+    fn tick_envelope(&mut self) {
+        self.envelope.tick(self.channel.get_nrx2());
     }
 
     fn is_dac_on(&self) -> bool {
@@ -69,6 +85,7 @@ impl Channel for PulseChannel {
         ChannelSignal::Pulse {
             frequency,
             wave_duty: self.channel.get_nrx1().output_wave_duty(),
+            volume: self.envelope.output_volume(),
         }
     }
 }

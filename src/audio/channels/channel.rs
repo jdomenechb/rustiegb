@@ -10,9 +10,19 @@ pub enum ChannelEvent {
 
 #[derive(Debug)]
 pub enum ChannelSignal {
-    Sweep { frequency: f32, wave_duty: f32 },
-    Pulse { frequency: f32, wave_duty: f32 },
-    Wave { frequency: f32 },
+    Sweep {
+        frequency: f32,
+        wave_duty: f32,
+        volume: f32,
+    },
+    Pulse {
+        frequency: f32,
+        wave_duty: f32,
+        volume: f32,
+    },
+    Wave {
+        frequency: f32,
+    },
     Noise {},
 }
 
@@ -30,6 +40,8 @@ pub trait Channel: ReadMemory {
     fn tick_length(&mut self) -> ChannelEvent;
 
     fn single_step(&mut self);
+
+    fn tick_envelope(&mut self) {}
 
     fn is_dac_on(&self) -> bool;
 
