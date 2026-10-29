@@ -10,12 +10,9 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, SizedSample, Stream, StreamConfig};
 use std::sync::{Arc, RwLock};
 
-pub trait ChannelGenerator {
-    fn generate(&mut self, buffer: &mut [f32]);
-}
-
 pub struct CpalAudioOutput {
     stream: Stream,
+    muted: bool,
 }
 
 impl CpalAudioOutput {
@@ -44,7 +41,10 @@ impl CpalAudioOutput {
             _ => panic!("Invalid sample format"),
         };
 
-        Self { stream }
+        Self {
+            stream,
+            muted: false,
+        }
     }
 
     fn run<T>(
@@ -92,5 +92,19 @@ impl CpalAudioOutput {
         stream.play()?;
 
         Ok(stream)
+    }
+
+    pub fn mute(&mut self) {
+        if !self.muted {
+            self.muted = true;
+            self.stream.pause().unwrap();
+        }
+    }
+
+    pub fn unmute(&mut self) {
+        if self.muted {
+            self.muted = false;
+            self.stream.play().unwrap();
+        }
     }
 }

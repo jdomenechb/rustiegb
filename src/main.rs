@@ -94,7 +94,7 @@ fn main() {
             configuration.bootstrap_path.is_some(),
         );
 
-        let audio_output = CpalAudioOutput::play(apu);
+        let mut audio_output = CpalAudioOutput::play(apu);
 
         let frame_duration =
             Duration::from_secs_f64(Cpu::AVAILABLE_CCYCLES_PER_FRAME as f64 / GB_CLOCK_HZ);
@@ -130,6 +130,14 @@ fn main() {
                 {
                     runtime_config_thread.write().available_cycles -=
                         last_instruction_cycles as i32;
+                }
+
+                let muted = { runtime_config_thread.read().muted };
+
+                if muted {
+                    audio_output.mute();
+                } else {
+                    audio_output.unmute();
                 }
             }
         }
