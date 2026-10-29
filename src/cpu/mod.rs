@@ -62,11 +62,8 @@ impl Cpu {
         self.last_instruction_ccycles = 0;
 
         if !self.halted {
-            let instruction;
-            let memory_has_bootstrap_rom;
-
-            instruction = self.bus.read_byte(self.registers.pc);
-            memory_has_bootstrap_rom = self.bus.has_bootstrap_rom();
+            let instruction = self.bus.read_byte(self.registers.pc);
+            let memory_has_bootstrap_rom = self.bus.has_bootstrap_rom();
 
             #[cfg(debug_assertions)]
             if trace {
@@ -440,7 +437,6 @@ impl Cpu {
 
         if check_joystick {
             self.p10_p13_transition_interrupt();
-            return;
         }
     }
 
@@ -1333,11 +1329,9 @@ impl Cpu {
      * Writes value from memory address $FF00 + n to register A.
      */
     fn ldh_a_n(&mut self) {
-        let to_sum;
-
-        to_sum = self.bus.read_byte(self.registers.pc + 1) as Word;
-
+        let to_sum = self.bus.read_byte(self.registers.pc + 1) as Word;
         let mem_addr = Address::IO_REGISTERS_START + to_sum;
+
         self.registers.a = self.bus.read_byte(mem_addr);
 
         self.pc_to_increment = 2;

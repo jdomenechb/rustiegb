@@ -600,7 +600,11 @@ mod tests {
         for channel in 1..=4 {
             let address = get_trigger_address(channel);
 
-            let dac_value = if channel == 3 { 0b1000_0000 } else { 0b1111_1000 };
+            let dac_value = if channel == 3 {
+                0b1000_0000
+            } else {
+                0b1111_1000
+            };
             apu.write_byte(get_dac_address(channel), dac_value);
             apu.write_byte(address, 0b1000_0000);
 

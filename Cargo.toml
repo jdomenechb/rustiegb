@@ -14,6 +14,9 @@ anyhow = "1.0"
 parking_lot = { version = "0.13" }
 prettytable-rs = "0.10"
 
+[lints.clippy]
+too_many_arguments = "allow"
+
 [dev-dependencies]
 test-case = "3.4"
 assert_fs = "1.1"

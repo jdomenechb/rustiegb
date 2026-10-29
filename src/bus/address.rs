@@ -2,6 +2,7 @@ use crate::Word;
 
 pub struct Address {}
 
+#[allow(dead_code)]
 impl Address {
     pub const BOOTSTRAP_ROM_START: Word = 0x0001;
     pub const CARTRIDGE_START: Word = 0x0100;

@@ -43,6 +43,7 @@ impl CpuMemoryBus {
         self.read_byte(position) as SignedByte
     }
 
+    #[cfg(debug_assertions)]
     pub fn peak_byte(&self, position: Word) -> Byte {
         self.memory.read().read_byte(position)
     }

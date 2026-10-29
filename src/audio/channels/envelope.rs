@@ -13,6 +13,7 @@ impl Envelope {
         Self { volume, timer: 0 }
     }
 
+    #[cfg(test)]
     pub fn volume(&self) -> Byte {
         self.volume
     }

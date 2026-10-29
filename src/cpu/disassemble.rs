@@ -1,6 +1,7 @@
 use crate::Word;
 use crate::bus::cpu_memory_bus::CpuMemoryBus;
 
+#[cfg(debug_assertions)]
 pub(super) fn disassemble(pc: Word, bus: &CpuMemoryBus) -> String {
     let op = bus.peak_byte(pc);
     let b1 = bus.peak_byte(pc.wrapping_add(1));
