@@ -1,7 +1,9 @@
 mod pulse;
+mod wave;
 
 use crate::audio::apu::Apu;
 use crate::audio::output::pulse::PulseGenerator;
+use crate::audio::output::wave::WaveGenerator;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, SizedSample, Stream, StreamConfig};
 use std::sync::{Arc, RwLock};
@@ -58,6 +60,7 @@ impl CpalAudioOutput {
 
         let mut channel1 = PulseGenerator::default();
         let mut channel2 = PulseGenerator::default();
+        let mut channel3 = WaveGenerator::default();
 
         let stream = device.build_output_stream(
             config,
@@ -66,7 +69,8 @@ impl CpalAudioOutput {
                     let apu = apu.read().unwrap();
                     let next_value1 = channel1.next_value(sample_rate, apu.get_output_data(1));
                     let next_value2 = channel2.next_value(sample_rate, apu.get_output_data(2));
-                    let next_value = (next_value1 + next_value2) / 2.0;
+                    let next_value3 = channel3.next_value(sample_rate, apu.get_output_data(3));
+                    let next_value = (next_value1 + next_value2 + next_value3) / 3.0;
 
                     let next_value = next_value * Self::MASTER_VOLUME;
 

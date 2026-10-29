@@ -17,6 +17,8 @@ pub enum ChannelSignal {
     },
     Wave {
         frequency: f32,
+        volume: f32,
+        samples: [Byte; 32],
     },
     Noise {},
 }

@@ -147,7 +147,22 @@ impl Channel for WaveChannel {
     }
 
     fn output_signal(&self) -> ChannelSignal {
-        unimplemented!()
+        // Each sample lasts (2048 - period) * 2 T-cycles, and the waveform has 32 samples
+        let frequency = 65536.0 / (2048.0 - self.channel.read_frequency() as f32);
+
+        let mut samples = [0; 32];
+
+        for i in 0..16 {
+            let byte = self.wave_pattern_ram.read_byte(i);
+            samples[i as usize * 2] = byte >> 4;
+            samples[i as usize * 2 + 1] = byte & 0b1111;
+        }
+
+        ChannelSignal::Wave {
+            frequency,
+            volume: self.channel.get_nrx2().output_level(),
+            samples,
+        }
     }
 }
 
@@ -179,6 +194,30 @@ mod tests {
         for _ in 0..cycles {
             fixture.single_step();
         }
+    }
+
+    #[test]
+    fn it_outputs_the_wave_ram_samples_frequency_and_volume() {
+        let mut fixture = WaveChannel::new();
+        fill_wave_ram(&mut fixture);
+        fixture.write_byte(2, 0b0100_0000, &0, false);
+        fixture.write_byte(3, 0x00, &0, false);
+        fixture.write_byte(4, 0b0000_0100, &0, false);
+
+        let ChannelSignal::Wave {
+            frequency,
+            volume,
+            samples,
+        } = fixture.output_signal()
+        else {
+            panic!("Expected a wave signal");
+        };
+
+        // Period 1024: 65536 / (2048 - 1024)
+        assert_eq!(frequency, 64.0);
+        assert_eq!(volume, 0.5);
+        assert_eq!(samples[0..4], [0x0, 0x0, 0x1, 0x1]);
+        assert_eq!(samples[30..32], [0xF, 0xF]);
     }
 
     #[test]
