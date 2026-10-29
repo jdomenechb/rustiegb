@@ -67,8 +67,7 @@ impl CpalAudioOutput {
                     let next_value1 = channel1.next_value(sample_rate, apu.get_output_data(1));
                     let next_value2 = channel2.next_value(sample_rate, apu.get_output_data(2));
                     let next_value = (next_value1 + next_value2) / 2.0;
-                    println!("Next value: {next_value}");
-                    //let next_value = (next_value1 + next_value2 + next_value3 + next_value4) / 4.0;
+
                     let next_value = next_value * Self::MASTER_VOLUME;
 
                     let value: T = T::from_sample::<f32>(next_value);
