@@ -136,10 +136,6 @@ impl IORegisters {
     pub fn ly_reset_wo_interrupt(&mut self) {
         self.ly.reset();
     }
-
-    pub fn get_apu(&self) -> Arc<RwLock<Apu>> {
-        self.apu.clone()
-    }
 }
 
 impl Debuggable for IORegisters {

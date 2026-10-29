@@ -4,7 +4,6 @@ extern crate image;
 extern crate piston_window;
 
 mod audio;
-mod audiold;
 mod bus;
 mod cartridge;
 mod configuration;
@@ -132,8 +131,6 @@ fn main() {
                     runtime_config_thread.write().available_cycles -=
                         last_instruction_cycles as i32;
                 }
-
-                let muted = { runtime_config_thread.read().muted };
             }
         }
     });

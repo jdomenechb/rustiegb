@@ -212,7 +212,7 @@ impl<
     }
 
     fn output_signal(&self) -> ChannelSignal {
-        !unimplemented!()
+        !unreachable!()
     }
 }
 

@@ -14,7 +14,6 @@ use std::collections::BTreeMap;
 #[derive(Debug)]
 pub struct OutputData {
     pub audio_unit_on: bool,
-    pub channel: u8,
     pub is_on: bool,
     pub is_dac_on: bool,
     pub signal: ChannelSignal,
@@ -129,7 +128,6 @@ impl Apu {
 
         OutputData {
             audio_unit_on: self.nr52.is_on(),
-            channel,
             is_on: self.nr52.is_channel_on(channel),
             is_dac_on: channel_selected.is_dac_on(),
             signal: channel_selected.output_signal(),
@@ -602,6 +600,8 @@ mod tests {
         for channel in 1..=4 {
             let address = get_trigger_address(channel);
 
+            let dac_value = if channel == 3 { 0b1000_0000 } else { 0b1111_1000 };
+            apu.write_byte(get_dac_address(channel), dac_value);
             apu.write_byte(address, 0b1000_0000);
 
             let flag = (apu.read_byte(Address::NR52_SOUND) >> (channel - 1) & 0b1) == 1;
