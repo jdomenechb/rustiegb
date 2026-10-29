@@ -56,6 +56,7 @@ impl CpalAudioOutput {
 
         let err_fn = |err| eprintln!("An error occurred on stream: {err}");
 
+        let mut channel1 = PulseGenerator::default();
         let mut channel2 = PulseGenerator::default();
 
         let stream = device.build_output_stream(
@@ -63,7 +64,9 @@ impl CpalAudioOutput {
             move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 for frame in data.chunks_mut(channels) {
                     let apu = apu.read().unwrap();
-                    let next_value = channel2.next_value(sample_rate, apu.get_output_data(2));
+                    let next_value1 = channel1.next_value(sample_rate, apu.get_output_data(1));
+                    let next_value2 = channel2.next_value(sample_rate, apu.get_output_data(2));
+                    let next_value = (next_value1 + next_value2) / 2.0;
                     println!("Next value: {next_value}");
                     //let next_value = (next_value1 + next_value2 + next_value3 + next_value4) / 4.0;
                     let next_value = next_value * Self::MASTER_VOLUME;

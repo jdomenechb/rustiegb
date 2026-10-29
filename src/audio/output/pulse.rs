@@ -14,11 +14,16 @@ impl PulseGenerator {
             return 0.0;
         }
 
-        let ChannelSignal::Pulse {
+        let (ChannelSignal::Pulse {
             frequency,
             wave_duty,
             volume,
-        } = output_data.signal
+        }
+        | ChannelSignal::Sweep {
+            frequency,
+            wave_duty,
+            volume,
+        }) = output_data.signal
         else {
             return 0.0;
         };
