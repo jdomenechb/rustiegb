@@ -208,7 +208,7 @@ impl Channel for SweepChannel {
     fn output_signal(&self) -> ChannelSignal {
         let frequency = 131072.0 / (2048.0 - self.channel.read_frequency() as f32);
 
-        ChannelSignal::Sweep {
+        ChannelSignal::Pulse {
             frequency,
             wave_duty: self.channel.get_nrx1().output_wave_duty(),
             volume: self.envelope.output_volume(),

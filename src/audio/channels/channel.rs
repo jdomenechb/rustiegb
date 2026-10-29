@@ -10,11 +10,6 @@ pub enum ChannelEvent {
 
 #[derive(Debug)]
 pub enum ChannelSignal {
-    Sweep {
-        frequency: f32,
-        wave_duty: f32,
-        volume: f32,
-    },
     Pulse {
         frequency: f32,
         wave_duty: f32,
