@@ -1,14 +1,9 @@
 use crate::audio::channels::channel::{Channel, ChannelEvent, ChannelSignal};
-use crate::audio::channels::default_channel::DefaultChannel;
+use crate::audio::channels::noise_channel::NoiseChannel;
 use crate::audio::channels::pulse_channel::PulseChannel;
 use crate::audio::channels::sweep_channel::SweepChannel;
 use crate::audio::channels::wave_channel::WaveChannel;
-use crate::audio::registers::no_register::NoRegister;
-use crate::audio::registers::nr41::NR41;
-use crate::audio::registers::nr43::NR43;
-use crate::audio::registers::nr44::NR44;
 use crate::audio::registers::nr52::NR52;
-use crate::audio::registers::nrx2::NRX2;
 use crate::audio::registers::{AudioRegister, WriteEffect};
 use crate::bus::address::Address;
 use crate::debug::Debuggable;
@@ -29,7 +24,7 @@ pub struct Apu {
     channel_1: SweepChannel,
     channel_2: PulseChannel,
     channel_3: WaveChannel,
-    channel_4: DefaultChannel<NoRegister, NR41, NRX2, NR43, NR44>,
+    channel_4: NoiseChannel,
 
     nr50: Byte,
     nr51: Byte,
@@ -151,16 +146,7 @@ impl Default for Apu {
 
             channel_3: WaveChannel::new(),
 
-            channel_4: DefaultChannel::new(
-                4,
-                NoRegister::default(),
-                NR41::default(),
-                NRX2::new_nr42(),
-                NR43::default(),
-                NR44::default(),
-                64,
-                false,
-            ),
+            channel_4: NoiseChannel::new(),
 
             nr50: 0x77,
             nr51: 0xf3,

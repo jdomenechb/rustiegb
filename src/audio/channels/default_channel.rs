@@ -74,6 +74,10 @@ impl<
         &self.nrx2
     }
 
+    pub fn get_nrx3(&self) -> &X {
+        &self.nrx3
+    }
+
     fn is_length_enabled(&self) -> bool {
         is_bit_set(&self.nrx4.read(), 6)
     }

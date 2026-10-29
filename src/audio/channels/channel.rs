@@ -20,7 +20,11 @@ pub enum ChannelSignal {
         volume: f32,
         samples: [Byte; 32],
     },
-    Noise {},
+    Noise {
+        frequency: f32,
+        is_short: bool,
+        volume: f32,
+    },
 }
 
 pub trait Channel: ReadMemory {
